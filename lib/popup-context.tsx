@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 // Popup types
 export enum PopupType {
@@ -36,6 +37,12 @@ interface PopupProviderProps {
 export function PopupProvider({ children }: PopupProviderProps) {
     const [activePopup, setActivePopup] = useState<PopupState | null>(null);
     const popupRef = useRef<HTMLDivElement | null>(null);
+    const pathname = usePathname();
+
+    // Close popup on route change
+    useEffect(() => {
+        setActivePopup(null);
+    }, [pathname]);
 
     // Show popup
     const showPopup = (type: PopupType, data: any, position: { x: number; y: number }) => {

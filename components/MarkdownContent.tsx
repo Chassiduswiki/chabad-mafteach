@@ -123,20 +123,7 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                     {cleanContent}
                 </ReactMarkdown>
             </div>
-            {/* Render active popups */}
-            {activePopup?.type === PopupType.INSTANT_LOOKUP && (
-                <InstantLookup
-                    term={activePopup.data.term}
-                    position={activePopup.position}
-                />
-            )}
-            {activePopup?.type === PopupType.FOOTNOTE && (
-                <FootnotePopup
-                    footnoteId={activePopup.data.footnoteId}
-                    footnoteText={activePopup.data.footnoteText}
-                    position={activePopup.position}
-                />
-            )}
+
         </>
     );
 }
