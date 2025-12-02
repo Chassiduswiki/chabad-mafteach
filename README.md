@@ -1,6 +1,8 @@
-# Chabad Mafteach - Chassidic Concepts Research Platform
+# Chabad Mafteach - Chassidic Concepts Research Platform (Frontend)
 
 > A comprehensive digital index connecting Chassidic concepts across all Chabad seforim
+
+**Note**: This repository contains the **frontend application only** (Next.js). The backend CMS (Directus) is hosted separately.
 
 [![Production Build](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
@@ -48,10 +50,12 @@ A living encyclopedia where:
 
 ## 🏗️ Architecture
 
+> **Important**: This repository contains only the **frontend application**. The backend (Directus CMS) is maintained separately.
+
 ### Tech Stack
-- **Frontend**: Next.js 16 (React, TypeScript)
-- **Backend**: Directus (Headless CMS)
-- **Database**: PostgreSQL
+- **Frontend** (This Repo): Next.js 16 (React, TypeScript)
+- **Backend** (Separate): Directus (Headless CMS)
+- **Database** (Backend): PostgreSQL
 - **Hosting**: Vercel (Frontend) + Directus Cloud (Backend)
 - **Styling**: Tailwind CSS with custom "Crown & Earth" theme
 
@@ -66,10 +70,11 @@ A living encyclopedia where:
 
 ## 🚀 Getting Started
 
+> **Note**: This guide covers frontend development only. You'll need access to a Directus backend instance (either the production API or your own local Directus setup).
+
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL 14+
-- Directus CLI (optional)
+- Access to a Directus backend instance (URL and API token)
 
 ### Local Development
 
