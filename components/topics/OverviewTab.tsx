@@ -9,6 +9,7 @@ import { Topic } from '@/lib/directus';
 import { Lightbulb, BookOpen, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
 import { InstantLookup } from '@/components/InstantLookup';
 import Link from 'next/link';
+import { usePopup, PopupType } from '@/lib/popup-context';
 
 interface OverviewTabProps {
     topic: Topic;
@@ -27,9 +28,10 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
         }
     })();
 
-    // Popover state for instant lookup
-    const [lookupTerm, setLookupTerm] = useState<string | null>(null);
-    const [lookupPosition, setLookupPosition] = useState({ x: 0, y: 0 });
+    // Clean content to remove manual "Footnotes" heading
+    const cleanOverview = topic.overview ? topic.overview.replace(/^##\s+Footnotes\s*$/gim, '') : '';
+
+    const { showPopup } = usePopup();
 
     // Article expansion state
     const [articleExpanded, setArticleExpanded] = useState(false);
@@ -38,8 +40,7 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
     const TermButton = ({ term, children }: { term: string; children: React.ReactNode }) => (
         <button
             onClick={(e) => {
-                setLookupPosition({ x: e.clientX, y: e.clientY });
-                setLookupTerm(term);
+                showPopup(PopupType.INSTANT_LOOKUP, { term }, { x: e.clientX, y: e.clientY });
             }}
             className="text-primary underline decoration-dotted decoration-2 underline-offset-2 hover:decoration-solid transition-all"
         >
@@ -53,9 +54,9 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
 
 
             {/* Overview Section - long-form Markdown content */}
-            {topic.overview && (
+            {cleanOverview && (
                 <>
-                    <div className={`prose prose-slate dark:prose-invert max-w-none ${!articleExpanded && topic.overview.length > 1000 ? 'max-h-96 overflow-hidden relative' : ''}`}>
+                    <div className={`prose prose-slate dark:prose-invert max-w-none ${!articleExpanded && cleanOverview.length > 1000 ? 'max-h-96 overflow-hidden relative' : ''}`}>
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[
@@ -123,17 +124,17 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
                                 },
                             }}
                         >
-                            {topic.overview}
+                            {cleanOverview}
                         </ReactMarkdown>
 
                         {/* Fade overlay for long articles */}
-                        {!articleExpanded && topic.overview.length > 1000 && (
+                        {!articleExpanded && cleanOverview.length > 1000 && (
                             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent pointer-events-none" />
                         )}
                     </div>
 
                     {/* Expand/Collapse button for long articles */}
-                    {topic.overview.length > 1000 && (
+                    {cleanOverview.length > 1000 && (
                         <button
                             onClick={() => setArticleExpanded(!articleExpanded)}
                             className="mt-4 flex items-center gap-2 text-sm font-medium text-primary hover:underline"
@@ -201,14 +202,7 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
                 </p>
             </div>
 
-            {/* Instant Lookup Popover */}
-            {lookupTerm && (
-                <InstantLookup
-                    term={lookupTerm}
-                    position={lookupPosition}
-                    onClose={() => setLookupTerm(null)}
-                />
-            )}
+
         </div>
     );
 }

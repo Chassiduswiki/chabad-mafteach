@@ -49,6 +49,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
     useEffect(() => {
         function handleKeyDown(e: KeyboardEvent) {
             if (e.key === 'Enter' && data?.slug) {
+                closePopup();
                 router.push(`/topics/${data.slug}`);
             }
         }
@@ -162,6 +163,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                                     <button
                                         onClick={() => {
                                             // TODO: Open side panel with full overview
+                                            closePopup();
                                             router.push(`/topics/${data.slug}`);
                                         }}
                                         className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
@@ -170,7 +172,10 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                                         2-min Overview
                                     </button>
                                     <button
-                                        onClick={() => router.push(`/topics/${data.slug}`)}
+                                        onClick={() => {
+                                            closePopup();
+                                            router.push(`/topics/${data.slug}`);
+                                        }}
                                         className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                                     >
                                         <BookOpen className="h-4 w-4" />
