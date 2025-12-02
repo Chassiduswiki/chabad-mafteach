@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { InstantLookup } from './InstantLookup';
 import { FootnotePopup } from './FootnotePopup';
+import { usePopup, PopupType } from '@/lib/popup-context';
 
 interface MarkdownContentProps {
     content: string;
@@ -14,8 +15,7 @@ interface MarkdownContentProps {
 }
 
 export function MarkdownContent({ content, className = '' }: MarkdownContentProps) {
-    const [lookupState, setLookupState] = useState<{ term: string; position: { x: number; y: number } } | null>(null);
-    const [footnoteState, setFootnoteState] = useState<{ id: string; text: string; position: { x: number; y: number } } | null>(null);
+    const { activePopup, showPopup } = usePopup();
 
     if (!content) return null;
 
@@ -49,11 +49,10 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                         const footnoteText = footnoteMap.get(footnoteId) || 'Citation not found';
 
                         const rect = target.getBoundingClientRect();
-                        setFootnoteState({
-                            id: footnoteId,
-                            text: footnoteText,
-                            position: { x: rect.left, y: rect.bottom }
-                        });
+                        showPopup(PopupType.FOOTNOTE, {
+                            footnoteId,
+                            footnoteText
+                        }, { x: rect.left, y: rect.bottom });
                     }
 
                     // Also handle if user clicks the <sup> wrapper
@@ -67,11 +66,10 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                             const footnoteText = footnoteMap.get(footnoteId) || 'Citation not found';
 
                             const rect = target.getBoundingClientRect();
-                            setFootnoteState({
-                                id: footnoteId,
-                                text: footnoteText,
-                                position: { x: rect.left, y: rect.bottom }
-                            });
+                            showPopup(PopupType.FOOTNOTE, {
+                                footnoteId,
+                                footnoteText
+                            }, { x: rect.left, y: rect.bottom });
                         }
                     }
                 }}
@@ -90,12 +88,8 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                                             e.preventDefault();
                                             const rect = e.currentTarget.getBoundingClientRect();
                                             // Use the text content as the search term
-                                            // We could also use the slug from href if we updated the API
                                             const term = String(children);
-                                            setLookupState({
-                                                term,
-                                                position: { x: rect.left, y: rect.bottom }
-                                            });
+                                            showPopup(PopupType.INSTANT_LOOKUP, { term }, { x: rect.left, y: rect.bottom });
                                         }}
                                     >
                                         {children}
@@ -129,19 +123,18 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                     {cleanContent}
                 </ReactMarkdown>
             </div>
-            {lookupState && (
+            {/* Render active popups */}
+            {activePopup?.type === PopupType.INSTANT_LOOKUP && (
                 <InstantLookup
-                    term={lookupState.term}
-                    position={lookupState.position}
-                    onClose={() => setLookupState(null)}
+                    term={activePopup.data.term}
+                    position={activePopup.position}
                 />
             )}
-            {footnoteState && (
+            {activePopup?.type === PopupType.FOOTNOTE && (
                 <FootnotePopup
-                    footnoteId={footnoteState.id}
-                    footnoteText={footnoteState.text}
-                    position={footnoteState.position}
-                    onClose={() => setFootnoteState(null)}
+                    footnoteId={activePopup.data.footnoteId}
+                    footnoteText={activePopup.data.footnoteText}
+                    position={activePopup.position}
                 />
             )}
         </>
