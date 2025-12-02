@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PopupProvider } from "@/lib/popup-context";
 import { GlobalPopupRenderer } from "@/components/GlobalPopupRenderer";
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Chabad Mafteach - Research Platform",
-  description: "Deep dive into Chassidic concepts with comprehensive sources",
+  title: "Chabad Mafteach - Chassidic Concepts Explorer",
+  description: "Explore Chassidic concepts with citations and sources",
 };
 
 export default function RootLayout({
@@ -26,16 +22,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ErrorBoundary>
-          <PopupProvider>
-            <GlobalPopupRenderer />
-            {children}
-          </PopupProvider>
-        </ErrorBoundary>
+    <html lang="en">
+      <body className={`${inter.variable} antialiased`}>
+        <PopupProvider>
+          {children}
+          <GlobalPopupRenderer />
+        </PopupProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
