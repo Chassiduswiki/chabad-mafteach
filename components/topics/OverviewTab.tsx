@@ -9,6 +9,7 @@ import { Topic } from '@/lib/directus';
 import { Lightbulb, BookOpen, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
 import { InstantLookup } from '@/components/InstantLookup';
 import Link from 'next/link';
+import { usePopup, PopupType } from '@/lib/popup-context';
 
 interface OverviewTabProps {
     topic: Topic;
@@ -30,9 +31,7 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
     // Clean content to remove manual "Footnotes" heading
     const cleanOverview = topic.overview ? topic.overview.replace(/^##\s+Footnotes\s*$/gim, '') : '';
 
-    // Popover state for instant lookup
-    const [lookupTerm, setLookupTerm] = useState<string | null>(null);
-    const [lookupPosition, setLookupPosition] = useState({ x: 0, y: 0 });
+    const { showPopup } = usePopup();
 
     // Article expansion state
     const [articleExpanded, setArticleExpanded] = useState(false);
@@ -41,8 +40,7 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
     const TermButton = ({ term, children }: { term: string; children: React.ReactNode }) => (
         <button
             onClick={(e) => {
-                setLookupPosition({ x: e.clientX, y: e.clientY });
-                setLookupTerm(term);
+                showPopup(PopupType.INSTANT_LOOKUP, { term }, { x: e.clientX, y: e.clientY });
             }}
             className="text-primary underline decoration-dotted decoration-2 underline-offset-2 hover:decoration-solid transition-all"
         >
@@ -204,14 +202,7 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
                 </p>
             </div>
 
-            {/* Instant Lookup Popover */}
-            {lookupTerm && (
-                <InstantLookup
-                    term={lookupTerm}
-                    position={lookupPosition}
-                    onClose={() => setLookupTerm(null)}
-                />
-            )}
+
         </div>
     );
 }

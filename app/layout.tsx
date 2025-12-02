@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PopupProvider } from "@/lib/popup-context";
+import { GlobalPopupRenderer } from "@/components/GlobalPopupRenderer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <PopupProvider>
+            <GlobalPopupRenderer />
             {children}
           </PopupProvider>
         </ErrorBoundary>
