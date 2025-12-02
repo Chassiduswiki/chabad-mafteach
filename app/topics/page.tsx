@@ -4,22 +4,51 @@ import { readItems } from '@directus/sdk';
 import { Topic } from '@/lib/directus';
 import { TopicsList } from '@/components/topics/TopicsList';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { Suspense } from 'react';
+import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 
-async function getTopics(): Promise<Topic[]> {
+async function getTopics(limit: number, offset: number): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
+        // Get paginated topics
+        // @ts-ignore
         const topics = await directus.request(readItems('topics', {
             sort: ['name'],
-            fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short']
+            fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
+            limit,
+            offset,
+            filter: { is_published: { _eq: true } }
         }));
-        return topics as Topic[];
+
+        // Get total count - using meta from original query
+        // Note: This is a workaround - ideally we'd use separate aggregate query
+        // but TypeScript doesn't recognize the aggregate response type
+        const allPublishedTopics = await directus.request(readItems('topics', {
+            fields: ['id'],
+            filter: { is_published: { _eq: true } }
+        }));
+
+        const totalCount = Array.isArray(allPublishedTopics) ? allPublishedTopics.length : 0;
+
+        return { topics: topics as Topic[], totalCount };
     } catch (error) {
         console.error('Failed to fetch topics:', error);
-        return [];
+        return { topics: [], totalCount: 0 };
     }
 }
 
-export default async function TopicsPage() {
-    const topics = await getTopics();
+export default async function TopicsPage({
+    searchParams
+}: {
+    searchParams: { page?: string }
+}) {
+    // Pagination settings
+    const page = Number(searchParams.page) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+
+    // Get topics with pagination
+    const { topics, totalCount } = await getTopics(limit, offset);
+    const totalPages = Math.ceil(totalCount / limit);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -46,7 +75,14 @@ export default async function TopicsPage() {
                     </p>
                 </div>
 
-                <TopicsList topics={topics} />
+                <Suspense fallback={<TopicsListSkeleton />}>
+                    <TopicsList
+                        topics={topics}
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalCount={totalCount}
+                    />
+                </Suspense>
             </div>
         </div>
     );

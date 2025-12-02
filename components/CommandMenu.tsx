@@ -5,6 +5,7 @@ import { Command } from 'cmdk';
 import { Search, BookOpen, Hash, User, ArrowRight, Command as CommandIcon, Loader2, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Fuse from 'fuse.js';
 
 type SearchResult = {
     id: string;
@@ -73,7 +74,20 @@ export function CommandMenu() {
                     url: `/seforim/${l.sefer}`
                 }));
 
-                setResults([...topicResults, ...seforimResults, ...locationResults]);
+                const allResults = [...topicResults, ...seforimResults, ...locationResults];
+
+                // Apply fuzzy search for better matching
+                const fuse = new Fuse(allResults, {
+                    keys: ['title', 'subtitle'],
+                    threshold: 0.4, // 0 = perfect match, 1 = match anything
+                    includeScore: true
+                });
+
+                const fuzzyResults = search.length > 2
+                    ? fuse.search(search).map(result => result.item)
+                    : allResults; // Don't use fuzzy for very short queries
+
+                setResults(fuzzyResults);
             } catch (error) {
                 console.error('Search failed:', error);
             } finally {
@@ -164,44 +178,115 @@ export function CommandMenu() {
                                     )}
 
                                     {results.length > 0 && (
-                                        <Command.Group heading="Results" className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                                            {results.map((item) => (
-                                                <Command.Item
-                                                    key={item.id}
-                                                    value={item.title}
-                                                    onSelect={() => handleSelect(item.url)}
-                                                    className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                                                >
-                                                    <div
-                                                        className="flex w-full items-center"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleSelect(item.url);
-                                                        }}
-                                                    >
-                                                        <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
-                                                            {item.type === 'topic' ? (
-                                                                <Brain className="h-5 w-5 text-purple-500" />
-                                                            ) : item.type === 'sefer' ? (
-                                                                <BookOpen className="h-5 w-5 text-blue-500" />
-                                                            ) : (
-                                                                <Hash className="h-5 w-5 text-amber-500" />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex flex-1 flex-col gap-1">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="font-semibold text-foreground">{item.title}</span>
-                                                                <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                        <>
+                                            {/* Topics/Concepts Group */}
+                                            {results.filter(r => r.type === 'topic').length > 0 && (
+                                                <Command.Group heading={`Concepts (${results.filter(r => r.type === 'topic').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'topic').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <Brain className="h-5 w-5 text-purple-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
                                                             </div>
-                                                            {item.subtitle && (
-                                                                <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
-                                                            )}
-                                                        </div>
-                                                        <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
-                                                    </div>
-                                                </Command.Item>
-                                            ))}
-                                        </Command.Group>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+
+                                            {/* Seforim/Sources Group */}
+                                            {results.filter(r => r.type === 'sefer').length > 0 && (
+                                                <Command.Group heading={`Sources (${results.filter(r => r.type === 'sefer').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'sefer').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <BookOpen className="h-5 w-5 text-blue-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+
+                                            {/* Locations Group */}
+                                            {results.filter(r => r.type === 'location').length > 0 && (
+                                                <Command.Group heading={`Locations (${results.filter(r => r.type === 'location').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'location').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <Hash className="h-5 w-5 text-amber-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+                                        </>
                                     )}
                                 </Command.List>
                                 <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground">

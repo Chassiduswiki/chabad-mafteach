@@ -60,16 +60,16 @@ export default function SourceCard({ citation }: SourceCardProps) {
             </div>
 
             {/* Quoted Text */}
-            {(citation.quoted_text || citation.quoted_text_english) && (
+            {(citation.quoted_text_hebrew || citation.quoted_text_english) && (
                 <blockquote className="mb-4 border-l-4 border-primary pl-4">
                     {citation.quoted_text_english && (
                         <p className="text-sm leading-relaxed text-foreground">
                             "{citation.quoted_text_english}"
                         </p>
                     )}
-                    {citation.quoted_text && (
+                    {citation.quoted_text_hebrew && (
                         <p className="mt-2 font-hebrew text-sm leading-relaxed text-muted-foreground dir-rtl">
-                            "{citation.quoted_text}"
+                            "{citation.quoted_text_hebrew}"
                         </p>
                     )}
                 </blockquote>

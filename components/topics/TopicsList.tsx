@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { Hash, Brain, Hand, Sparkles, BookText } from 'lucide-react';
 import { Topic } from '@/lib/directus';
 import { ViewToggle } from '@/components/ViewToggle';
+import Pagination from './Pagination';
 
 interface TopicsListProps {
     topics: Topic[];
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
 }
 
 const categoryIcons = {
@@ -26,7 +30,7 @@ const categoryColors = {
     other: 'from-gray-500/10 to-slate-500/10 border-gray-500/20'
 };
 
-export function TopicsList({ topics }: TopicsListProps) {
+export function TopicsList({ topics, currentPage, totalPages, totalCount }: TopicsListProps) {
     const [view, setView] = useState<'grid' | 'list'>('grid');
 
     // Load preference from localStorage on mount
@@ -90,8 +94,8 @@ export function TopicsList({ topics }: TopicsListProps) {
                                     >
                                         {view === 'grid' ? (
                                             <>
-                                                {/* Grid Card Content */}
-                                                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                                                {/* Subtle gold gradient overlay on hover */}
+                                                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#D4AF37]/0 via-[#D4AF37]/5 to-[#D4AF37]/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
 
                                                 <div className="flex flex-col gap-3">
                                                     <div>
@@ -147,6 +151,19 @@ export function TopicsList({ topics }: TopicsListProps) {
                     );
                 })}
             </div>
+
+            {/* Pagination info and controls */}
+            {topics.length > 0 && (
+                <div className="mt-12">
+                    <p className="text-center text-sm text-muted-foreground mb-4">
+                        Showing {((currentPage - 1) * 50) + 1}–{Math.min(currentPage * 50, totalCount)} of {totalCount} topics
+                    </p>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                    />
+                </div>
+            )}
 
             {topics.length === 0 && (
                 <div className="py-24 text-center">

@@ -58,11 +58,14 @@ export function TopicHeader({ topic }: TopicHeaderProps) {
                         </p>
                     )}
 
-                    {topic.definition_short && (
-                        <p className="mt-6 text-xl leading-relaxed text-muted-foreground">
-                            {topic.definition_short}
-                        </p>
-                    )}
+                    {/* At a Glance */}
+                    <div className="mt-8">
+                        {topic.definition_short && (
+                            <p className="text-lg leading-relaxed text-muted-foreground max-w-3xl">
+                                {topic.definition_short}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
         </>

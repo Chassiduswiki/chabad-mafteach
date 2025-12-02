@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { readItems } from '@directus/sdk';
 import directus, { Topic, TopicCitation, TopicRelationship } from '@/lib/directus';
-import { TopicTabs } from '@/components/TopicTabs';
+import TopicTabs from '@/components/topics/TopicTabs';
 import { TopicHeader } from '@/components/topics/TopicHeader';
 import { TopicOverview } from '@/components/topics/TopicOverview';
 import { TopicSources } from '@/components/topics/TopicSources';
@@ -135,14 +135,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     {/* Main Content (Left 2/3) */}
                     <div className="lg:col-span-2">
-                        <TopicTabs
-                            citationsCount={citations.length}
-                            overviewContent={<TopicOverview topic={topic} />}
-                            articleContent={<TopicArticle topic={topic} />}
-                            sourcesContent={<TopicSources citations={citations} />}
-                            boundariesContent={<TopicBoundaries topic={topic} />}
-                            relatedContent={<TopicRelated topic={topic} relationships={relationships} />}
-                        />
+                        <TopicTabs topic={topic} />
                     </div>
 
                     {/* Sidebar (Right 1/3) */}

@@ -13,17 +13,20 @@ export async function GET(request: NextRequest) {
     try {
         const [seforim, locations, topics] = await Promise.all([
             // Search seforim
+            // @ts-ignore
             directus.request(readItems('seforim', {
                 filter: {
                     _or: [
                         { title: { _contains: query } },
-                        { author: { _contains: query } }
+                        { title_hebrew: { _contains: query } },
+                        { title_transliteration: { _contains: query } }
                     ]
                 },
-                fields: ['id', 'title', 'author'],
+                fields: ['id', 'title', 'title_hebrew'],
                 limit: 5
             })),
             // Search locations
+            // @ts-ignore
             directus.request(readItems('locations', {
                 filter: {
                     display_name: { _contains: query }
@@ -31,16 +34,23 @@ export async function GET(request: NextRequest) {
                 fields: ['id', 'display_name', 'sefer'],
                 limit: 5
             })),
-            // Search topics
+            // Search topics - comprehensive search across all content fields
+            // @ts-ignore
             directus.request(readItems('topics', {
                 filter: {
                     _or: [
                         { name: { _contains: query } },
+                        { name_hebrew: { _contains: query } },
+                        { name_transliteration: { _contains: query } },
                         { definition_short: { _contains: query } },
-                        { name_hebrew: { _contains: query } }
+                        { overview: { _contains: query } },
+                        { article: { _contains: query } },
+                        { definition_positive: { _contains: query } },
+                        { definition_negative: { _contains: query } },
+                        { historical_context: { _contains: query } }
                     ]
                 },
-                fields: ['id', 'name', 'name_hebrew', 'slug', 'definition_short'],
+                fields: ['id', 'name', 'name_hebrew', 'name_transliteration', 'slug', 'definition_short', 'category'],
                 limit: 5
             }))
         ]);

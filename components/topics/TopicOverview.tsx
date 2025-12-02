@@ -8,30 +8,28 @@ interface TopicOverviewProps {
 export function TopicOverview({ topic }: TopicOverviewProps) {
     return (
         <div className="space-y-8">
-            {/* Definitions Section */}
-            <div className="grid gap-6 md:grid-cols-1">
-                {topic.definition_short ? (
-                    <div className="rounded-xl border bg-card p-6 shadow-sm">
-                        <h3 className="mb-3 text-lg font-semibold text-primary">Definition</h3>
-                        <div className="prose prose-sm dark:prose-invert">
-                            <MarkdownContent content={topic.definition_short} />
-                        </div>
+            {/* At a Glance Section */}
+            {topic.definition_short && (
+                <div className="rounded-xl border bg-card/50 p-6">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">At a Glance</h3>
+                    <div className="prose prose-sm dark:prose-invert">
+                        <MarkdownContent content={topic.definition_short} />
                     </div>
-                ) : (
-                    <div className="rounded-xl border bg-card p-6 shadow-sm">
-                        <h3 className="mb-3 text-lg font-semibold text-primary">Definition</h3>
-                        <p className="text-muted-foreground italic">No definition available.</p>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
 
+            {/* Overview Content */}
+            {topic.overview && (
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                    <MarkdownContent content={topic.overview} />
+                </div>
+            )}
 
-
-            {/* Historical Context Section */}
+            {/* Historical Context */}
             {topic.historical_context && (
-                <div className="rounded-xl border bg-muted/30 p-6">
-                    <h3 className="mb-3 text-lg font-semibold">Historical Context</h3>
-                    <div className="prose prose-sm dark:prose-invert max-w-none italic text-muted-foreground">
+                <div className="rounded-xl border bg-card p-6 shadow-sm">
+                    <h3 className="mb-3 text-lg font-semibold text-primary">Historical Context</h3>
+                    <div className="prose prose-sm dark:prose-invert">
                         <MarkdownContent content={topic.historical_context} />
                     </div>
                 </div>
