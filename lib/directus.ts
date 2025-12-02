@@ -1,6 +1,6 @@
 import { createDirectus, rest, staticToken, readItems } from '@directus/sdk';
 import type { Schema, Topic } from './types';
-import { safe DirectusCall, directusPool } from './integration-hardening';
+import { safeDirectusCall, directusPool } from './integration-hardening';
 
 // Re-export types for convenience
 export * from './types';
