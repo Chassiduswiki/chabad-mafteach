@@ -1,8 +1,8 @@
 import directus from '@/lib/directus';
 import { readItem, readItems } from '@directus/sdk';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, BookOpen, MapPin, Quote } from 'lucide-react';
-import Link from 'next/link';
+import { BookOpen, MapPin, Quote } from 'lucide-react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 export const revalidate = 60;
 
@@ -18,8 +18,8 @@ async function getLocations(seferId: string) {
     try {
         return await directus.request(readItems('locations', {
             filter: { sefer: { _eq: parseInt(seferId) } },
-            fields: ['id', 'display_name', 'section', 'chapter', 'verse', 'page'],
-            sort: ['chapter', 'verse', 'page']
+            fields: ['id', 'reference_text', 'reference_hebrew', 'location_type', 'full_path'],
+            sort: ['sort_order']
         }));
     } catch (error) {
         return [];
@@ -40,10 +40,14 @@ export default async function SeferPage({ params }: { params: Promise<{ id: stri
         <div className="min-h-screen bg-background text-foreground">
             <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8">
 
-                {/* Back Link */}
-                <Link href="/seforim" className="mb-8 inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Library
-                </Link>
+                {/* Breadcrumbs */}
+                <Breadcrumbs
+                    items={[
+                        { label: 'Seforim', href: '/seforim' },
+                        { label: sefer.title, href: undefined }
+                    ]}
+                    className="mb-8"
+                />
 
                 {/* Header */}
                 <div className="mb-12 rounded-3xl border border-border bg-background/50 p-8 shadow-sm backdrop-blur-sm sm:p-12">
@@ -92,7 +96,12 @@ export default async function SeferPage({ params }: { params: Promise<{ id: stri
                                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                             <Quote className="h-4 w-4" />
                                         </div>
-                                        <span className="font-medium">{loc.display_name}</span>
+                                        <div>
+                                            <span className="font-medium">{loc.reference_text}</span>
+                                            {loc.reference_hebrew && (
+                                                <span className="mr-2 text-sm text-muted-foreground"> • {loc.reference_hebrew}</span>
+                                            )}
+                                        </div>
                                     </div>
                                     {/* Placeholder for future citation count or link */}
                                 </div>

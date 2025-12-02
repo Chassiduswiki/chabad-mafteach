@@ -7,6 +7,7 @@ import BoundariesTab from './BoundariesTab';
 import SourcesTab from './SourcesTab';
 import RelatedTab from './RelatedTab';
 import SourceCard from './SourceCard';
+import { TopicArticle } from './TopicArticle';
 
 interface TopicTabsProps {
     topic: Topic;
@@ -33,6 +34,7 @@ interface TopicSource {
 
 const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'article', label: 'Article' },
     { id: 'sources', label: 'Sources' },
     { id: 'boundaries', label: 'Boundaries' },
     { id: 'related', label: 'Related' }
@@ -96,6 +98,15 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
                     hidden={activeTab !== 'overview'}
                 >
                     {activeTab === 'overview' && <OverviewTab topic={topic} />}
+                </div>
+
+                <div
+                    id="article-panel"
+                    role="tabpanel"
+                    aria-labelledby="article-tab"
+                    hidden={activeTab !== 'article'}
+                >
+                    {activeTab === 'article' && <TopicArticle topic={topic} />}
                 </div>
 
                 <div

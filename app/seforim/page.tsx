@@ -2,6 +2,7 @@ import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import Link from 'next/link';
 import { BookOpen, ArrowRight } from 'lucide-react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 export const revalidate = 60; // Revalidate every minute
 
@@ -31,6 +32,12 @@ export default async function SeforimPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             <div className="mx-auto max-w-7xl px-6 py-24 sm:px-8 sm:py-32">
+                <Breadcrumbs
+                    items={[
+                        { label: 'Seforim', href: undefined }
+                    ]}
+                    className="mb-8"
+                />
                 <div className="mb-12">
                     <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Seforim Library</h1>
                     <p className="mt-4 text-lg text-muted-foreground">

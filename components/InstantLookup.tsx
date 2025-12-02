@@ -102,6 +102,7 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
         <AnimatePresence>
             {/* Backdrop */}
             <motion.div
+                key="backdrop"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -111,6 +112,7 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
 
             {/* Popup */}
             <motion.div
+                key="popup"
                 ref={popupRef}
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
