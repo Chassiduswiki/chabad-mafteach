@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { usePopup } from '@/lib/popup-context';
 
 interface LookupData {
     found: boolean;
@@ -18,14 +19,14 @@ interface LookupData {
 interface InstantLookupProps {
     term: string;
     position: { x: number; y: number };
-    onClose: () => void;
 }
 
-export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
+export function InstantLookup({ term, position }: InstantLookupProps) {
     const [data, setData] = useState<LookupData | null>(null);
     const [loading, setLoading] = useState(true);
     const popupRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const { closePopup } = usePopup();
 
     // Fetch definition
     useEffect(() => {
@@ -44,32 +45,16 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
         fetchDefinition();
     }, [term]);
 
-    // Handle ESC key
+    // Handle Enter key to navigate
     useEffect(() => {
         function handleKeyDown(e: KeyboardEvent) {
-            if (e.key === 'Escape') {
-                onClose();
-            } else if (e.key === 'Enter' && data?.slug) {
+            if (e.key === 'Enter' && data?.slug) {
                 router.push(`/topics/${data.slug}`);
             }
         }
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, data, router]);
-
-    // Handle click outside
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        }
-        // Small delay to prevent immediate close on the click that opened it
-        setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside);
-        }, 100);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose]);
+    }, [data, router]);
 
     // Calculate popup position (prevent overflow)
     const getPopupStyle = () => {
@@ -107,7 +92,7 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
-                onClick={onClose}
+                onClick={closePopup}
             />
 
             {/* Popup */}
@@ -137,7 +122,7 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
                             <p className="text-sm font-medium text-foreground">Term not found</p>
                             <p className="mt-1 text-xs text-muted-foreground">"{term}" isn't in our database yet</p>
                             <button
-                                onClick={onClose}
+                                onClick={closePopup}
                                 className="mt-4 text-xs text-primary hover:underline"
                             >
                                 Close
@@ -147,7 +132,7 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
                         <>
                             {/* Close button */}
                             <button
-                                onClick={onClose}
+                                onClick={closePopup}
                                 className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                                 <X className="h-4 w-4" />
