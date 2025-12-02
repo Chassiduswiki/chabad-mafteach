@@ -1,39 +1,18 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { X } from 'lucide-react';
+import { usePopup } from '@/lib/popup-context';
 
 interface FootnotePopupProps {
     footnoteId: string;
     footnoteText: string;
     position: { x: number; y: number };
-    onClose: () => void;
 }
 
-export function FootnotePopup({ footnoteId, footnoteText, position, onClose }: FootnotePopupProps) {
+export function FootnotePopup({ footnoteId, footnoteText, position }: FootnotePopupProps) {
     const popupRef = useRef<HTMLDivElement>(null);
-
-    // Handle Esc key
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
-        document.addEventListener('keydown', handleEsc);
-        return () => document.removeEventListener('keydown', handleEsc);
-    }, [onClose]);
-
-    // Handle click outside
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose]);
+    const { closePopup } = usePopup();
 
     return (
         <>
@@ -58,7 +37,7 @@ export function FootnotePopup({ footnoteId, footnoteText, position, onClose }: F
                         </span>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={closePopup}
                         className="p-1 hover:bg-muted rounded-md transition-colors"
                         aria-label="Close"
                     >
