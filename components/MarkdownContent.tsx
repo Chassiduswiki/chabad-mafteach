@@ -8,13 +8,21 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { InstantLookup } from './InstantLookup';
 import { FootnotePopup } from './FootnotePopup';
 import { usePopup, PopupType } from '@/lib/popup-context';
+import { TopicCitation, Location, Sefer } from '@/lib/types';
 
 interface MarkdownContentProps {
     content: string;
     className?: string;
+    availableCitations?: (TopicCitation & { location: Location; sefer: Sefer })[];
+    onViewSource?: (citationId: number) => void;
 }
 
-export function MarkdownContent({ content, className = '' }: MarkdownContentProps) {
+export function MarkdownContent({
+    content,
+    className = '',
+    availableCitations,
+    onViewSource
+}: MarkdownContentProps) {
     const { activePopup, showPopup } = usePopup();
 
     if (!content) return null;
@@ -51,7 +59,9 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                         const rect = target.getBoundingClientRect();
                         showPopup(PopupType.FOOTNOTE, {
                             footnoteId,
-                            footnoteText
+                            footnoteText,
+                            availableCitations,
+                            onViewSource
                         }, { x: rect.left, y: rect.bottom });
                     }
 
@@ -68,7 +78,9 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
                             const rect = target.getBoundingClientRect();
                             showPopup(PopupType.FOOTNOTE, {
                                 footnoteId,
-                                footnoteText
+                                footnoteText,
+                                availableCitations,
+                                onViewSource
                             }, { x: rect.left, y: rect.bottom });
                         }
                     }
@@ -127,3 +139,4 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
         </>
     );
 }
+
