@@ -29,7 +29,7 @@ export default function Home() {
         <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground sm:flex">
           <Link href="/topics" className="hover:text-primary transition-colors cursor-pointer">Topics</Link>
           <Link href="/seforim" className="hover:text-primary transition-colors cursor-pointer">Sources</Link>
-          <button onClick={() => alert('About page coming soon!')} className="hover:text-primary transition-colors cursor-pointer">About</button>
+          <Link href="/about" className="hover:text-primary transition-colors cursor-pointer">About</Link>
           <div className="h-4 w-px bg-border" />
           <button onClick={() => alert('Sign in flow coming soon!')} className="text-foreground hover:text-primary transition-colors cursor-pointer">Sign in</button>
         </div>
