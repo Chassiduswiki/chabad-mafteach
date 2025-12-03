@@ -3,7 +3,11 @@
 import { motion } from 'framer-motion';
 import { CommandMenuTrigger } from '@/components/CommandMenuTrigger';
 import Link from 'next/link';
-import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe, Share2 } from 'lucide-react';
+import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
+import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
+import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
+import { WordRotate } from '@/components/ui/WordRotate';
+import { cn } from '@/lib/utils';
 
 export default function Home() {
   return (
@@ -14,8 +18,8 @@ export default function Home() {
         {/* Top Center Glow */}
         <div className="hero-glow absolute left-1/2 top-[-10%] h-[800px] w-[800px] -translate-x-1/2 rounded-full opacity-60" />
 
-        {/* Subtle Grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.03]" />
+        {/* Floating Hebrew Letters */}
+        <FloatingHebrewLetters />
       </div>
 
       {/* Navigation */}
@@ -53,17 +57,27 @@ export default function Home() {
         </motion.div>
 
         {/* Hero Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-          className="max-w-4xl text-center text-5xl font-bold tracking-tight text-foreground sm:text-7xl lg:text-[5.5rem] leading-[1.1]"
-        >
-          Master Index of
-          <span className="block bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            Chassidic Wisdom
-          </span>
-        </motion.h1>
+        <div className="flex flex-col items-center justify-center text-center">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+            className="max-w-4xl text-5xl font-bold tracking-tight text-foreground sm:text-7xl lg:text-[5.5rem] leading-[1.1]"
+          >
+            Master Index of
+          </motion.h1>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+            className="mt-2"
+          >
+            <WordRotate
+              words={["Chassidic Wisdom", "Divine Truth", "Inner Light", "Torah Knowledge"]}
+              className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent text-5xl font-bold tracking-tight sm:text-7xl lg:text-[5.5rem] leading-[1.1]"
+            />
+          </motion.div>
+        </div>
 
         {/* Subtitle */}
         <motion.p
@@ -106,7 +120,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6"
+          className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 pb-20"
         >
           {[
             {
