@@ -7,7 +7,7 @@ import { TopicSidebar } from '@/components/topics/TopicSidebar';
 import { linkTerms } from '@/lib/term-linker';
 import { getAllTopics } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { Share2, Bookmark } from 'lucide-react';
+import { ActionButtons } from '@/components/ActionButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,14 +117,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                             { label: topic.name }
                         ]}
                     />
-                    <div className="flex items-center gap-2">
-                        <button className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title="Share">
-                            <Share2 className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title="Bookmark">
-                            <Bookmark className="h-4 w-4" />
-                        </button>
-                    </div>
+                    <ActionButtons topicSlug={topic.slug} topicName={topic.name} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
