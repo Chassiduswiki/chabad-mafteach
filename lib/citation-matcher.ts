@@ -160,8 +160,8 @@ export function scoreMatch(
             score += 25; // Partial reference match
         } else {
             // Extract numbers and compare
-            const queryNumbers = parsedCitation.reference.match(/\d+/g) || [];
-            const targetNumbers = locationRef.match(/\d+/g) || [];
+            const queryNumbers: string[] = parsedCitation.reference.match(/\d+/g) || [];
+            const targetNumbers: string[] = locationRef.match(/\d+/g) || [];
 
             if (queryNumbers.some(n => targetNumbers.includes(n))) {
                 score += 15; // Number overlap

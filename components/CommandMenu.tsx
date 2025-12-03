@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { Command } from 'cmdk';
-import { Search, BookOpen, Hash, User, ArrowRight, Command as CommandIcon, Loader2, Brain } from 'lucide-react';
+import { Search, BookOpen, Hash, ArrowRight, Loader2, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
+import { useSearch } from '@/lib/search-context';
 
 type SearchResult = {
     id: string;
@@ -16,23 +17,11 @@ type SearchResult = {
 };
 
 export function CommandMenu() {
-    const [open, setOpen] = React.useState(false);
+    const { open, setOpen } = useSearch();
     const [search, setSearch] = React.useState('');
     const [results, setResults] = React.useState<SearchResult[]>([]);
     const [loading, setLoading] = React.useState(false);
     const router = useRouter();
-
-    // Toggle with Cmd+K
-    React.useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                setOpen((open) => !open);
-            }
-        };
-        document.addEventListener('keydown', down);
-        return () => document.removeEventListener('keydown', down);
-    }, []);
 
     // Debounced Search
     React.useEffect(() => {
@@ -104,205 +93,187 @@ export function CommandMenu() {
     };
 
     return (
-        <>
-            {/* Trigger Button (Visible on page) */}
-            <button
-                onClick={() => setOpen(true)}
-                className="group relative z-10 flex w-full items-center gap-3 rounded-xl border border-border bg-background/60 px-5 py-4 text-left shadow-sm backdrop-blur-xl transition-all hover:border-primary/30 hover:bg-background/80 hover:shadow-md hover:shadow-primary/5 cursor-pointer"
-            >
-                <Search className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
-                <span className="flex-1 text-[15px] text-muted-foreground group-hover:text-foreground transition-colors">
-                    Search concepts, sources, or authors...
-                </span>
-                <div className="hidden items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:flex">
-                    <CommandIcon className="h-3 w-3" />
-                    <span>K</span>
+        <AnimatePresence>
+            {open && (
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setOpen(false)}
+                        className="absolute inset-0 bg-background/60 backdrop-blur-md"
+                    />
+
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10"
+                    >
+                        <Command className="w-full" shouldFilter={false}>
+                            <div className="flex items-center border-b border-border px-4">
+                                <Search className="mr-3 h-5 w-5 text-muted-foreground" />
+                                <Command.Input
+                                    value={search}
+                                    onValueChange={setSearch}
+                                    placeholder="Search for anything..."
+                                    className="flex h-16 w-full rounded-md bg-transparent py-3 text-lg outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                    autoFocus
+                                />
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="rounded bg-muted px-1.5 py-0.5">ESC</span>
+                                    <span>to close</span>
+                                </div>
+                            </div>
+                            <Command.List className="max-h-[60vh] overflow-y-auto p-2 scrollbar-hide">
+                                {!search && results.length === 0 && (
+                                    <div className="py-12 text-center text-sm text-muted-foreground">
+                                        Start typing to search...
+                                    </div>
+                                )}
+
+                                {search && loading && (
+                                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                        Searching...
+                                    </div>
+                                )}
+
+                                {search && !loading && results.length === 0 && (
+                                    <Command.Empty className="py-12 text-center text-sm text-muted-foreground">
+                                        <div className="mb-2 flex justify-center">
+                                            <Search className="h-8 w-8 opacity-20" />
+                                        </div>
+                                        No results found for "{search}".
+                                    </Command.Empty>
+                                )}
+
+                                {results.length > 0 && (
+                                    <>
+                                        {/* Topics/Concepts Group */}
+                                        {results.filter(r => r.type === 'topic').length > 0 && (
+                                            <Command.Group heading={`Concepts (${results.filter(r => r.type === 'topic').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                {results.filter(r => r.type === 'topic').map((item) => (
+                                                    <Command.Item
+                                                        key={item.id}
+                                                        value={item.title}
+                                                        onSelect={() => handleSelect(item.url)}
+                                                        className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                    >
+                                                        <div
+                                                            className="flex w-full items-center"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSelect(item.url);
+                                                            }}
+                                                        >
+                                                            <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                <Brain className="h-5 w-5 text-purple-500" />
+                                                            </div>
+                                                            <div className="flex flex-1 flex-col gap-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-semibold text-foreground">{item.title}</span>
+                                                                    <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                </div>
+                                                                {item.subtitle && (
+                                                                    <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                )}
+                                                            </div>
+                                                            <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                        </div>
+                                                    </Command.Item>
+                                                ))}
+                                            </Command.Group>
+                                        )}
+
+                                        {/* Seforim/Sources Group */}
+                                        {results.filter(r => r.type === 'sefer').length > 0 && (
+                                            <Command.Group heading={`Sources (${results.filter(r => r.type === 'sefer').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                {results.filter(r => r.type === 'sefer').map((item) => (
+                                                    <Command.Item
+                                                        key={item.id}
+                                                        value={item.title}
+                                                        onSelect={() => handleSelect(item.url)}
+                                                        className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                    >
+                                                        <div
+                                                            className="flex w-full items-center"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSelect(item.url);
+                                                            }}
+                                                        >
+                                                            <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                <BookOpen className="h-5 w-5 text-blue-500" />
+                                                            </div>
+                                                            <div className="flex flex-1 flex-col gap-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-semibold text-foreground">{item.title}</span>
+                                                                    <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                </div>
+                                                                {item.subtitle && (
+                                                                    <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                )}
+                                                            </div>
+                                                            <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                        </div>
+                                                    </Command.Item>
+                                                ))}
+                                            </Command.Group>
+                                        )}
+
+                                        {/* Locations Group */}
+                                        {results.filter(r => r.type === 'location').length > 0 && (
+                                            <Command.Group heading={`Locations (${results.filter(r => r.type === 'location').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                {results.filter(r => r.type === 'location').map((item) => (
+                                                    <Command.Item
+                                                        key={item.id}
+                                                        value={item.title}
+                                                        onSelect={() => handleSelect(item.url)}
+                                                        className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                    >
+                                                        <div
+                                                            className="flex w-full items-center"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSelect(item.url);
+                                                            }}
+                                                        >
+                                                            <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                <Hash className="h-5 w-5 text-amber-500" />
+                                                            </div>
+                                                            <div className="flex flex-1 flex-col gap-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-semibold text-foreground">{item.title}</span>
+                                                                    <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                </div>
+                                                                {item.subtitle && (
+                                                                    <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                )}
+                                                            </div>
+                                                            <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                        </div>
+                                                    </Command.Item>
+                                                ))}
+                                            </Command.Group>
+                                        )}
+                                    </>
+                                )}
+                            </Command.List>
+                            <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground">
+                                <div className="flex gap-4">
+                                    <span><strong>↑↓</strong> to navigate</span>
+                                    <span><strong>↵</strong> to select</span>
+                                </div>
+                                <div>
+                                    Chabad Maftaiach v2.0
+                                </div>
+                            </div>
+                        </Command>
+                    </motion.div>
                 </div>
-            </button>
-
-            {/* Command Palette Modal */}
-            <AnimatePresence>
-                {open && (
-                    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setOpen(false)}
-                            className="absolute inset-0 bg-background/60 backdrop-blur-md"
-                        />
-
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10"
-                        >
-                            <Command className="w-full" shouldFilter={false}>
-                                <div className="flex items-center border-b border-border px-4">
-                                    <Search className="mr-3 h-5 w-5 text-muted-foreground" />
-                                    <Command.Input
-                                        value={search}
-                                        onValueChange={setSearch}
-                                        placeholder="Search for anything..."
-                                        className="flex h-16 w-full rounded-md bg-transparent py-3 text-lg outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                                        autoFocus
-                                    />
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span className="rounded bg-muted px-1.5 py-0.5">ESC</span>
-                                        <span>to close</span>
-                                    </div>
-                                </div>
-                                <Command.List className="max-h-[60vh] overflow-y-auto p-2 scrollbar-hide">
-                                    {!search && results.length === 0 && (
-                                        <div className="py-12 text-center text-sm text-muted-foreground">
-                                            Start typing to search...
-                                        </div>
-                                    )}
-
-                                    {search && loading && (
-                                        <div className="flex items-center justify-center py-12 text-muted-foreground">
-                                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                                            Searching...
-                                        </div>
-                                    )}
-
-                                    {search && !loading && results.length === 0 && (
-                                        <Command.Empty className="py-12 text-center text-sm text-muted-foreground">
-                                            <div className="mb-2 flex justify-center">
-                                                <Search className="h-8 w-8 opacity-20" />
-                                            </div>
-                                            No results found for "{search}".
-                                        </Command.Empty>
-                                    )}
-
-                                    {results.length > 0 && (
-                                        <>
-                                            {/* Topics/Concepts Group */}
-                                            {results.filter(r => r.type === 'topic').length > 0 && (
-                                                <Command.Group heading={`Concepts (${results.filter(r => r.type === 'topic').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                                                    {results.filter(r => r.type === 'topic').map((item) => (
-                                                        <Command.Item
-                                                            key={item.id}
-                                                            value={item.title}
-                                                            onSelect={() => handleSelect(item.url)}
-                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                                                        >
-                                                            <div
-                                                                className="flex w-full items-center"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleSelect(item.url);
-                                                                }}
-                                                            >
-                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
-                                                                    <Brain className="h-5 w-5 text-purple-500" />
-                                                                </div>
-                                                                <div className="flex flex-1 flex-col gap-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="font-semibold text-foreground">{item.title}</span>
-                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
-                                                                    </div>
-                                                                    {item.subtitle && (
-                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
-                                                                    )}
-                                                                </div>
-                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
-                                                            </div>
-                                                        </Command.Item>
-                                                    ))}
-                                                </Command.Group>
-                                            )}
-
-                                            {/* Seforim/Sources Group */}
-                                            {results.filter(r => r.type === 'sefer').length > 0 && (
-                                                <Command.Group heading={`Sources (${results.filter(r => r.type === 'sefer').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                                                    {results.filter(r => r.type === 'sefer').map((item) => (
-                                                        <Command.Item
-                                                            key={item.id}
-                                                            value={item.title}
-                                                            onSelect={() => handleSelect(item.url)}
-                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                                                        >
-                                                            <div
-                                                                className="flex w-full items-center"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleSelect(item.url);
-                                                                }}
-                                                            >
-                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
-                                                                    <BookOpen className="h-5 w-5 text-blue-500" />
-                                                                </div>
-                                                                <div className="flex flex-1 flex-col gap-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="font-semibold text-foreground">{item.title}</span>
-                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
-                                                                    </div>
-                                                                    {item.subtitle && (
-                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
-                                                                    )}
-                                                                </div>
-                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
-                                                            </div>
-                                                        </Command.Item>
-                                                    ))}
-                                                </Command.Group>
-                                            )}
-
-                                            {/* Locations Group */}
-                                            {results.filter(r => r.type === 'location').length > 0 && (
-                                                <Command.Group heading={`Locations (${results.filter(r => r.type === 'location').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                                                    {results.filter(r => r.type === 'location').map((item) => (
-                                                        <Command.Item
-                                                            key={item.id}
-                                                            value={item.title}
-                                                            onSelect={() => handleSelect(item.url)}
-                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-3 text-sm outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                                                        >
-                                                            <div
-                                                                className="flex w-full items-center"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleSelect(item.url);
-                                                                }}
-                                                            >
-                                                                <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
-                                                                    <Hash className="h-5 w-5 text-amber-500" />
-                                                                </div>
-                                                                <div className="flex flex-1 flex-col gap-1">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="font-semibold text-foreground">{item.title}</span>
-                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
-                                                                    </div>
-                                                                    {item.subtitle && (
-                                                                        <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
-                                                                    )}
-                                                                </div>
-                                                                <ArrowRight className="ml-4 h-4 w-4 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
-                                                            </div>
-                                                        </Command.Item>
-                                                    ))}
-                                                </Command.Group>
-                                            )}
-                                        </>
-                                    )}
-                                </Command.List>
-                                <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2 text-[10px] text-muted-foreground">
-                                    <div className="flex gap-4">
-                                        <span><strong>↑↓</strong> to navigate</span>
-                                        <span><strong>↵</strong> to select</span>
-                                    </div>
-                                    <div>
-                                        Chabad Maftaiach v2.0
-                                    </div>
-                                </div>
-                            </Command>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </>
+            )}
+        </AnimatePresence>
     );
 }

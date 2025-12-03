@@ -25,10 +25,10 @@ export default function SourcesTab({ sources }: SourcesTabProps) {
     const [filterSefer, setFilterSefer] = useState<string>(searchParams.get('sefer') || 'all');
 
     // Get unique values for filters
-    const categories = Array.from(new Set(sources.map(s => s.source_id.sefer.category).filter(Boolean)));
+    const categories = Array.from(new Set(sources.map(s => s.source_id.sefer.category).filter((c): c is NonNullable<Sefer['category']> => !!c)));
     const seforim = Array.from(new Set(sources.map(s => s.source_id.sefer.title))).sort();
     const roles = Array.from(new Set(sources.map(s => s.citation_role).filter(Boolean)));
-    const importanceLevels = Array.from(new Set(sources.map(s => s.importance).filter(Boolean)));
+    const importanceLevels = Array.from(new Set(sources.map(s => s.importance).filter((i): i is NonNullable<TopicCitation['importance']> => !!i)));
 
     // Update URL when filters change
     useEffect(() => {
