@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { TopicCitation } from '@/lib/directus';
 import { getHebrewBooksUrl } from '@/lib/hebrewbooks';
 import { ExternalLink } from 'lucide-react';
@@ -36,6 +37,7 @@ const importanceStars: Record<string, string> = {
 };
 
 export default function SourceCard({ citation }: SourceCardProps) {
+    const [isExpanded, setIsExpanded] = React.useState(false);
     const location = citation.location || {};
     const sefer = location.sefer || {};
     const hebrewBooksId = sefer.hebrewbooks_id;
@@ -44,6 +46,15 @@ export default function SourceCard({ citation }: SourceCardProps) {
     const roleLabel = roleLabels[citation.citation_role] || citation.citation_role;
     const stars = citation.importance ? (importanceStars[citation.importance] || '') : '';
 
+    // Calculate word count
+    const englishText = citation.quoted_text_english || '';
+    const hebrewText = citation.quoted_text_hebrew || '';
+    const wordCount = (englishText.split(/\s+/).length + hebrewText.split(/\s+/).length);
+
+    // Determine display mode
+    const isShort = wordCount < 20 && !hebrewText; // Only inline English for now to avoid RTL issues
+    const isLong = wordCount > 100;
+
     return (
         <div className="rounded-2xl border bg-card p-6 transition-all hover:border-primary/20 hover:shadow-lg">
             {/* Header with Role and Importance */}
@@ -51,6 +62,13 @@ export default function SourceCard({ citation }: SourceCardProps) {
                 <div className="flex items-center gap-2">
                     <span className="text-xl">{roleIcon}</span>
                     <span className="text-sm font-medium text-muted-foreground">{roleLabel}</span>
+
+                    {/* Inline Short Quote */}
+                    {isShort && englishText && (
+                        <span className="ml-2 text-sm text-foreground">
+                            "{englishText}"
+                        </span>
+                    )}
                 </div>
                 {stars && (
                     <span className="text-amber-500" title={citation.importance}>
@@ -59,18 +77,27 @@ export default function SourceCard({ citation }: SourceCardProps) {
                 )}
             </div>
 
-            {/* Quoted Text */}
-            {(citation.quoted_text_hebrew || citation.quoted_text_english) && (
+            {/* Block Quote (Medium/Long) */}
+            {!isShort && (englishText || hebrewText) && (
                 <blockquote className="mb-4 border-l-4 border-primary pl-4">
-                    {citation.quoted_text_english && (
-                        <p className="text-sm leading-relaxed text-foreground">
-                            "{citation.quoted_text_english}"
-                        </p>
+                    {englishText && (
+                        <div className={`text-sm leading-relaxed text-foreground ${isLong && !isExpanded ? 'line-clamp-3' : ''}`}>
+                            "{englishText}"
+                        </div>
                     )}
-                    {citation.quoted_text_hebrew && (
-                        <p className="mt-2 font-hebrew text-sm leading-relaxed text-muted-foreground dir-rtl">
-                            "{citation.quoted_text_hebrew}"
-                        </p>
+                    {hebrewText && (
+                        <div className={`mt-2 font-hebrew text-sm leading-relaxed text-muted-foreground dir-rtl ${isLong && !isExpanded ? 'line-clamp-3' : ''}`}>
+                            "{hebrewText}"
+                        </div>
+                    )}
+
+                    {isLong && (
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="mt-2 text-xs font-medium text-primary hover:underline focus:outline-none"
+                        >
+                            {isExpanded ? 'Show Less' : 'Read More'}
+                        </button>
                     )}
                 </blockquote>
             )}

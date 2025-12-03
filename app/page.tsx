@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CommandMenu } from '@/components/CommandMenu';
+import { CommandMenuTrigger } from '@/components/CommandMenuTrigger';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe, Share2 } from 'lucide-react';
 
@@ -85,7 +85,7 @@ export default function Home() {
           <div className="relative group">
             {/* Glow effect behind search */}
             <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/30 via-blue-400/30 to-primary/30 opacity-40 blur-2xl transition duration-500 group-hover:opacity-60" />
-            <CommandMenu />
+            <CommandMenuTrigger />
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground sm:gap-8">

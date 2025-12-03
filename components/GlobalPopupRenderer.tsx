@@ -24,6 +24,8 @@ export function GlobalPopupRenderer() {
                     footnoteId={activePopup.data.footnoteId}
                     footnoteText={activePopup.data.footnoteText}
                     position={activePopup.position}
+                    availableCitations={activePopup.data.availableCitations}
+                    onViewSource={activePopup.data.onViewSource}
                 />
             );
         case PopupType.TOOLTIP:
@@ -40,3 +42,4 @@ export function GlobalPopupRenderer() {
             return null;
     }
 }
+
