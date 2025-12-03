@@ -19,14 +19,23 @@ interface LookupData {
 interface InstantLookupProps {
     term: string;
     position: { x: number; y: number };
+    onClose?: () => void;
 }
 
-export function InstantLookup({ term, position }: InstantLookupProps) {
+export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
     const [data, setData] = useState<LookupData | null>(null);
     const [loading, setLoading] = useState(true);
     const popupRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
-    const { closePopup } = usePopup();
+    const { closePopup: contextClosePopup } = usePopup();
+
+    const handleClose = () => {
+        if (onClose) {
+            onClose();
+        } else {
+            contextClosePopup();
+        }
+    };
 
     // Fetch definition
     useEffect(() => {
@@ -49,7 +58,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
     useEffect(() => {
         function handleKeyDown(e: KeyboardEvent) {
             if (e.key === 'Enter' && data?.slug) {
-                closePopup();
+                handleClose();
                 router.push(`/topics/${data.slug}`);
             }
         }
@@ -93,7 +102,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
-                onClick={closePopup}
+                onClick={handleClose}
             />
 
             {/* Popup */}
@@ -123,7 +132,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                             <p className="text-sm font-medium text-foreground">Term not found</p>
                             <p className="mt-1 text-xs text-muted-foreground">"{term}" isn't in our database yet</p>
                             <button
-                                onClick={closePopup}
+                                onClick={handleClose}
                                 className="mt-4 text-xs text-primary hover:underline"
                             >
                                 Close
@@ -133,7 +142,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                         <>
                             {/* Close button */}
                             <button
-                                onClick={closePopup}
+                                onClick={handleClose}
                                 className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                             >
                                 <X className="h-4 w-4" />
@@ -163,7 +172,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                                     <button
                                         onClick={() => {
                                             // TODO: Open side panel with full overview
-                                            closePopup();
+                                            handleClose();
                                             router.push(`/topics/${data.slug}`);
                                         }}
                                         className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
@@ -173,7 +182,7 @@ export function InstantLookup({ term, position }: InstantLookupProps) {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            closePopup();
+                                            handleClose();
                                             router.push(`/topics/${data.slug}`);
                                         }}
                                         className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
