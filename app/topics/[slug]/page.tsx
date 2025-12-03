@@ -128,7 +128,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
 
                     {/* Sidebar (Right 1/3) */}
                     <div className="space-y-8">
-                        <TopicSidebar topic={topic} />
+                        <TopicSidebar topic={topic} relationships={relationships} />
                     </div>
                 </div>
             </main>

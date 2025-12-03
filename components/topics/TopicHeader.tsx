@@ -36,8 +36,8 @@ export function TopicHeader({ topic }: TopicHeaderProps) {
 
             {/* Header Content */}
             <div className="mx-auto max-w-5xl px-6 sm:px-8 lg:px-12">
-                <div className="mb-10 mt-8">
-                    <div className="mb-4 flex items-center gap-3">
+                <div className="mb-6 mt-6">
+                    <div className="mb-3 flex items-center gap-3">
                         <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                             {topic.category || 'Concept'}
                         </span>
@@ -48,18 +48,18 @@ export function TopicHeader({ topic }: TopicHeaderProps) {
                         )}
                     </div>
 
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                         {topic.name}
                     </h1>
 
                     {topic.name_hebrew && (
-                        <p className="mt-2 font-hebrew text-2xl text-muted-foreground dir-rtl">
+                        <p className="mt-1 font-hebrew text-xl text-muted-foreground dir-rtl">
                             {topic.name_hebrew}
                         </p>
                     )}
 
                     {/* At a Glance */}
-                    <div className="mt-8">
+                    <div className="mt-6">
                         {topic.definition_short && (
                             <p className="text-lg leading-relaxed text-muted-foreground max-w-3xl">
                                 {topic.definition_short}
