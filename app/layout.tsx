@@ -8,6 +8,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { SearchProvider } from "@/lib/search-context";
 import { CommandMenu } from "@/components/CommandMenu";
 
+import { MobileNav } from "@/components/mobile/MobileNav";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -31,6 +33,7 @@ export default function RootLayout({
             {children}
             <GlobalPopupRenderer />
             <CommandMenu />
+            <MobileNav />
           </PopupProvider>
         </SearchProvider>
         <Analytics />

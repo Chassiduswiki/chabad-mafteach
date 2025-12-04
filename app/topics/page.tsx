@@ -7,6 +7,9 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 
+// Force dynamic rendering - always fetch fresh data
+export const dynamic = 'force-dynamic';
+
 async function getTopics(limit: number, offset: number): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
         // Get paginated topics
@@ -52,7 +55,7 @@ export default async function TopicsPage({
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8 sm:py-16">
+            <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 sm:px-8 sm:py-16">
 
                 <div className="mb-8">
                     <Breadcrumbs
