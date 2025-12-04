@@ -7,6 +7,9 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { SearchProvider } from "@/lib/search-context";
 import { CommandMenu } from "@/components/CommandMenu";
+import { ThemeProvider } from "@/components/ThemeProvider";
+
+import { MobileNav } from "@/components/mobile/MobileNav";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,16 +29,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
-        <SearchProvider>
-          <PopupProvider>
-            {children}
-            <GlobalPopupRenderer />
-            <CommandMenu />
-          </PopupProvider>
-        </SearchProvider>
+        <ThemeProvider>
+          <SearchProvider>
+            <PopupProvider>
+              {children}
+              <GlobalPopupRenderer />
+              <CommandMenu />
+              <MobileNav />
+            </PopupProvider>
+          </SearchProvider>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>
     </html>
   );
 }
+
