@@ -7,6 +7,8 @@ import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react
 import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
 import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
 import { WordRotate } from '@/components/ui/WordRotate';
+import { ThemeToggleCompact } from '@/components/ThemeToggle';
+import { ContentDiscovery } from '@/components/ContentDiscovery';
 import { cn } from '@/lib/utils';
 
 export default function Home() {
@@ -22,20 +24,45 @@ export default function Home() {
         <FloatingHebrewLetters />
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - Enhanced prominence per Task 2.5 */}
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6 sm:px-8">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
             <BookOpen className="h-5 w-5" />
           </div>
           <span className="text-base font-bold tracking-tight">Chabad Maftaiach</span>
-        </div>
-        <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground sm:flex">
-          <Link href="/topics" className="hover:text-primary transition-colors cursor-pointer">Topics</Link>
-          <Link href="/seforim" className="hover:text-primary transition-colors cursor-pointer">Sources</Link>
-          <Link href="/about" className="hover:text-primary transition-colors cursor-pointer">About</Link>
-          <div className="h-4 w-px bg-border" />
-          <button onClick={() => alert('Sign in flow coming soon!')} className="text-foreground hover:text-primary transition-colors cursor-pointer">Sign in</button>
+        </Link>
+
+        {/* Primary Navigation - Enhanced visibility */}
+        <div className="hidden items-center gap-2 sm:flex">
+          {/* Main nav links - larger, bolder, higher contrast */}
+          <div className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-1">
+            <Link
+              href="/topics"
+              className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              Topics
+            </Link>
+            <Link
+              href="/seforim"
+              className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              Sources
+            </Link>
+            <Link
+              href="/explore"
+              className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              Explore
+            </Link>
+          </div>
+
+          {/* Utility links - separated from primary nav */}
+          <div className="ml-4 flex items-center gap-2">
+            <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+            <div className="h-4 w-px bg-border" />
+            <ThemeToggleCompact />
+          </div>
         </div>
       </nav>
 
@@ -161,6 +188,22 @@ export default function Home() {
             </div>
           ))}
         </motion.div>
+
+        {/* Content Discovery Section - Task 2.5 */}
+        <div className="mt-16 w-full">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="mb-8 text-center text-2xl font-bold text-foreground"
+          >
+            Discover Content
+          </motion.h2>
+          <ContentDiscovery />
+        </div>
+
+        {/* Spacer */}
+        <div className="pb-32" />
 
       </main>
     </div>
