@@ -57,15 +57,15 @@ export function ActionButtons({ topicSlug, topicName }: ActionButtonsProps) {
     };
 
     return (
-        <div className="flex items-center gap-2">
-            {/* Share Button */}
+        <div className="flex items-center gap-1">
+            {/* Share Button - 44px minimum touch target */}
             <button
                 onClick={handleShare}
-                className="group relative rounded-full p-2 text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
+                className="group relative flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
                 title="Share topic"
                 aria-label="Share topic"
             >
-                <Share2 className="h-4 w-4" />
+                <Share2 className="h-5 w-5" />
 
                 {/* Copied toast */}
                 {showCopied && (
@@ -76,18 +76,18 @@ export function ActionButtons({ topicSlug, topicName }: ActionButtonsProps) {
                 )}
             </button>
 
-            {/* Bookmark Button */}
+            {/* Bookmark Button - 44px minimum touch target */}
             <button
                 onClick={handleBookmark}
-                className={`group relative rounded-full p-2 transition-all ${isBookmarked
-                        ? 'bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                className={`group relative flex h-11 w-11 items-center justify-center rounded-full transition-all ${isBookmarked
+                    ? 'bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                 title={isBookmarked ? 'Remove bookmark' : 'Bookmark topic'}
                 aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark topic'}
             >
                 <Bookmark
-                    className={`h-4 w-4 transition-all ${isBookmarked ? 'fill-current' : ''}`}
+                    className={`h-5 w-5 transition-all ${isBookmarked ? 'fill-current' : ''}`}
                 />
             </button>
         </div>
