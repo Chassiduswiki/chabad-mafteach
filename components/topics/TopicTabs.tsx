@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Topic } from '@/lib/directus';
 import OverviewTab from './OverviewTab';
 import BoundariesTab from './BoundariesTab';
@@ -46,6 +46,33 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
     const [activeTab, setActiveTab] = useState<TabId>('overview');
     const [sources, setSources] = useState<TopicSource[]>([]);
     const [sourcesLoading, setSourcesLoading] = useState(false);
+    const [showLeftShadow, setShowLeftShadow] = useState(false);
+    const [showRightShadow, setShowRightShadow] = useState(true);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Handle scroll shadows
+    const updateScrollShadows = () => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const { scrollLeft, scrollWidth, clientWidth } = container;
+        setShowLeftShadow(scrollLeft > 0);
+        setShowRightShadow(scrollLeft < scrollWidth - clientWidth - 1);
+    };
+
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        updateScrollShadows();
+        container.addEventListener('scroll', updateScrollShadows, { passive: true });
+        window.addEventListener('resize', updateScrollShadows);
+
+        return () => {
+            container.removeEventListener('scroll', updateScrollShadows);
+            window.removeEventListener('resize', updateScrollShadows);
+        };
+    }, []);
 
     // Fetch sources when Sources tab is clicked
     useEffect(() => {
@@ -66,27 +93,49 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
 
     return (
         <div>
-            {/* Tab Navigation */}
-            <div className="mb-8 border-b">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs" role="tablist">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            role="tab"
-                            aria-selected={activeTab === tab.id}
-                            aria-controls={`${tab.id}-panel`}
-                            className={`
-                                whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors
-                                ${activeTab === tab.id
-                                    ? 'border-primary text-primary'
-                                    : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'}
-                            `}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </nav>
+            {/* Tab Navigation - Horizontally scrollable on mobile */}
+            <div className="relative mb-8 border-b">
+                {/* Left scroll shadow */}
+                <div
+                    className={`pointer-events-none absolute left-0 top-0 z-10 h-full w-8 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 ${showLeftShadow ? 'opacity-100' : 'opacity-0'}`}
+                    aria-hidden="true"
+                />
+
+                {/* Right scroll shadow */}
+                <div
+                    className={`pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l from-background to-transparent transition-opacity duration-200 ${showRightShadow ? 'opacity-100' : 'opacity-0'}`}
+                    aria-hidden="true"
+                />
+
+                <div
+                    ref={scrollContainerRef}
+                    className="scrollbar-hide -mb-px overflow-x-auto scroll-smooth"
+                >
+                    <nav
+                        className="flex min-w-max gap-1 sm:gap-2"
+                        aria-label="Tabs"
+                        role="tablist"
+                    >
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                role="tab"
+                                aria-selected={activeTab === tab.id}
+                                aria-controls={`${tab.id}-panel`}
+                                className={`
+                                    whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                                    min-h-[44px] min-w-[44px]
+                                    ${activeTab === tab.id
+                                        ? 'border-primary text-primary'
+                                        : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'}
+                                `}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
             </div>
 
             {/* Tab Content */}
