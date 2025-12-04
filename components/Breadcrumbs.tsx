@@ -15,10 +15,14 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
     return (
-        <nav aria-label="Breadcrumb" className={`flex items-center text-sm text-muted-foreground ${className}`}>
+        <nav
+            aria-label="Breadcrumb"
+            className={`flex flex-wrap items-center text-sm text-muted-foreground gap-1 ${className}`}
+        >
+            {/* Home link with 44px touch target */}
             <Link
                 href="/"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md hover:bg-muted/50 hover:text-foreground transition-colors -ml-2"
                 title="Home"
             >
                 <Home className="h-4 w-4" />
@@ -26,16 +30,19 @@ export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
 
             {items.map((item, index) => (
                 <div key={index} className="flex items-center">
-                    <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground/50" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                     {item.href ? (
                         <Link
                             href={item.href}
-                            className="hover:text-foreground transition-colors font-medium"
+                            className="min-h-[44px] flex items-center px-2 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors font-medium truncate max-w-[150px] sm:max-w-none"
                         >
                             {item.label}
                         </Link>
                     ) : (
-                        <span className="text-foreground font-semibold" aria-current="page">
+                        <span
+                            className="min-h-[44px] flex items-center px-2 text-foreground font-semibold truncate max-w-[150px] sm:max-w-none"
+                            aria-current="page"
+                        >
                             {item.label}
                         </span>
                     )}
@@ -44,3 +51,4 @@ export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
         </nav>
     );
 }
+
