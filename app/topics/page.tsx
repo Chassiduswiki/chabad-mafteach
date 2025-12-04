@@ -7,6 +7,7 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 import { ContextualSearch } from '@/components/ContextualSearch';
+import { IndexSidebar } from '@/components/IndexSidebar';
 
 // Force dynamic rendering - always fetch fresh data
 export const dynamic = 'force-dynamic';
@@ -98,14 +99,20 @@ export default async function TopicsPage({
                     </div>
                 </div>
 
-                <Suspense fallback={<TopicsListSkeleton />}>
-                    <TopicsList
-                        topics={topics}
-                        currentPage={page}
-                        totalPages={totalPages}
-                        totalCount={totalCount}
-                    />
-                </Suspense>
+                <div className="flex gap-8">
+                    <IndexSidebar />
+
+                    <div className="flex-1">
+                        <Suspense fallback={<TopicsListSkeleton />}>
+                            <TopicsList
+                                topics={topics}
+                                currentPage={page}
+                                totalPages={totalPages}
+                                totalCount={totalCount}
+                            />
+                        </Suspense>
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -32,14 +32,29 @@ const categoryColors = {
 
 export function TopicsList({ topics, currentPage, totalPages, totalCount }: TopicsListProps) {
     const [view, setView] = useState<'grid' | 'list'>('grid');
+    const [isMobile, setIsMobile] = useState(false);
 
-    // Load preference from localStorage on mount
+    // Detect mobile screen size
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Load preference from localStorage on mount, default to list on mobile
     useEffect(() => {
         const savedView = localStorage.getItem('topicsView');
         if (savedView === 'grid' || savedView === 'list') {
             setView(savedView);
+        } else if (isMobile) {
+            // Default to list view on mobile if no saved preference
+            setView('list');
         }
-    }, []);
+    }, [isMobile]);
 
     const handleViewChange = (newView: 'grid' | 'list') => {
         setView(newView);
@@ -79,7 +94,7 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
 
                             <div className={
                                 view === 'grid'
-                                    ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                                    ? "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
                                     : "space-y-3"
                             }>
                                 {items.map((topic) => (
@@ -88,7 +103,7 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                                         href={`/topics/${topic.slug}`}
                                         className={
                                             view === 'grid'
-                                                ? `group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`
+                                                ? `group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`
                                                 : `group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/50`
                                         }
                                     >
