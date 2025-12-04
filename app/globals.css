@@ -293,3 +293,13 @@ html {
     background-color: hsl(0 84% 15%);
   }
 }
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

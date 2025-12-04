@@ -120,7 +120,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 pb-20"
+          className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 pb-32"
         >
           {[
             {
