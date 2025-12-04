@@ -6,9 +6,20 @@ import { TopicsList } from '@/components/topics/TopicsList';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
+import { ContextualSearch } from '@/components/ContextualSearch';
+import { IndexSidebar } from '@/components/IndexSidebar';
 
-async function getTopics(limit: number, offset: number): Promise<{ topics: Topic[]; totalCount: number }> {
+// Force dynamic rendering - always fetch fresh data
+export const dynamic = 'force-dynamic';
+
+async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
+        // Build filter - add category if provided
+        const filter: any = { is_published: { _eq: true } };
+        if (category) {
+            filter.category = { _eq: category };
+        }
+
         // Get paginated topics
         // @ts-ignore
         const topics = await directus.request(readItems('topics', {
@@ -16,15 +27,13 @@ async function getTopics(limit: number, offset: number): Promise<{ topics: Topic
             fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
             limit,
             offset,
-            filter: { is_published: { _eq: true } }
+            filter
         }));
 
-        // Get total count - using meta from original query
-        // Note: This is a workaround - ideally we'd use separate aggregate query
-        // but TypeScript doesn't recognize the aggregate response type
+        // Get total count with same filter
         const allPublishedTopics = await directus.request(readItems('topics', {
             fields: ['id'],
-            filter: { is_published: { _eq: true } }
+            filter
         }));
 
         const totalCount = Array.isArray(allPublishedTopics) ? allPublishedTopics.length : 0;
@@ -39,20 +48,21 @@ async function getTopics(limit: number, offset: number): Promise<{ topics: Topic
 export default async function TopicsPage({
     searchParams
 }: {
-    searchParams: { page?: string }
+    searchParams: { page?: string; category?: string }
 }) {
     // Pagination settings
     const page = Number(searchParams.page) || 1;
+    const category = searchParams.category;
     const limit = 50;
     const offset = (page - 1) * limit;
 
-    // Get topics with pagination
-    const { topics, totalCount } = await getTopics(limit, offset);
+    // Get topics with pagination and optional category filter
+    const { topics, totalCount } = await getTopics(limit, offset, category);
     const totalPages = Math.ceil(totalCount / limit);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8 sm:py-16">
+            <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 sm:px-8 sm:py-16">
 
                 <div className="mb-8">
                     <Breadcrumbs
@@ -71,18 +81,38 @@ export default async function TopicsPage({
                         Topics & Concepts
                     </h1>
                     <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Explore Chassidic concepts and find all the sources that discuss them
+                        {category ? (
+                            <span>
+                                Showing <span className="font-semibold text-foreground capitalize">{category}</span> topics
+                            </span>
+                        ) : (
+                            'Explore Chassidic concepts and find all the sources that discuss them'
+                        )}
                     </p>
+
+                    {/* Contextual Search - Task 2.6 */}
+                    <div className="mt-8 flex justify-center">
+                        <ContextualSearch
+                            placeholder="Search topics..."
+                            searchType="topics"
+                        />
+                    </div>
                 </div>
 
-                <Suspense fallback={<TopicsListSkeleton />}>
-                    <TopicsList
-                        topics={topics}
-                        currentPage={page}
-                        totalPages={totalPages}
-                        totalCount={totalCount}
-                    />
-                </Suspense>
+                <div className="flex gap-8">
+                    <IndexSidebar />
+
+                    <div className="flex-1">
+                        <Suspense fallback={<TopicsListSkeleton />}>
+                            <TopicsList
+                                topics={topics}
+                                currentPage={page}
+                                totalPages={totalPages}
+                                totalCount={totalCount}
+                            />
+                        </Suspense>
+                    </div>
+                </div>
             </div>
         </div>
     );
