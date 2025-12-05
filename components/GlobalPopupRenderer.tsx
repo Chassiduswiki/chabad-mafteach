@@ -21,7 +21,6 @@ export function GlobalPopupRenderer() {
         case PopupType.FOOTNOTE:
             return (
                 <FootnotePopup
-                    footnoteId={activePopup.data.footnoteId}
                     footnoteText={activePopup.data.footnoteText}
                     position={activePopup.position}
                     availableCitations={activePopup.data.availableCitations}

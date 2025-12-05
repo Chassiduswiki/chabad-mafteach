@@ -4,38 +4,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BookOpen, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { TopicCardSkeleton } from '@/components/skeletons/TopicCardSkeleton';
 
-interface FeaturedTopic {
-    id: number;
-    name: string;
-    name_hebrew?: string;
-    slug: string;
-    category?: string;
-    definition_short?: string;
+import { Topic, TopicCitation, Location, Sefer } from '@/lib/types';
+
+interface FeaturedTopic extends Topic { }
+
+interface RecentSource extends Omit<Partial<TopicCitation>, 'location' | 'topic'> {
+    location?: Location & { sefer?: Sefer };
+    topic?: Topic;
 }
 
-interface RecentSource {
-    id: number;
-    excerpt?: string;
-    location?: {
-        display_name: string;
-        sefer?: {
-            title: string;
-        };
-    };
-    topic?: {
-        name: string;
-        slug: string;
-    };
-}
-
-interface RecentTopic {
-    id: number;
-    name: string;
-    name_hebrew?: string;
-    slug: string;
-    category?: string;
-}
+interface RecentTopic extends Topic { }
 
 interface FeaturedData {
     featuredTopic: FeaturedTopic | null;
@@ -62,7 +42,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
     const itemLimit = isCompact ? 2 : 3;
 
     useEffect(() => {
-        fetch('/api/featured')
+        fetch('/api/topics?mode=discovery')
             .then(res => res.json())
             .then(setData)
             .catch(console.error)
@@ -73,7 +53,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
         return (
             <div className={`grid ${gridCols} gap-6`}>
                 {(isCompact ? [1, 2] : [1, 2, 3]).map(i => (
-                    <div key={i} className="animate-pulse rounded-2xl border border-border bg-muted/20 p-6 h-48" />
+                    <TopicCardSkeleton key={i} />
                 ))}
             </div>
         );

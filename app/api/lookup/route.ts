@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { handleApiError } from '@/lib/utils/api-errors';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -39,7 +40,6 @@ export async function GET(request: NextRequest) {
             slug: topic.slug
         });
     } catch (error) {
-        console.error('Lookup error:', error);
-        return NextResponse.json({ error: 'Lookup failed' }, { status: 500 });
+        return handleApiError(error);
     }
 }
