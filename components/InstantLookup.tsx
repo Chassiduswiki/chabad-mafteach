@@ -5,6 +5,8 @@ import { BookOpen, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { usePopup } from '@/lib/popup-context';
 import { BasePopup } from '@/components/ui/BasePopup';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { UI } from '@/lib/constants';
 
 interface LookupData {
     found: boolean;
@@ -73,14 +75,17 @@ export function InstantLookup({ term, position, onClose }: InstantLookupProps) {
         <BasePopup
             onClose={handleClose}
             triggerPosition={position}
-            positionOptions={{ maxWidth: 400, offset: { y: 20 } }}
+            positionOptions={{
+                maxWidth: UI.POPUP.MAX_WIDTH_DESKTOP,
+                offset: { x: 0, y: 20 }
+            }}
             className="w-full max-w-md"
             contentClassName="p-0"
         >
             <div className="relative overflow-hidden rounded-lg">
                 {loading ? (
                     <div className="p-8 text-center">
-                        <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        <LoadingSpinner size="md" className="mx-auto mb-3" />
                         <p className="text-sm text-muted-foreground">Looking up...</p>
                     </div>
                 ) : !data?.found ? (

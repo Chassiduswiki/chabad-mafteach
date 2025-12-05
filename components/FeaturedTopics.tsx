@@ -4,14 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BookOpen, ArrowRight, Sparkles } from 'lucide-react';
+import { TopicCardSkeleton } from '@/components/skeletons/TopicCardSkeleton';
+import { API } from '@/lib/constants';
 
-interface TopicWithStats {
-    id: number;
-    name: string;
-    name_hebrew?: string;
-    slug: string;
-    category?: string;
-    definition_short?: string;
+import { Topic } from '@/lib/types';
+
+interface TopicWithStats extends Topic {
     citation_count?: number;
 }
 
@@ -24,19 +22,27 @@ export function FeaturedTopics() {
     const [topics, setTopics] = useState<TopicWithStats[]>([]);
     const [loading, setLoading] = useState(true);
 
+
+
+    // ...
+
     useEffect(() => {
-        fetch('/api/topics?mode=featured&limit=3')
+        fetch(`/api/topics?mode=featured&limit=${API.LIMITS.FEATURED_TOPICS}`)
             .then(res => res.json())
             .then(data => setTopics(data.topics || []))
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);
 
+
+
+    // ...
+
     if (loading) {
         return (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="animate-pulse rounded-2xl border border-border bg-muted/20 p-8 h-64" />
+                    <TopicCardSkeleton key={i} />
                 ))}
             </div>
         );

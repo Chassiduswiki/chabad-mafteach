@@ -7,6 +7,7 @@ import { fuzzyMatchCitation, hasHebrewBooksLink, CitationMatch } from '@/lib/cit
 import { getHebrewBooksUrl } from '@/lib/hebrewbooks';
 import { TopicCitation, Location, Sefer } from '@/lib/types';
 import { BasePopup } from '@/components/ui/BasePopup';
+import { UI } from '@/lib/constants';
 
 interface FootnotePopupProps {
     footnoteText: string;
@@ -67,7 +68,10 @@ export function FootnotePopup({
         <BasePopup
             onClose={closePopup}
             triggerPosition={position}
-            positionOptions={{ maxWidth: 320, offset: { y: 10 } }}
+            positionOptions={{
+                maxWidth: UI.POPUP.MAX_WIDTH_DESKTOP,
+                offset: { x: 0, y: UI.POPUP.OFFSET_Y }
+            }}
             className="w-80"
             contentClassName="space-y-3 p-4"
             header={

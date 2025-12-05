@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { handleApiError } from '@/lib/utils/api-errors';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -57,12 +58,6 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ seforim, locations, topics });
     } catch (error) {
-        console.error('Search error details:', error);
-        // @ts-ignore
-        if (error.errors) {
-            // @ts-ignore
-            console.error('Directus errors:', JSON.stringify(error.errors, null, 2));
-        }
-        return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+        return handleApiError(error);
     }
 }

@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import { Command } from 'cmdk';
-import { Search, BookOpen, Hash, ArrowRight, Loader2, Brain } from 'lucide-react';
+import { Search, BookOpen, Hash, ArrowRight, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Fuse from 'fuse.js';
 import { useSearch } from '@/lib/search-context';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 type SearchResult = {
     id: string;
@@ -157,7 +158,7 @@ export function CommandMenu() {
 
                                 {search && loading && (
                                     <div className="flex items-center justify-center py-12 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                        <LoadingSpinner size="sm" className="mr-2" />
                                         Searching...
                                     </div>
                                 )}
