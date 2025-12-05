@@ -1,17 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 import { TopicCardSkeleton } from '@/components/skeletons/TopicCardSkeleton';
-import { API } from '@/lib/constants';
-
-import { Topic } from '@/lib/types';
-
-interface TopicWithStats extends Topic {
-    citation_count?: number;
-}
+import { useFeaturedTopics } from '@/lib/hooks/useTopics';
 
 /**
  * FeaturedTopics - Replaces generic marketing cards with real topics
@@ -19,26 +12,9 @@ interface TopicWithStats extends Topic {
  * Shows 3 random published topics with real data
  */
 export function FeaturedTopics() {
-    const [topics, setTopics] = useState<TopicWithStats[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: topics, isLoading, error } = useFeaturedTopics();
 
-
-
-    // ...
-
-    useEffect(() => {
-        fetch(`/api/topics?mode=featured&limit=${API.LIMITS.FEATURED_TOPICS}`)
-            .then(res => res.json())
-            .then(data => setTopics(data.topics || []))
-            .catch(console.error)
-            .finally(() => setLoading(false));
-    }, []);
-
-
-
-    // ...
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6">
                 {[1, 2, 3].map(i => (
@@ -46,6 +22,11 @@ export function FeaturedTopics() {
                 ))}
             </div>
         );
+    }
+
+    if (error) {
+        console.error('Error loading featured topics:', error);
+        return null;
     }
 
     if (!topics || topics.length === 0) return null;
@@ -111,3 +92,4 @@ export function FeaturedTopics() {
         </motion.div>
     );
 }
+

@@ -1,9 +1,9 @@
 'use client';
 
 import { usePopup, PopupType } from '@/lib/popup-context';
-import { InstantLookup } from '@/components/InstantLookup';
-import { FootnotePopup } from '@/components/FootnotePopup';
-import { TooltipPopup } from '@/components/TooltipPopup';
+import { InstantLookup } from '@/components/features/search/InstantLookup';
+import { FootnotePopup } from './FootnotePopup';
+import { TooltipPopup } from './TooltipPopup';
 
 export function GlobalPopupRenderer() {
     const { activePopup } = usePopup();

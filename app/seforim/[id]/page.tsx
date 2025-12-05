@@ -2,7 +2,7 @@ import directus from '@/lib/directus';
 import { readItem, readItems } from '@directus/sdk';
 import { notFound } from 'next/navigation';
 import { BookOpen, MapPin, Quote } from 'lucide-react';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 export const revalidate = 60;
 
