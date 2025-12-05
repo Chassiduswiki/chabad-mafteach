@@ -146,7 +146,16 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Feature Grid - Modern Bento Style */}
+        {/* Content Discovery Section - Moved up for above-fold visibility */}
+        <div className="mt-16 w-full">
+          <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
+            Discover Content
+          </h2>
+          <ContentDiscovery />
+        </div>
+
+        {/* Feature Grid - Temporarily hidden to prioritize content discovery */}
+        {/*
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -192,14 +201,7 @@ export default function Home() {
             </div>
           ))}
         </motion.div>
-
-        {/* Content Discovery Section - Task 2.5 */}
-        <div className="mt-12 w-full">
-          <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
-            Discover Content
-          </h2>
-          <ContentDiscovery />
-        </div>
+        */}
 
         {/* Spacer */}
         <div className="pb-32" />
