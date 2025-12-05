@@ -2,7 +2,7 @@ import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import Link from 'next/link';
 import { BookOpen, ArrowRight } from 'lucide-react';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 export const revalidate = 60; // Revalidate every minute
 

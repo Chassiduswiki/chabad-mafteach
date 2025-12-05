@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { InstantLookup } from '@/components/InstantLookup';
+import { InstantLookup } from '@/components/features/search/InstantLookup';
 import { Sparkles } from 'lucide-react';
 
 export default function LookupDemoPage() {

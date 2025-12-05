@@ -7,7 +7,7 @@ import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { Topic } from '@/lib/directus';
 import { Lightbulb, BookOpen, ChevronDown, ChevronUp, ArrowUpRight } from 'lucide-react';
-import { InstantLookup } from '@/components/InstantLookup';
+import { InstantLookup } from '@/components/features/search/InstantLookup';
 import Link from 'next/link';
 import { usePopup, PopupType } from '@/lib/popup-context';
 
