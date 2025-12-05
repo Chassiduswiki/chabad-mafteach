@@ -5,8 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import { InstantLookup } from './InstantLookup';
-import { FootnotePopup } from './FootnotePopup';
+import { InstantLookup } from '@/components/features/search/InstantLookup';
+import { FootnotePopup } from '@/components/features/popups/FootnotePopup';
 import { usePopup, PopupType } from '@/lib/popup-context';
 import { TopicCitation, Location, Sefer } from '@/lib/types';
 

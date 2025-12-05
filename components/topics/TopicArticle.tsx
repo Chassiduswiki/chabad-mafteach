@@ -1,5 +1,5 @@
 import { Topic } from '@/lib/directus';
-import { MarkdownContent } from '@/components/MarkdownContent';
+import { MarkdownContent } from '@/components/shared/MarkdownContent';
 
 interface TopicArticleProps {
     topic: Topic;

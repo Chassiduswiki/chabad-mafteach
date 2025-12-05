@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Hash, Brain, Hand, Sparkles, BookText } from 'lucide-react';
 import { Topic } from '@/lib/directus';
-import { ViewToggle } from '@/components/ViewToggle';
+import { ViewToggle } from '@/components/layout/ViewToggle';
 import Pagination from './Pagination';
 
 interface TopicsListProps {

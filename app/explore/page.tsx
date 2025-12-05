@@ -3,8 +3,8 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
 import { ExploreCategories } from '@/components/explore/ExploreCategories';
-import { ContentDiscovery } from '@/components/ContentDiscovery';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 export default function ExplorePage() {
     return (

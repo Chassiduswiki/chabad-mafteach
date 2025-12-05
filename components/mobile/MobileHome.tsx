@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Hash, Compass, Clock, ArrowRight, BookOpen, Search } from 'lucide-react';
-import { ContentDiscovery } from '@/components/ContentDiscovery';
+import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
 import { useSearch } from '@/lib/search-context';
 
 interface LastTopic {

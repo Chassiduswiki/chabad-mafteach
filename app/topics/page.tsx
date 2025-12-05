@@ -3,11 +3,11 @@ import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import { Topic } from '@/lib/directus';
 import { TopicsList } from '@/components/topics/TopicsList';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
-import { ContextualSearch } from '@/components/ContextualSearch';
-import { IndexSidebar } from '@/components/IndexSidebar';
+import { ContextualSearch } from '@/components/features/search/ContextualSearch';
+import { IndexSidebar } from '@/components/layout/IndexSidebar';
 
 // Force dynamic rendering - always fetch fresh data
 export const dynamic = 'force-dynamic';
