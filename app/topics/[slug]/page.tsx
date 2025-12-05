@@ -8,6 +8,7 @@ import { linkTerms } from '@/lib/term-linker';
 import { getAllTopics } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ActionButtons } from '@/components/ActionButtons';
+import { TopicTracker } from '@/components/TopicTracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,6 +108,9 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
 
     return (
         <div className="min-h-screen bg-background pb-20">
+            {/* Track last visited topic for Continue Learning */}
+            <TopicTracker slug={topic.slug} name={topic.name} />
+
             <TopicHeader topic={topic} />
 
             <main className="mx-auto max-w-5xl px-6 py-8 sm:px-8 lg:px-12">

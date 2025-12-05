@@ -43,14 +43,23 @@ interface FeaturedData {
     recentTopics: RecentTopic[];
 }
 
+interface ContentDiscoveryProps {
+    variant?: 'full' | 'compact'; // default: 'full'
+}
+
 /**
  * ContentDiscovery - Homepage content preview sections
  * Displays: Featured Topic, Recent Sources, Recently Updated
  * Per Task 2.5: Add content previews to balance search with discovery
+ * Task 2.11: Added compact variant for mobile homepage
  */
-export function ContentDiscovery() {
+export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
     const [data, setData] = useState<FeaturedData | null>(null);
     const [loading, setLoading] = useState(true);
+
+    const isCompact = variant === 'compact';
+    const gridCols = isCompact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3';
+    const itemLimit = isCompact ? 2 : 3;
 
     useEffect(() => {
         fetch('/api/featured')
@@ -62,8 +71,8 @@ export function ContentDiscovery() {
 
     if (loading) {
         return (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {[1, 2, 3].map(i => (
+            <div className={`grid ${gridCols} gap-6`}>
+                {(isCompact ? [1, 2] : [1, 2, 3]).map(i => (
                     <div key={i} className="animate-pulse rounded-2xl border border-border bg-muted/20 p-6 h-48" />
                 ))}
             </div>
@@ -76,8 +85,8 @@ export function ContentDiscovery() {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-3"
+            transition={{ duration: 0.6, delay: isCompact ? 0 : 0.6 }}
+            className={`grid ${gridCols} gap-6`}
         >
             {/* Featured Topic */}
             {data.featuredTopic && (
@@ -113,7 +122,7 @@ export function ContentDiscovery() {
                     New Sources
                 </div>
                 <ul className="space-y-3">
-                    {(data.recentSources || []).slice(0, 3).map((source) => (
+                    {(data.recentSources || []).slice(0, itemLimit).map((source) => (
                         <li key={source.id}>
                             <Link
                                 href={`/topics/${source.topic?.slug || ''}`}
@@ -147,7 +156,7 @@ export function ContentDiscovery() {
                     Recently Updated
                 </div>
                 <ul className="space-y-3">
-                    {(data.recentTopics || []).slice(0, 4).map((topic) => (
+                    {(data.recentTopics || []).slice(0, isCompact ? 3 : 4).map((topic) => (
                         <li key={topic.id}>
                             <Link
                                 href={`/topics/${topic.slug}`}
