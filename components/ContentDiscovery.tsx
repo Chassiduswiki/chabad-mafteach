@@ -62,7 +62,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
     const itemLimit = isCompact ? 2 : 3;
 
     useEffect(() => {
-        fetch('/api/featured')
+        fetch('/api/topics?mode=discovery')
             .then(res => res.json())
             .then(setData)
             .catch(console.error)
