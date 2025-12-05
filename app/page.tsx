@@ -4,12 +4,11 @@ import { motion } from 'framer-motion';
 import { CommandMenuTrigger } from '@/components/CommandMenuTrigger';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
-import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
 import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
 import { WordRotate } from '@/components/ui/WordRotate';
 import { ThemeToggleCompact } from '@/components/ThemeToggle';
 import { ContentDiscovery } from '@/components/ContentDiscovery';
-import { cn } from '@/lib/utils';
+import { MobileHome } from '@/components/mobile/MobileHome';
 
 export default function Home() {
   return (
@@ -66,8 +65,13 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Hero Content */}
-      <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-center justify-center px-6 pt-24 sm:px-8 sm:pt-32 lg:pt-40">
+      {/* Mobile Homepage - App-like Dashboard (Task 2.11) */}
+      <div className="lg:hidden">
+        <MobileHome />
+      </div>
+
+      {/* Desktop Homepage - Google-like Hero (Original) */}
+      <main className="hidden lg:flex relative z-10 mx-auto max-w-6xl flex-col items-center px-6 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
 
         {/* Badge */}
         <motion.div
@@ -89,7 +93,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="max-w-4xl text-5xl font-bold tracking-tight text-foreground sm:text-7xl lg:text-[5.5rem] leading-[1.1]"
+            className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.1]"
           >
             Master Index of
           </motion.h1>
@@ -101,7 +105,7 @@ export default function Home() {
           >
             <WordRotate
               words={["Chassidic Wisdom", "Divine Truth", "Inner Light", "Torah Knowledge"]}
-              className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent text-5xl font-bold tracking-tight sm:text-7xl lg:text-[5.5rem] leading-[1.1]"
+              className="bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl leading-[1.1]"
             />
           </motion.div>
         </div>
@@ -110,18 +114,18 @@ export default function Home() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-          className="mt-6 max-w-2xl text-center text-lg text-muted-foreground sm:text-xl leading-relaxed"
+          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          className="mt-4 max-w-2xl text-center text-base text-muted-foreground sm:text-lg leading-relaxed"
         >
           Explore concepts, discover sources. A comprehensive index connecting Chassidic topics to their sources across all Chabad literature.
         </motion.p>
 
         {/* Command Palette Trigger Area */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-          className="mt-12 w-full max-w-2xl"
+          transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+          className="mt-8 w-full max-w-2xl"
         >
           <div className="relative group">
             {/* Glow effect behind search */}
@@ -129,7 +133,7 @@ export default function Home() {
             <CommandMenuTrigger />
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground sm:gap-8">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground sm:gap-8">
             <span className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" /> AI-Powered
             </span>
@@ -142,12 +146,21 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Feature Grid - Modern Bento Style */}
+        {/* Content Discovery Section - Moved up for above-fold visibility */}
+        <div className="mt-16 w-full">
+          <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
+            Discover Content
+          </h2>
+          <ContentDiscovery />
+        </div>
+
+        {/* Feature Grid - Temporarily hidden to prioritize content discovery */}
+        {/*
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 pb-32"
+          transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
+          className="mt-16 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6"
         >
           {[
             {
@@ -188,19 +201,7 @@ export default function Home() {
             </div>
           ))}
         </motion.div>
-
-        {/* Content Discovery Section - Task 2.5 */}
-        <div className="mt-16 w-full">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.55 }}
-            className="mb-8 text-center text-2xl font-bold text-foreground"
-          >
-            Discover Content
-          </motion.h2>
-          <ContentDiscovery />
-        </div>
+        */}
 
         {/* Spacer */}
         <div className="pb-32" />

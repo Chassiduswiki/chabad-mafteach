@@ -4,11 +4,18 @@ import React from 'react';
 import { Compass } from 'lucide-react';
 import { ExploreCategories } from '@/components/explore/ExploreCategories';
 import { ContentDiscovery } from '@/components/ContentDiscovery';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 export default function ExplorePage() {
     return (
         <div className="min-h-screen bg-background text-foreground pb-32 pt-8 px-5">
             <div className="max-w-5xl mx-auto space-y-12">
+                {/* Breadcrumbs */}
+                <Breadcrumbs
+                    items={[
+                        { label: 'Explore', href: undefined }
+                    ]}
+                />
                 {/* Header */}
                 <div className="text-center space-y-4">
                     <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/10">
