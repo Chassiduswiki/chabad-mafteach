@@ -6,9 +6,9 @@ import { TopicHeader } from '@/components/topics/TopicHeader';
 import { TopicSidebar } from '@/components/topics/TopicSidebar';
 import { linkTerms } from '@/lib/term-linker';
 import { getAllTopics } from '@/lib/directus';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { ActionButtons } from '@/components/ActionButtons';
-import { TopicTracker } from '@/components/TopicTracker';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { ActionButtons } from '@/components/shared/ActionButtons';
+import { TopicTracker } from '@/components/shared/TopicTracker';
 
 export const dynamic = 'force-dynamic';
 

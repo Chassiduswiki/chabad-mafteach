@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePopup, PopupType } from '@/lib/popup-context';
-import { TooltipPopup } from '@/components/TooltipPopup';
+import { TooltipPopup } from '@/components/features/popups/TooltipPopup';
 
 export default function TooltipDemoPage() {
     const { activePopup, showPopup } = usePopup();

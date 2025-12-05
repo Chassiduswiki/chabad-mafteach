@@ -1,15 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CommandMenuTrigger } from '@/components/CommandMenuTrigger';
-import Link from 'next/link';
-import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
+import { CommandMenuTrigger } from '@/components/features/search/CommandMenuTrigger';
+import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
 import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
 import { WordRotate } from '@/components/ui/WordRotate';
-import { ThemeToggleCompact } from '@/components/ThemeToggle';
-import { ContentDiscovery } from '@/components/ContentDiscovery';
+import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
+import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
+import { FeaturedTopics } from '@/components/features/home/FeaturedTopics';
 import { MobileHome } from '@/components/mobile/MobileHome';
-import { FeaturedTopics } from '@/components/FeaturedTopics';
+import Link from 'next/link';
+import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
 
 export default function Home() {
   return (
