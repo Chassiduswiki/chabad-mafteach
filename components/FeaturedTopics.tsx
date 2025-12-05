@@ -25,7 +25,7 @@ export function FeaturedTopics() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/api/featured-topics')
+        fetch('/api/topics?mode=featured&limit=3')
             .then(res => res.json())
             .then(data => setTopics(data.topics || []))
             .catch(console.error)
