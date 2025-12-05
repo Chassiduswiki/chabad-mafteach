@@ -414,3 +414,30 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Mobile homepage utilities - Task 2.11 */
+.mobile-hero-compact {
+  padding-top: 4rem;
+  /* Reduce from desktop's pt-24 */
+  padding-bottom: 2rem;
+}
+
+.quick-action-card {
+  position: relative;
+  min-height: 80px;
+  /* Generous touch target */
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.quick-action-card:active {
+  transform: scale(0.98);
+  /* Mobile press feedback */
+}
+
+/* Breadcrumb truncation - Mobile */
+.breadcrumb-truncate {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

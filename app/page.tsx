@@ -4,12 +4,11 @@ import { motion } from 'framer-motion';
 import { CommandMenuTrigger } from '@/components/CommandMenuTrigger';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
-import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
 import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
 import { WordRotate } from '@/components/ui/WordRotate';
 import { ThemeToggleCompact } from '@/components/ThemeToggle';
 import { ContentDiscovery } from '@/components/ContentDiscovery';
-import { cn } from '@/lib/utils';
+import { MobileHome } from '@/components/mobile/MobileHome';
 
 export default function Home() {
   return (
@@ -66,8 +65,13 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Hero Content */}
-      <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-center justify-center px-6 pt-24 sm:px-8 sm:pt-32 lg:pt-40">
+      {/* Mobile Homepage - App-like Dashboard (Task 2.11) */}
+      <div className="lg:hidden">
+        <MobileHome />
+      </div>
+
+      {/* Desktop Homepage - Google-like Hero (Original) */}
+      <main className="hidden lg:flex relative z-10 mx-auto max-w-6xl flex-col items-center justify-center px-6 pt-24 sm:px-8 sm:pt-32 lg:pt-40">
 
         {/* Badge */}
         <motion.div
@@ -110,7 +114,7 @@ export default function Home() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
           className="mt-6 max-w-2xl text-center text-lg text-muted-foreground sm:text-xl leading-relaxed"
         >
           Explore concepts, discover sources. A comprehensive index connecting Chassidic topics to their sources across all Chabad literature.
@@ -118,9 +122,9 @@ export default function Home() {
 
         {/* Command Palette Trigger Area */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
           className="mt-12 w-full max-w-2xl"
         >
           <div className="relative group">
@@ -144,9 +148,9 @@ export default function Home() {
 
         {/* Feature Grid - Modern Bento Style */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
+          transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
           className="mt-32 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 pb-32"
         >
           {[
@@ -191,14 +195,9 @@ export default function Home() {
 
         {/* Content Discovery Section - Task 2.5 */}
         <div className="mt-16 w-full">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.55 }}
-            className="mb-8 text-center text-2xl font-bold text-foreground"
-          >
+          <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
             Discover Content
-          </motion.h2>
+          </h2>
           <ContentDiscovery />
         </div>
 
