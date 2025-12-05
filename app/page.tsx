@@ -9,6 +9,7 @@ import { WordRotate } from '@/components/ui/WordRotate';
 import { ThemeToggleCompact } from '@/components/ThemeToggle';
 import { ContentDiscovery } from '@/components/ContentDiscovery';
 import { MobileHome } from '@/components/mobile/MobileHome';
+import { FeaturedTopics } from '@/components/FeaturedTopics';
 
 export default function Home() {
   return (
@@ -154,54 +155,13 @@ export default function Home() {
           <ContentDiscovery />
         </div>
 
-        {/* Feature Grid - Temporarily hidden to prioritize content discovery */}
-        {/*
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-          className="mt-16 grid w-full grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6"
-        >
-          {[
-            {
-              icon: Search,
-              title: 'Bi-Lingual Search',
-              desc: 'Seamlessly search across Hebrew and English concepts with fuzzy matching.',
-              color: 'text-blue-500',
-              bg: 'bg-blue-500/10'
-            },
-            {
-              icon: BookOpen,
-              title: 'Deep Knowledge Graph',
-              desc: 'Visualize connections between thousands of concepts and sources.',
-              color: 'text-indigo-500',
-              bg: 'bg-indigo-500/10'
-            },
-            {
-              icon: Zap,
-              title: 'Lightning Fast',
-              desc: 'Instant results powered by edge caching and optimized indexing.',
-              color: 'text-amber-500',
-              bg: 'bg-amber-500/10'
-            }
-          ].map((feature, i) => (
-            <div
-              key={i}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-background/40 p-8 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-primary/20 hover:bg-background/60 hover:shadow-xl hover:shadow-primary/5"
-            >
-              <div className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bg} ${feature.color}`}>
-                <feature.icon className="h-6 w-6" />
-              </div>
-              <h3 className="mb-3 text-lg font-bold text-foreground">{feature.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
-
-              <div className="absolute bottom-6 right-6 opacity-0 transition-opacity transform translate-x-2 group-hover:opacity-100 group-hover:translate-x-0">
-                <ArrowRight className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          ))}
-        </motion.div>
-        */}
+        {/* Featured Topics - Real Content (Task 2.13) */}
+        <div className="mt-16 w-full">
+          <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
+            Explore Topics
+          </h2>
+          <FeaturedTopics />
+        </div>
 
         {/* Spacer */}
         <div className="pb-32" />

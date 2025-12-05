@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import { X, ExternalLink, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ExternalLink, BookOpen } from 'lucide-react';
 import { usePopup } from '@/lib/popup-context';
 import { fuzzyMatchCitation, hasHebrewBooksLink, CitationMatch } from '@/lib/citation-matcher';
 import { getHebrewBooksUrl } from '@/lib/hebrewbooks';
 import { TopicCitation, Location, Sefer } from '@/lib/types';
+import { BasePopup } from '@/components/ui/BasePopup';
+import { UI } from '@/lib/constants';
 
 interface FootnotePopupProps {
-    footnoteId: string;
     footnoteText: string;
     position: { x: number; y: number };
     availableCitations?: (TopicCitation & { location: Location; sefer: Sefer })[];
@@ -16,13 +17,11 @@ interface FootnotePopupProps {
 }
 
 export function FootnotePopup({
-    footnoteId,
     footnoteText,
     position,
     availableCitations = [],
     onViewSource
 }: FootnotePopupProps) {
-    const popupRef = useRef<HTMLDivElement>(null);
     const { closePopup } = usePopup();
     const [match, setMatch] = useState<CitationMatch | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -66,112 +65,90 @@ export function FootnotePopup({
     };
 
     return (
-        <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40" />
-
-            {/* Popup */}
-            <div
-                ref={popupRef}
-                className="fixed z-50 w-[90vw] max-w-md bg-background border border-border rounded-xl shadow-2xl"
-                style={{
-                    left: `${Math.min(position.x, window.innerWidth - 400)}px`,
-                    top: `${Math.min(position.y + 10, window.innerHeight - 300)}px`,
-                }}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                    <div className="flex items-center gap-2">
-                        <span className="text-2xl">📖</span>
-                        <span className="font-semibold text-sm text-muted-foreground">
-                            Citation {match && `(${Math.round(match.confidence)}% match)`}
-                        </span>
-                    </div>
-                    <button
-                        onClick={closePopup}
-                        className="p-1 hover:bg-muted rounded-md transition-colors"
-                        aria-label="Close"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
+        <BasePopup
+            onClose={closePopup}
+            triggerPosition={position}
+            positionOptions={{
+                maxWidth: UI.POPUP.MAX_WIDTH_DESKTOP,
+                offset: { x: 0, y: UI.POPUP.OFFSET_Y }
+            }}
+            className="w-80"
+            contentClassName="space-y-3 p-4"
+            header={
+                <div className="flex items-center gap-2">
+                    <span className="text-lg">📖</span>
+                    <span className="font-medium text-muted-foreground text-sm">
+                        Citation {match && `(${Math.round(match.confidence)}% match)`}
+                    </span>
                 </div>
+            }
+            footer="Press Esc to close"
+        >
+            {isLoading ? (
+                <div className="text-muted-foreground text-sm">Loading...</div>
+            ) : (
+                <>
+                    {/* Original footnote text */}
+                    <p className="text-foreground text-sm leading-relaxed">
+                        {footnoteText}
+                    </p>
 
-                {/* Content */}
-                <div className="p-4 space-y-4">
-                    {isLoading ? (
-                        <div className="text-sm text-muted-foreground">Loading...</div>
-                    ) : (
-                        <>
-                            {/* Original footnote text */}
-                            <p className="text-sm text-foreground leading-relaxed">
-                                {footnoteText}
-                            </p>
+                    {/* Level 1: Full match - show quoted text */}
+                    {displayLevel === 1 && match && (
+                        <div className="pt-3 border-t border-border space-y-2">
+                            <div className="flex items-center gap-2">
+                                <BookOpen className="h-3 w-3 text-amber-600" />
+                                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Matched Citation
+                                </span>
+                            </div>
 
-                            {/* Level 1: Full match - show quoted text */}
-                            {displayLevel === 1 && match && (
-                                <div className="pt-3 border-t border-border space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <BookOpen className="h-4 w-4 text-primary" />
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                            Matched Citation
-                                        </span>
-                                    </div>
-
-                                    {/* Display quoted text */}
-                                    {match.citation.quoted_text_hebrew && (
-                                        <blockquote className="pr-3 font-hebrew text-right text-sm leading-relaxed border-r-2 border-primary/30">
-                                            {match.citation.quoted_text_hebrew}
-                                        </blockquote>
-                                    )}
-
-                                    {match.citation.quoted_text_english && (
-                                        <blockquote className="pl-3 text-sm leading-relaxed border-l-2 border-primary/30 text-muted-foreground italic">
-                                            {match.citation.quoted_text_english}
-                                        </blockquote>
-                                    )}
-
-                                    {/* Source attribution */}
-                                    <p className="text-xs text-muted-foreground">
-                                        — {match.citation.sefer.title}, {match.citation.location.reference_text}
-                                    </p>
-                                </div>
+                            {/* Display quoted text */}
+                            {match.citation.quoted_text_hebrew && (
+                                <blockquote className="pr-3 font-serif text-right text-foreground leading-relaxed border-r-2 border-amber-500/30 text-sm">
+                                    {match.citation.quoted_text_hebrew}
+                                </blockquote>
                             )}
 
-                            {/* Actions */}
-                            <div className="flex gap-2 pt-2 border-t border-border">
-                                {/* View Full Source - Level 1 only */}
-                                {displayLevel === 1 && match && onViewSource && (
-                                    <button
-                                        onClick={handleViewSource}
-                                        className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
-                                    >
-                                        <BookOpen className="h-3 w-3" />
-                                        View Full Source
-                                    </button>
-                                )}
+                            {match.citation.quoted_text_english && (
+                                <blockquote className="pl-3 text-muted-foreground italic leading-relaxed border-l-2 border-amber-500/30 text-sm">
+                                    {match.citation.quoted_text_english}
+                                </blockquote>
+                            )}
 
-                                {/* HebrewBooks Link - Level 1 & 2 */}
-                                {(displayLevel === 1 || displayLevel === 2) && match && hasHebrewBooksLink(match.citation.sefer) && (
-                                    <button
-                                        onClick={handleHebrewBooks}
-                                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        <ExternalLink className="h-3 w-3" />
-                                        HebrewBooks →
-                                    </button>
-                                )}
-
-                                {/* Level 3: No actions, just footnote text */}
-                            </div>
-                        </>
+                            {/* Source attribution */}
+                            <p className="text-xs text-muted-foreground">
+                                — {match.citation.sefer.title}, {match.citation.location.reference_text}
+                            </p>
+                        </div>
                     )}
-                </div>
 
-                {/* Footer hint */}
-                <div className="px-4 pb-3 text-xs text-muted-foreground text-center">
-                    Press Esc to close
-                </div>
-            </div>
-        </>
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-2">
+                        {/* View Full Source - Level 1 only */}
+                        {displayLevel === 1 && match && onViewSource && (
+                            <button
+                                onClick={handleViewSource}
+                                className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-500 hover:text-amber-800 dark:hover:text-amber-400 transition-colors font-medium"
+                            >
+                                <BookOpen className="h-3 w-3" />
+                                View Full Source
+                            </button>
+                        )}
+
+                        {/* HebrewBooks Link - Level 1 & 2 */}
+                        {(displayLevel === 1 || displayLevel === 2) && match && hasHebrewBooksLink(match.citation.sefer) && (
+                            <button
+                                onClick={handleHebrewBooks}
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <ExternalLink className="h-3 w-3" />
+                                HebrewBooks →
+                            </button>
+                        )}
+                    </div>
+                </>
+            )}
+        </BasePopup>
     );
 }
