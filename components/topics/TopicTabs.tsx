@@ -1,35 +1,27 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Topic } from '@/lib/directus';
+
 import OverviewTab from './OverviewTab';
 import BoundariesTab from './BoundariesTab';
 import SourcesTab from './SourcesTab';
 import RelatedTab from './RelatedTab';
 import SourceCard from './SourceCard';
 import { TopicArticle } from './TopicArticle';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 interface TopicTabsProps {
     topic: Topic;
 }
 
-interface TopicSource {
-    id: number;
-    excerpt: string;
-    relevance: string;
-    notes: string | null;
-    location: {
-        id: number;
-        display_name: string;
-        page?: string;
-        section?: string;
-        sefer: {
-            id: number;
-            title: string;
-            author?: string;
-            category?: string;
-        };
+import { Topic, TopicCitation, Location, Sefer } from '@/lib/types';
+
+interface TopicSource extends Omit<TopicCitation, 'location'> {
+    location: Location & {
+        sefer: Sefer;
     };
+    relevance?: string; // Add missing fields if they aren't in TopicCitation
+    notes?: string | null;
 }
 
 const tabs = [
@@ -167,7 +159,7 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
                     {activeTab === 'sources' && (
                         sourcesLoading ? (
                             <div className="rounded-2xl border bg-card p-12 text-center">
-                                <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                <LoadingSpinner size="lg" className="mx-auto mb-4" />
                                 <p className="text-muted-foreground">Loading sources...</p>
                             </div>
                         ) : sources.length > 0 ? (

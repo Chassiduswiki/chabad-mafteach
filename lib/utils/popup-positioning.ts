@@ -10,14 +10,23 @@ export interface Dimensions {
     height: number;
 }
 
+import { UI } from '@/lib/constants';
+
 export interface PositionOptions {
     maxWidth?: number;
     maxHeight?: number;
-    offset?: { x?: number; y?: number };
-    padding?: number;
-    preferredPlacement?: 'top' | 'bottom' | 'left' | 'right' | 'auto';
+    offset?: { x: number; y: number };
     viewportPadding?: number;
+    preferredPlacement?: 'top' | 'bottom' | 'left' | 'right' | 'auto';
 }
+
+const DEFAULT_OPTIONS: Required<PositionOptions> = {
+    maxWidth: UI.POPUP.MAX_WIDTH_DESKTOP,
+    maxHeight: 400,
+    offset: { x: 0, y: UI.POPUP.OFFSET_Y },
+    viewportPadding: 16,
+    preferredPlacement: 'auto'
+};
 
 /**
  * Calculates the optimal position for a popup to ensure it stays within the viewport.

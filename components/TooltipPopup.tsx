@@ -4,6 +4,7 @@ import React from 'react';
 import { Info, Lightbulb, AlertCircle } from 'lucide-react';
 import { usePopup } from '@/lib/popup-context';
 import { BasePopup } from '@/components/ui/BasePopup';
+import { UI } from '@/lib/constants';
 
 interface TooltipPopupProps {
     title?: string;
@@ -30,7 +31,10 @@ export function TooltipPopup({ title, content, icon = 'info', position, actions 
         <BasePopup
             onClose={closePopup}
             triggerPosition={position}
-            positionOptions={{ maxWidth: 320, offset: { y: 10 } }}
+            positionOptions={{
+                maxWidth: 320,
+                offset: { x: 0, y: UI.POPUP.OFFSET_Y }
+            }}
             className="w-[90vw] max-w-xs"
             contentClassName="p-0" // Custom content padding
             footer="Press Esc or click outside to close"
