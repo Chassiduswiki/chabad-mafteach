@@ -53,7 +53,7 @@ export function CommandMenu() {
                     id: `sefer-${s.id}`,
                     title: s.title,
                     type: 'sefer' as const,
-                    subtitle: s.author,
+                    subtitle: s.author ?? undefined,
                     url: `/seforim/${s.id}`
                 }));
 
@@ -96,7 +96,7 @@ export function CommandMenu() {
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-2 sm:pt-[15vh] sm:px-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -110,7 +110,7 @@ export function CommandMenu() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10"
+                        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[90vh] flex flex-col"
                     >
                         <Command className="w-full" shouldFilter={false}>
                             <div className="flex items-center border-b border-border px-4">
@@ -149,7 +149,7 @@ export function CommandMenu() {
                                     </button>
                                 </div>
                             </div>
-                            <Command.List className="max-h-[60vh] overflow-y-auto p-2 scrollbar-hide">
+                            <Command.List className="max-h-[60vh] sm:max-h-[65vh] overflow-y-auto p-2 scrollbar-hide">
                                 {!search && results.length === 0 && (
                                     <div className="py-12 text-center text-sm text-muted-foreground">
                                         Start typing to search...

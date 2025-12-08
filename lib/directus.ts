@@ -29,9 +29,8 @@ export const getAllTopics = async (): Promise<Topic[]> => {
     return safeDirectusCall(
         () => directusPool.acquire(() =>
             directus.request(readItems('topics', {
-                fields: ['id', 'name', 'slug', 'alternate_names'],
+                fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                 limit: -1,
-                filter: { is_published: { _eq: true } }
             })) as Promise<Topic[]>
         ),
         {

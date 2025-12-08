@@ -16,14 +16,13 @@ export async function GET(request: NextRequest) {
             // We map them into the legacy Topic shape expected by the UI
             // (name, category, definition_short).
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let rawTopics: any[] = [];
             try {
                 rawTopics = await directus.request(
-                    readItems('topics' as any, {
+                    readItems('topics', {
                         fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                         limit: 50,
-                    } as any)
+                    })
                 ) as any[];
             } catch (error) {
                 console.warn('Failed to fetch topics for discovery:', error);
@@ -57,13 +56,12 @@ export async function GET(request: NextRequest) {
 
         // MODE: FEATURED (Random topics with citation counts)
         if (mode === 'featured') {
-            // New schema: fetch all topics and map to legacy shape
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // Fetch all topics and map to legacy shape
             const rawTopics = await directus.request(
-                readItems('topics' as any, {
+                readItems('topics', {
                     fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                     limit: -1,
-                } as any)
+                })
             ) as any[];
 
             const allTopics = rawTopics.map((t) => ({
@@ -88,7 +86,7 @@ export async function GET(request: NextRequest) {
         }
 
         // DEFAULT: List topics
-        const filter = category ? { topic_type: { _eq: category as any } } : {};
+        const filter: any = category ? { topic_type: { _eq: category } } : {};
 
         const rawTopics = await directus.request(readItems('topics', {
             filter,

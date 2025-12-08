@@ -8,10 +8,13 @@ export const revalidate = 60; // Revalidate every minute
 
 async function getSeforim() {
     try {
-        // New schema: use documents collection as our "seforim" list.
+        // Use documents collection - filter for sefer type if available
         const docs = await directus.request(readItems('documents', {
             sort: ['title'],
-            fields: ['id', 'title', 'doc_type', 'published_at'],
+            fields: ['id', 'title', 'doc_type', 'published_at', 'status'],
+            filter: {
+                status: { _eq: 'published' }
+            }
         }));
 
         // Map documents into a seforim-like shape
