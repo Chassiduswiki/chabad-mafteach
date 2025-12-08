@@ -27,27 +27,21 @@ export async function GET(
 
         const topic = topics[0];
 
-        // Fetch related sources from topic_citations junction table
-        const citations = await directus.request(readItems('topic_citations', {
-            filter: { topic: { _eq: topic.id } },
-            // @ts-ignore
-            fields: [
-                '*',
-                'location.id',
-                'location.reference_text',
-                'location.reference_hebrew',
-                'location.full_path',
-                'location.sefer.id',
-                'location.sefer.title',
-                'location.sefer.title_hebrew',
-                'location.sefer.author'
-            ] as any,
-            sort: ['-importance', 'sort_order'] // Foundational sources first
-        }));
+        // Fetch related statements from statement_topics junction table
+        let statementTopics: any[] = [];
+        try {
+            statementTopics = await directus.request(readItems('statement_topics', {
+                filter: { topic_id: { _eq: topic.id } } as any,
+                fields: ['*', { statement_id: ['id', 'text', 'order_key'] }] as any,
+                sort: ['-relevance_score'] as any
+            })) as any[];
+        } catch (error) {
+            console.warn('Failed to fetch statement_topics:', error);
+        }
 
         return NextResponse.json({
             topic,
-            citations // Rich semantic data with citation_role, importance, etc.
+            citations: statementTopics // Map to citations for backward compatibility
         });
     } catch (error) {
         console.error('Topic fetch error:', error);

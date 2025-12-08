@@ -29,25 +29,13 @@ async function getTopic(slug: string): Promise<Topic | null> {
         const mapped: Topic = {
             id: t.id as number,
             slug: t.slug as string,
+            canonical_title: t.canonical_title as string,
+            topic_type: t.topic_type,
+            description: t.description,
+            // Legacy aliases for UI compatibility
             name: (t.canonical_title as string) || (t.slug as string),
-            name_hebrew: undefined,
-            name_transliteration: undefined,
-            alternate_names: [],
-            category: t.topic_type as Topic['category'],
-            definition_short: t.description as string | undefined,
-            definition_positive: undefined,
-            definition_negative: undefined,
-            overview: undefined,
-            article: undefined,
-            practical_takeaways: undefined,
-            common_confusions: [],
-            key_concepts: [],
-            historical_context: undefined,
-            difficulty_level: undefined,
-            estimated_read_time: undefined,
-            view_count: undefined,
-            is_published: undefined,
-            meta_description: undefined,
+            category: t.topic_type,
+            definition_short: t.description,
         };
 
         return mapped;
@@ -68,7 +56,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
     return (
         <div className="min-h-screen bg-background pb-20">
             {/* Track last visited topic for Continue Learning */}
-            <TopicTracker slug={topic.slug} name={topic.name} />
+            <TopicTracker slug={topic.slug} name={topic.name || topic.canonical_title} />
 
             <TopicHeader topic={topic} />
 
@@ -77,10 +65,10 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                     <Breadcrumbs
                         items={[
                             { label: 'Topics', href: '/topics' },
-                            { label: topic.name }
+                            { label: topic.name || topic.canonical_title }
                         ]}
                     />
-                    <ActionButtons topicSlug={topic.slug} topicName={topic.name} />
+                    <ActionButtons topicSlug={topic.slug} topicName={topic.name || topic.canonical_title} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

@@ -9,8 +9,8 @@ export const revalidate = 60;
 
 async function getDocument(id: string) {
     try {
-        // New schema: documents collection represents seforim
-        return await directus.request(readItem('documents' as any, parseInt(id)));
+        // Documents collection represents seforim
+        return await directus.request(readItem('documents', parseInt(id)));
     } catch (error) {
         return null;
     }
