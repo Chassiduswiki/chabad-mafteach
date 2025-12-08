@@ -12,19 +12,29 @@ import { Source } from "@/lib/types";
  */
 export function useSourceSearch() {
   const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // Preload a batch of sources for instant fuzzy search
   const { data: initialSources = [], isLoading: isInitialLoading } = useQuery({
     queryKey: ["sources", "initial"],
     queryFn: async () => {
-      const result = await directus.request(
-        readItems("sources", {
-          fields: ["id", "title"],
-          limit: 200, // small cache for fast fuzzy search
-          sort: ["title"],
-        })
-      );
-      return result as Source[];
+      try {
+        const result = await directus.request(
+          readItems("sources", {
+            fields: ["id", "title"],
+            limit: 200, // small cache for fast fuzzy search
+            sort: ["title"],
+          })
+        );
+        return result as Source[];
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          setError('Authentication failed: Unauthorized access. Please check your Directus token.');
+        } else {
+          setError(err.message || 'Error fetching sources');
+        }
+        return []; // Return empty array on error
+      }
     },
     staleTime: 60_000,
   });
@@ -34,14 +44,23 @@ export function useSourceSearch() {
     queryKey: ["sources", "search", search],
     queryFn: async () => {
       if (!search || search.length < 3) return [] as Source[];
-      const result = await directus.request(
-        readItems("sources", {
-          search,
-          fields: ["id", "title"],
-          limit: 10,
-        })
-      );
-      return result as Source[];
+      try {
+        const result = await directus.request(
+          readItems("sources", {
+            search,
+            fields: ["id", "title"],
+            limit: 10,
+          })
+        );
+        return result as Source[];
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          setError('Authentication failed: Unauthorized access. Please check your Directus token.');
+        } else {
+          setError(err.message || 'Error fetching sources');
+        }
+        return []; // Return empty array on error
+      }
     },
     enabled: search.length >= 3,
   });
@@ -71,5 +90,6 @@ export function useSourceSearch() {
     setSearch,
     results: fused,
     isLoading: isInitialLoading || isRemoteLoading,
+    error,
   };
 }

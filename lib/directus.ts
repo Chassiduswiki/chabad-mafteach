@@ -6,8 +6,13 @@ import { safeDirectusCall, directusPool } from './integration-hardening';
 export * from './types';
 
 // Directus client configuration
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
-const directusToken = process.env.DIRECTUS_STATIC_TOKEN || 'chabad_research_static_token_2025';
+// Use NEXT_PUBLIC_ prefix for client-side access, fall back to server-side vars
+const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
+const directusToken = process.env.NEXT_PUBLIC_DIRECTUS_TOKEN || process.env.DIRECTUS_STATIC_TOKEN;
+
+if (!directusUrl || !directusToken) {
+    throw new Error('DIRECTUS_URL or DIRECTUS_STATIC_TOKEN environment variable is not set. Please configure .env file.');
+}
 
 console.log('Directus Config:', {
     url: directusUrl,
@@ -15,13 +20,9 @@ console.log('Directus Config:', {
     tokenStart: directusToken?.substring(0, 10)
 });
 
-if (!directusToken) {
-    console.error('Missing DIRECTUS_STATIC_TOKEN environment variable');
-}
-
-// Create Directus client
+// Create Directus client with required token
 const directus = createDirectus<Schema>(directusUrl)
-    .with(staticToken(directusToken || ''))
+    .with(staticToken(directusToken))
     .with(rest());
 
 // Helper function to get all topics with retry logic and graceful degradation
@@ -42,4 +43,3 @@ export const getAllTopics = async (): Promise<Topic[]> => {
 };
 
 export default directus;
-

@@ -7,18 +7,28 @@ import { Author } from "@/lib/types";
 
 export function useAuthorSearch() {
   const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const { data: initialAuthors = [] } = useQuery({
     queryKey: ["authors", "initial"],
     queryFn: async () => {
-      const result = await directus.request(
-        readItems("authors", {
-          fields: ["id", "canonical_name"],
-          limit: 200,
-          sort: ["canonical_name"],
-        })
-      );
-      return result as Author[];
+      try {
+        const result = await directus.request(
+          readItems("authors", {
+            fields: ["id", "canonical_name"],
+            limit: 200,
+            sort: ["canonical_name"],
+          })
+        );
+        return result as Author[];
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          setError('Authentication failed: Unauthorized access. Please check your Directus token.');
+        } else {
+          setError(err.message || 'Error fetching authors');
+        }
+        return []; // Return empty array on error
+      }
     },
     staleTime: 60_000,
   });
@@ -27,14 +37,23 @@ export function useAuthorSearch() {
     queryKey: ["authors", "search", search],
     queryFn: async () => {
       if (!search || search.length < 2) return [] as Author[];
-      const result = await directus.request(
-        readItems("authors", {
-          search,
-          fields: ["id", "canonical_name"],
-          limit: 10,
-        })
-      );
-      return result as Author[];
+      try {
+        const result = await directus.request(
+          readItems("authors", {
+            search,
+            fields: ["id", "canonical_name"],
+            limit: 10,
+          })
+        );
+        return result as Author[];
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          setError('Authentication failed: Unauthorized access. Please check your Directus token.');
+        } else {
+          setError(err.message || 'Error fetching authors');
+        }
+        return []; // Return empty array on error
+      }
     },
     enabled: search.length >= 2,
   });
@@ -62,5 +81,6 @@ export function useAuthorSearch() {
     search,
     setSearch,
     results,
+    error,
   };
 }

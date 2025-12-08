@@ -12,27 +12,34 @@ export const useEditorDocument = (documentId: string | number | null) => {
         queryKey: ['editor-document', documentId],
         queryFn: async () => {
             if (!documentId) return null;
-            
-            // Fetch document with paragraphs
-            // We cast the result because the SDK types for deep relations can be tricky
-            const result = await directus.request(readItem('documents', documentId, {
-                fields: [
-                    '*',
-                    'paragraphs.id',
-                    'paragraphs.text',
-                    'paragraphs.order_key',
-                    'paragraphs.status'
-                ]
-            })) as unknown as EditorDocument;
+            try {
+                // Fetch document with paragraphs
+                // We cast the result because the SDK types for deep relations can be tricky
+                const result = await directus.request(readItem('documents', documentId, {
+                    fields: [
+                        '*',
+                        'paragraphs.id',
+                        'paragraphs.text',
+                        'paragraphs.order_key',
+                        'paragraphs.status'
+                    ]
+                })) as unknown as EditorDocument;
 
-            // Sort paragraphs by order_key if they exist
-            if (result && result.paragraphs && Array.isArray(result.paragraphs)) {
-                result.paragraphs.sort((a, b) => {
-                    return (a.order_key || '').localeCompare(b.order_key || '', undefined, { numeric: true });
-                });
+                // Sort paragraphs by order_key if they exist
+                if (result && result.paragraphs && Array.isArray(result.paragraphs)) {
+                    result.paragraphs.sort((a, b) => {
+                        return (a.order_key || '').localeCompare(b.order_key || '', undefined, { numeric: true });
+                    });
+                }
+
+                return result;
+            } catch (err: any) {
+                if (err.response?.status === 401) {
+                    throw new Error('Authentication failed: Unauthorized access. Please check your Directus token.');
+                } else {
+                    throw new Error(err.message || 'Error fetching document');
+                }
             }
-
-            return result;
         },
         enabled: !!documentId,
         retry: 1,

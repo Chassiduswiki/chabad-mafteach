@@ -71,11 +71,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                     <ActionButtons topicSlug={topic.slug} topicName={topic.name || topic.canonical_title} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    {/* Main Content (Left 2/3) */}
-                    <div className="lg:col-span-2">
-                        <TopicTabs topic={topic} />
-                    </div>
+                <div className="w-full">
+                    <TopicTabs topic={topic} />
                 </div>
             </main>
         </div>

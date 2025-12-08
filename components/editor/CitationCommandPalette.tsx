@@ -154,60 +154,64 @@ export function CitationCommandPalette({
       className="fixed z-[100] inset-0 flex items-start justify-center pt-24 bg-black/40"
     >
       <DialogTitle className="sr-only">Citation command palette</DialogTitle>
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
-        {view === "search" ? (
-          <Command className="w-full">
-            <div className="flex items-center px-4 border-b border-gray-200">
-              <Command.Input
-                ref={searchInputRef}
-                value={search}
-                onValueChange={setSearch}
-                placeholder="Type to search sources..."
-                className="py-3 text-base outline-none flex-1"
-              />
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-              ) : null}
-            </div>
+      <div 
+        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden"
+      >
+        <Command className="w-full">
+          {view === "search" ? (
+            <>
+              <div className="flex items-center px-4 border-b border-gray-200">
+                <Command.Input
+                  ref={searchInputRef}
+                  value={search}
+                  onValueChange={setSearch}
+                  placeholder="Type to search sources..."
+                  className="py-3 text-base outline-none flex-1"
+                />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                ) : null}
+              </div>
 
-            <Command.List className="max-h-80 overflow-y-auto">
-              {results.length > 0 ? (
-                <Command.Group heading="Sources">
-                  {results.map((source) => (
+              <Command.List className="max-h-80 overflow-y-auto">
+                {results.length > 0 ? (
+                  <Command.Group heading="Sources">
+                    {results.map((source) => (
+                      <Command.Item
+                        key={source.id}
+                        value={`source:${source.id}`}
+                        onSelect={() => handleSelectSource(source)}
+                        className="px-4 py-3 flex items-center gap-3"
+                      >
+                        <BookOpenText className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm text-gray-800">{source.title}</span>
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                ) : (
+                  <Command.Empty className="px-4 py-3 text-sm text-gray-500">
+                    No sources found
+                  </Command.Empty>
+                )}
+
+                {search.trim() ? (
+                  <Command.Group heading="Actions">
                     <Command.Item
-                      key={source.id}
-                      value={`source:${source.id}`}
-                      onSelect={() => handleSelectSource(source)}
+                      value={`create:${search.trim()}`}
+                      onSelect={() => handleCreateOption(search.trim())}
                       className="px-4 py-3 flex items-center gap-3"
                     >
-                      <BookOpenText className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-gray-800">{source.title}</span>
+                      <PlusCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-gray-800">
+                        Create new source "{search.trim()}"
+                      </span>
                     </Command.Item>
-                  ))}
-                </Command.Group>
-              ) : (
-                <Command.Empty className="px-4 py-3 text-sm text-gray-500">
-                  No sources found
-                </Command.Empty>
-              )}
-
-              {search.trim() ? (
-                <Command.Group heading="Actions">
-                  <Command.Item
-                    value={`create:${search.trim()}`}
-                    onSelect={() => handleCreateOption(search.trim())}
-                    className="px-4 py-3 flex items-center gap-3"
-                  >
-                    <PlusCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-gray-800">
-                      Create new source “{search.trim()}”
-                    </span>
-                  </Command.Item>
-                </Command.Group>
-              ) : null}
-            </Command.List>
-          </Command>
-        ) : null}
+                  </Command.Group>
+                ) : null}
+              </Command.List>
+            </>
+          ) : null}
+        </Command>
 
         {view === "reference" && selectedSource ? (
           <div className="p-5 space-y-4">
@@ -233,6 +237,7 @@ export function CitationCommandPalette({
                   ref={referenceInputRef}
                   value={reference}
                   onChange={(event) => setReference(event.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
                   placeholder="e.g. Chapter 12, p. 42"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
@@ -269,6 +274,7 @@ export function CitationCommandPalette({
               <input
                 value={draftTitle}
                 onChange={(event) => setDraftTitle(event.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 placeholder="Source title"
               />
@@ -283,6 +289,7 @@ export function CitationCommandPalette({
                   setAuthorName(event.target.value);
                   setAuthorSearch(event.target.value);
                 }}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 placeholder="Type a name and press enter to create"
               />
@@ -317,6 +324,7 @@ export function CitationCommandPalette({
               <input
                 value={reference}
                 onChange={(event) => setReference(event.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 placeholder="e.g. Chapter 3, Section 2"
               />

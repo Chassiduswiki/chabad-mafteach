@@ -482,6 +482,12 @@ html {
   gap: 0.5rem;
 }
 
+.pm-editor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pm-editor-button {
   border-radius: 0.5rem;
   border: 1px solid #e2e8f0;

@@ -87,17 +87,32 @@ export const StructureSidebar: React.FC<StructureSidebarProps> = ({
 }) => {
   // Fetch all documents to build the tree
   // In a real app with thousands of docs, we'd fetch lazily or only the relevant subtree
-  const { data: documents } = useQuery({
+  const {
+    data: documents,
+    error,
+    isLoading,
+  } = useQuery({
     queryKey: ["structure-tree"],
     queryFn: async () => {
-      const result = await directus.request(
-        readItems("documents", {
-          fields: ["id", "title", "parent_id", "doc_type"],
-          limit: -1,
-          sort: ["title"], // Ideally sort by an order field
-        })
-      );
-      return result as Document[];
+      try {
+        const result = await directus.request(
+          readItems("documents", {
+            fields: ["id", "title", "parent_id", "doc_type"],
+            limit: -1,
+            sort: ["title"], // Ideally sort by an order field
+          })
+        );
+        return result as Document[];
+      } catch (err: any) {
+        // Surface 403 errors with a clear message so the UI can explain what's wrong
+        const status = err?.response?.status;
+        if (status === 403) {
+          throw new Error(
+            "FORBIDDEN: This Directus token does not have permission to read the documents collection."
+          );
+        }
+        throw err;
+      }
     },
   });
 
@@ -134,13 +149,36 @@ export const StructureSidebar: React.FC<StructureSidebarProps> = ({
     return roots;
   }, [documents]);
 
+  const isForbidden =
+    error instanceof Error &&
+    error.message.startsWith("FORBIDDEN:");
+
   return (
     <div className="w-64 border-r bg-gray-50 h-full flex flex-col">
       <div className="p-4 border-b bg-white">
         <h2 className="font-semibold text-gray-800">Library Structure</h2>
       </div>
+
       <div className="flex-1 overflow-auto p-2">
-        {tree.map((node) => (
+        {isLoading && !error && (
+          <div className="text-xs text-gray-500 p-2">Loading documents…</div>
+        )}
+
+        {isForbidden && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
+            <p className="font-semibold">Editor cannot load documents (403 Forbidden).</p>
+            <p>
+              The Directus token configured in <code>.env.local</code> does not have read
+              access to the <code>documents</code> collection.
+            </p>
+            <p>
+              Update Directus Access Control to allow <code>documents</code> read for this
+              token, then refresh the editor.
+            </p>
+          </div>
+        )}
+
+        {!isForbidden && tree.map((node) => (
           <TreeNode
             key={node.id}
             node={node}
