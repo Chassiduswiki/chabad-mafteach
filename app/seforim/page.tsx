@@ -8,9 +8,19 @@ export const revalidate = 60; // Revalidate every minute
 
 async function getSeforim() {
     try {
-        return await directus.request(readItems('seforim', {
+        // New schema: use documents collection as our "seforim" list.
+        const docs = await directus.request(readItems('documents', {
             sort: ['title'],
-            fields: ['id', 'title', 'category', 'author', 'year_published']
+            fields: ['id', 'title', 'doc_type', 'published_at'],
+        }));
+
+        // Map documents into a seforim-like shape
+        return (docs as any[]).map((doc) => ({
+            id: doc.id,
+            title: doc.title,
+            category: doc.doc_type || 'other',
+            author: undefined,
+            year_published: doc.published_at ? new Date(doc.published_at).getFullYear() : undefined,
         }));
     } catch (error) {
         console.error('Failed to fetch seforim:', error);

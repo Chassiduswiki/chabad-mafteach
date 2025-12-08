@@ -1,81 +1,60 @@
 import { notFound } from 'next/navigation';
 import { readItems } from '@directus/sdk';
-import directus, { Topic, TopicCitation, TopicRelationship } from '@/lib/directus';
+import directus, { Topic } from '@/lib/directus';
 import TopicTabs from '@/components/topics/TopicTabs';
 import { TopicHeader } from '@/components/topics/TopicHeader';
-import { TopicSidebar } from '@/components/topics/TopicSidebar';
-import { linkTerms } from '@/lib/term-linker';
-import { getAllTopics } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { ActionButtons } from '@/components/shared/ActionButtons';
 import { TopicTracker } from '@/components/shared/TopicTracker';
 
 export const dynamic = 'force-dynamic';
 
-async function getTopic(slug: string) {
+async function getTopic(slug: string): Promise<Topic | null> {
     try {
         console.log('Fetching topic for slug:', slug);
-        const topics = await directus.request(readItems('topics', {
+
+        const rawTopics = await directus.request(readItems('topics', {
             filter: { slug: { _eq: slug } },
-            fields: [
-                '*',
-                // Fetch citations with nested location/sefer data
-                // Note: We need to fetch this separately or via deep relation if Directus allows
-                // For now, let's try fetching the topic first, then we might need parallel fetches
-            ],
+            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
             limit: 1
         }));
 
-        if (!topics || topics.length === 0) {
+        if (!rawTopics || (Array.isArray(rawTopics) && rawTopics.length === 0)) {
             console.log('No topic found for slug:', slug);
             return null;
         }
-        console.log('Found topic:', topics[0].name, 'ID:', topics[0].id);
-        return topics[0] as Topic;
+
+        const t = (Array.isArray(rawTopics) ? rawTopics[0] : rawTopics) as any;
+
+        const mapped: Topic = {
+            id: t.id as number,
+            slug: t.slug as string,
+            name: (t.canonical_title as string) || (t.slug as string),
+            name_hebrew: undefined,
+            name_transliteration: undefined,
+            alternate_names: [],
+            category: t.topic_type as Topic['category'],
+            definition_short: t.description as string | undefined,
+            definition_positive: undefined,
+            definition_negative: undefined,
+            overview: undefined,
+            article: undefined,
+            practical_takeaways: undefined,
+            common_confusions: [],
+            key_concepts: [],
+            historical_context: undefined,
+            difficulty_level: undefined,
+            estimated_read_time: undefined,
+            view_count: undefined,
+            is_published: undefined,
+            meta_description: undefined,
+        };
+
+        return mapped;
     } catch (error) {
         console.error('Error fetching topic:', error);
         return null;
     }
-}
-
-async function getTopicData(topicId: number) {
-    // Parallel fetch for related data
-    const [citations, relationships] = await Promise.all([
-        // 1. Citations
-        directus.request(readItems('topic_citations', {
-            filter: { topic: { _eq: topicId } },
-            // @ts-ignore
-            fields: [
-                '*',
-                'location.id',
-                'location.reference_text',
-                'location.reference_hebrew',
-                'location.reference_hebrew',
-                'location.sefer.id',
-                'location.sefer.title',
-                'location.sefer.title_hebrew',
-                'location.sefer.author',
-                'location.sefer.hebrewbooks_id'
-            ] as any,
-            sort: ['-importance', 'sort_order']
-        })),
-        // 2. Relationships (both directions)
-        directus.request(readItems('topic_relationships', {
-            filter: {
-                _or: [
-                    { from_topic: { _eq: topicId } },
-                    { to_topic: { _eq: topicId } }
-                ]
-            },
-            // @ts-ignore
-            fields: ['*', 'from_topic.name', 'from_topic.slug', 'to_topic.name', 'to_topic.slug'] as any
-        }))
-    ]);
-
-    return {
-        citations: citations as unknown as TopicCitation[],
-        relationships: relationships as unknown as TopicRelationship[]
-    };
 }
 
 export default async function TopicDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -84,26 +63,6 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
 
     if (!topic) {
         notFound();
-    }
-
-    const { citations, relationships } = await getTopicData(topic.id);
-    const allTopics = await getAllTopics() as Topic[];
-
-    // Apply term linking to markdown content
-    // We filter out the current topic to avoid self-linking
-    const linkableTopics = allTopics.filter((t: Topic) => t.id !== topic.id);
-
-    if (topic.overview) {
-        topic.overview = linkTerms(topic.overview, linkableTopics as Topic[]);
-    }
-    if (topic.definition_positive) {
-        topic.definition_positive = linkTerms(topic.definition_positive, linkableTopics as Topic[]);
-    }
-    if (topic.definition_negative) {
-        topic.definition_negative = linkTerms(topic.definition_negative, linkableTopics as Topic[]);
-    }
-    if (topic.historical_context) {
-        topic.historical_context = linkTerms(topic.historical_context, linkableTopics as Topic[]);
     }
 
     return (
@@ -128,11 +87,6 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                     {/* Main Content (Left 2/3) */}
                     <div className="lg:col-span-2">
                         <TopicTabs topic={topic} />
-                    </div>
-
-                    {/* Sidebar (Right 1/3) */}
-                    <div className="space-y-8">
-                        <TopicSidebar topic={topic} relationships={relationships} />
                     </div>
                 </div>
             </main>
