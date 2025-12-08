@@ -6,29 +6,31 @@ import { EditorView } from "prosemirror-view";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap } from "prosemirror-commands";
-import { Undo2, Redo2 } from "lucide-react";
 import { mySchema } from "./schema";
 import "prosemirror-view/style/prosemirror.css";
-import { createCitationPlugin } from "./plugins/citations/createCitationPlugin";
+import "./editor-styles.css";
+import { createComprehensiveCitationPlugin, insertCitation } from "./plugins/citations/comprehensiveCitationPlugin";
 import { CitationCommandPalette } from "./CitationCommandPalette";
-import { IconButton } from "@/components/ui/IconButton";
+import { EditorToolbar } from "./EditorToolbar";
 import { useCitationPalette } from "./hooks/useCitationPalette";
+import { useEditor } from '@/lib/hooks/useEditor';
 
 interface ProseEditorProps {
-  initialContent?: any; // JSON object or HTML string
-  onChange?: (json: any) => void;
+  docId: string | null;
   className?: string;
 }
 
-export const ProseEditor: React.FC<ProseEditorProps> = ({
-  initialContent,
-  onChange,
-  className,
-}) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  
-  // Citation palette state
+export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className }) => {
+  const {
+    initialContent,
+    editorContent,
+    handleContentChange,
+    isSaving: editorIsSaving,
+    handleSave,
+    isLoading,
+    error,
+  } = useEditor(docId);
+
   const {
     isOpen: showCitationPalette,
     range: citationRange,
@@ -40,60 +42,100 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({
     { type: "success" | "error"; message: string } | null
   >(null);
 
-  // Initialize the editor
+  const editorRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+
+  // Store handleContentChange in a ref to avoid re-creating editor on every render
+  const handleContentChangeRef = useRef(handleContentChange);
+  handleContentChangeRef.current = handleContentChange;
+
   useEffect(() => {
     if (!editorRef.current) return;
-
-    // Create the initial state
-    let state;
     
-    // ... (Initial content logic remains same, but we need to re-create it here or extract it)
-    // For brevity, I'm duplicating the simple logic, assuming initialContent is handled by parent key-reset
-    // In a real refactor, we'd move state creation out.
+    // Create a default empty document if no content provided
+    const defaultDoc = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [] }]
+    };
     
-    const doc = initialContent && typeof initialContent === 'object' 
-        ? mySchema.nodeFromJSON(initialContent) 
-        : undefined;
-
-    state = EditorState.create({
-        doc,
-        schema: mySchema,
-        plugins: [
-            history(),
-            keymap({ "Mod-z": undo, "Mod-y": redo }),
-            keymap(baseKeymap),
-            createCitationPlugin({
-              onTrigger: (range) => {
-                openWithRange(range);
-              },
-              onDismiss: () => {
-                closePalette();
-              },
-            })
-        ],
+    const docContent = initialContent || defaultDoc;
+    
+    // Custom keymaps for formatting
+    const customKeymap = {
+      "Mod-b": (state: any, dispatch: any) => {
+        const mark = mySchema.marks.strong;
+        const { from, to } = state.selection;
+        const hasMark = state.doc.rangeHasMark(from, to, mark);
+        
+        if (hasMark) {
+          dispatch(state.tr.removeMark(from, to, mark));
+        } else {
+          dispatch(state.tr.addMark(from, to, mark.create()));
+        }
+        return true;
+      },
+      "Mod-i": (state: any, dispatch: any) => {
+        const mark = mySchema.marks.em;
+        const { from, to } = state.selection;
+        const hasMark = state.doc.rangeHasMark(from, to, mark);
+        
+        if (hasMark) {
+          dispatch(state.tr.removeMark(from, to, mark));
+        } else {
+          dispatch(state.tr.addMark(from, to, mark.create()));
+        }
+        return true;
+      },
+      "Mod-`": (state: any, dispatch: any) => {
+        const mark = mySchema.marks.code;
+        const { from, to } = state.selection;
+        const hasMark = state.doc.rangeHasMark(from, to, mark);
+        
+        if (hasMark) {
+          dispatch(state.tr.removeMark(from, to, mark));
+        } else {
+          dispatch(state.tr.addMark(from, to, mark.create()));
+        }
+        return true;
+      },
+    };
+    
+    let state = EditorState.create({
+      doc: mySchema.nodeFromJSON(docContent),
+      schema: mySchema,
+      plugins: [
+        history(),
+        keymap({ "Mod-z": undo, "Mod-y": redo }),
+        keymap(customKeymap),
+        keymap(baseKeymap),
+        createComprehensiveCitationPlugin({
+          onTrigger: (range) => {
+            openWithRange(range);
+          },
+          onDismiss: () => {
+            closePalette();
+          },
+        })
+      ],
     });
-
-    // Create the view
     const view = new EditorView(editorRef.current, {
       state,
       dispatchTransaction(transaction) {
         const newState = view.state.apply(transaction);
         view.updateState(newState);
-        if (transaction.docChanged && onChange) {
-          onChange(newState.doc.toJSON());
+        if (transaction.docChanged) {
+          handleContentChangeRef.current(newState.doc.toJSON());
         }
       },
       attributes: {
-        class: "ProseMirror pm-editor-content",
+        class: "pm-editor-content prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-6",
       },
     });
-
     viewRef.current = view;
-
     return () => {
       view.destroy();
     };
-  }, []); 
+  }, [initialContent, openWithRange, closePalette]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -101,66 +143,49 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({
     return () => window.clearTimeout(timeout);
   }, [feedback]);
 
-  const insertCitation = (
-    source: { id: number; title: string },
-    reference: string
-  ) => {
-    const view = viewRef.current;
-    if (!view || !citationRange) return;
-
-    // Insert the citation node
-    const citationNode = mySchema.nodes.citation.create({
-        source_id: source.id,
-        source_title: source.title,
-        reference: reference
-    });
-
-    const tr = view.state.tr.replaceWith(
-      citationRange.from,
-      citationRange.to,
-      citationNode
-    );
-    // Add a space after for easier continued typing
-    tr.insertText(" ", citationRange.from + citationNode.nodeSize);
-
-    view.dispatch(tr);
-    view.focus();
-    closePalette();
-  };
-
   return (
     <div className={`pm-editor-shell ${className ?? ""}`}>
-      <div className="pm-editor-toolbar">
-        <div className="pm-editor-toolbar-left">
-          <IconButton
-            label="Undo"
-            onClick={() => {
-              const view = viewRef.current;
-              if (view) {
-                undo(view.state, view.dispatch);
-                view.focus();
-              }
-            }}
-          >
-            <Undo2 className="h-5 w-5" />
-          </IconButton>
-          <IconButton
-            label="Redo"
-            onClick={() => {
-              const view = viewRef.current;
-              if (view) {
-                redo(view.state, view.dispatch);
-                view.focus();
-              }
-            }}
-          >
-            <Redo2 className="h-5 w-5" />
-          </IconButton>
-        </div>
-        <span className="pm-editor-hint">Type “@” to cite</span>
-      </div>
+      {/* Main Toolbar */}
+      {viewRef.current && (
+        <EditorToolbar
+          view={viewRef.current}
+          onUndo={() => {
+            const view = viewRef.current;
+            if (view) {
+              undo(view.state, view.dispatch);
+              view.focus();
+            }
+          }}
+          onRedo={() => {
+            const view = viewRef.current;
+            if (view) {
+              redo(view.state, view.dispatch);
+              view.focus();
+            }
+          }}
+          onSave={async () => {
+            const result = await handleSave();
+            if (result) {
+              setFeedback({ type: "success", message: `Saved! Created: ${result.created}, Updated: ${result.updated}, Deleted: ${result.deleted}` });
+            } else {
+              setFeedback({ type: "error", message: "Failed to save or nothing to save" });
+            }
+          }}
+          isSaving={editorIsSaving}
+          canUndo={false}
+          canRedo={false}
+        />
+      )}
 
-      <div ref={editorRef} className="pm-editor-surface" />
+      {/* Editor Content */}
+      <div className="relative bg-white">
+        <div ref={editorRef} className="pm-editor-surface" />
+
+        {/* Floating Toolbar */}
+        {/* {viewRef.current && (
+          <FloatingToolbar view={viewRef.current} />
+        )} */}
+      </div>
 
       {feedback ? (
         <div
@@ -180,11 +205,11 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({
           }
         }}
         onComplete={(source, reference) => {
-          insertCitation(source, reference);
+          insertCitation(viewRef.current, citationRange, source, reference, mySchema);
+          closePalette();
         }}
         onFeedback={(payload) => setFeedback(payload)}
       />
     </div>
   );
-}
-;
+};

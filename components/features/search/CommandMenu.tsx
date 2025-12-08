@@ -14,6 +14,8 @@ type SearchResult = {
     title: string;
     type: 'sefer' | 'location' | 'topic';
     subtitle?: string;
+    category?: string;
+    slug?: string;
     url: string;
 };
 
@@ -46,6 +48,8 @@ export function CommandMenu() {
                     title: t.title || t.name || 'Untitled',
                     type: 'topic' as const,
                     subtitle: t.definition?.substring(0, 80) + (t.definition?.length > 80 ? '...' : ''),
+                    category: t.category || t.topic_type,
+                    slug: t.slug,
                     url: `/topics/${t.slug}`
                 }));
 
@@ -68,7 +72,7 @@ export function CommandMenu() {
 
                 // Apply fuzzy search for better matching
                 const fuse = new Fuse(allResults, {
-                    keys: ['title', 'subtitle'],
+                    keys: ['title', 'subtitle', 'slug', 'category'],
                     threshold: 0.4, // 0 = perfect match, 1 = match anything
                     includeScore: true
                 });
@@ -197,7 +201,14 @@ export function CommandMenu() {
                                                             <div className="flex flex-1 flex-col gap-1">
                                                                 <div className="flex items-center justify-between">
                                                                     <span className="font-semibold text-foreground">{item.title}</span>
-                                                                    <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {item.category && (
+                                                                            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                                                                                {item.category}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="text-xs text-muted-foreground capitalize group-aria-selected:text-primary">topic</span>
+                                                                    </div>
                                                                 </div>
                                                                 {item.subtitle && (
                                                                     <span className="text-xs text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>

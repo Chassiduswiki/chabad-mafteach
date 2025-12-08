@@ -114,6 +114,45 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## TRACK 6: Editor Refactor (Phase 2 - COMPLETED)
+
+**Goal**: Clean up the codebase now that citation feature is working.
+
+### Phase 2.1: Extract Citation Plugin (COMPLETED)
+- [x] Move citation logic from `ProseEditor.tsx` into a self-contained ProseMirror plugin in `components/editor/plugins/citations/`
+- [x] Include: cmdk palette, suggestion trigger, node insertion logic
+- [x] Update ProseEditor to use the new comprehensive citation plugin
+- [x] Test: Citation workflow still works after extraction
+
+### Phase 2.2: Extract `useEditor` Hook (COMPLETED)
+- [x] Review current `useEditor` hook implementation
+- [x] Consolidate any remaining data-fetching, state management, and save logic from `app/editor/page.tsx`
+- [x] Ensure page component is clean and isolated editor logic
+
+---
+
+## 🚨 CRITICAL INFRASTRUCTURE ISSUES (URGENT - BLOCKING EDITOR)
+
+### **Directus Permissions Configuration (REQUIRED)**
+**Status:** ❌ NOT DONE - BLOCKING EDITOR FUNCTIONALITY
+**Impact:** Editor completely broken - 403 Forbidden on all API calls
+**Action Required:**
+- Login to Directus Admin: https://directus-production-20db.up.railway.app/admin
+- Go to Settings → Access Control
+- Create/configure "Public" role with READ permissions for:
+  - documents collection (all fields)
+  - topics collection (all fields) 
+  - sources collection (all fields)
+  - authors collection (all fields)
+- Assign static token `Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96` to Public role
+- Test: Editor should load StructureSidebar and citations without 403 errors
+
+**Next Agent:** Check if this has been resolved before proceeding with any editor work!
+
+---
+
+---
+
 ## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
 
 - [ ] Decide final Directus public-access model: which collections/fields readable by static token.
@@ -156,6 +195,14 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## Remaining Roadmap Items from Editor Audit:
+- Implement full Phase 2 refactor, including consolidating all editor state management into hooks and extracting plugins.
+- Add contextual editing for citations, such as making citation chips clickable for quick edits.
+- Develop collaboration features using Operational Transformation (OT) or CRDTs for real-time editing.
+- Enhance author disambiguation UI for better user prompts and error handling.
+
+---
+
 ## Execution Order (Recommended)
 
 1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
@@ -174,4 +221,3 @@ The frontend TypeScript types now match the new Directus schema:
 - **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
 - **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
 - **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
-
