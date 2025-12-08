@@ -1,0 +1,133 @@
+# Chabad Mafteach Frontend Roadmap
+
+## Current Status
+- ✅ Topics pages simplified to use minimal Directus fields (canonical_title, topic_type, description).
+- ✅ Tanya prototype wired to local Chapter 1 data file.
+- ✅ Search API stabilized with error handling for permissions.
+- ✅ Mobile search modal layout improved.
+- ⏳ **Next: Pick one track below and execute.**
+
+---
+
+## TRACK 1: Topics Detail Page (Unblock everything else)
+
+**Goal**: Make `/topics/[slug]` simple, fast, and honest about what data exists.
+
+### Phase 1a: MVP Detail Page (IMMEDIATE)
+- [ ] Simplify `TopicHeader` to show only: title (canonical_title), category (topic_type), short description.
+- [ ] Remove or feature-flag `BoundariesTab`, `SourcesTab`, `RelatedTab` from `TopicTabs` (mark as "Coming soon").
+- [ ] Remove `TopicSidebar` from detail page layout.
+- [ ] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
+
+### Phase 1b: Rich Content Fields (After Phase 1a)
+- [ ] Add to Directus `topics`: `overview`, `article`, `practical_takeaways`, `historical_context` (rich text fields).
+- [ ] Wire `TopicOverview` to render these fields when present.
+- [ ] Update `TopicTabs` to conditionally show tabs only if content exists.
+
+### Phase 1c: Boundaries & Relationships (After Phase 1b)
+- [ ] Add to Directus `topics`: `definition_positive`, `definition_negative` (rich text).
+- [ ] Wire `BoundariesTab` to render these.
+- [ ] Implement `topic_relationships` query and wire `RelatedTab` + `TopicSidebar`.
+
+### Phase 1d: Citations & Sources (After Phase 1c)
+- [ ] Redesign `SourcesTab` to query `statements` tagged with topic (via `statement_topics`), group by source.
+- [ ] Ensure Directus permissions allow static token to read `statements`, `sources`, `source_links`.
+
+---
+
+## TRACK 2: Search (Topics-first, then Seforim)
+
+**Goal**: Make search feel responsive and reliable for topics, then extend to seforim.
+
+### Phase 2a: Topics Search Feel (IMMEDIATE)
+- [ ] Audit `/api/search` topics filter: decide whether to fetch broader set + rely on Fuse, or expand server-side filter to include `slug` + future translation fields.
+- [ ] Test: typing a topic's English name reliably returns that topic (no vanishing as you add letters).
+- [ ] Update `CommandMenu` to show topic results with clear category/type badge.
+
+### Phase 2b: Seforim Search (After 2a)
+- [ ] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection.
+- [ ] Ensure `/api/search` queries the right collection and handles permissions gracefully.
+- [ ] Test: searching "Tanya" or other sefer titles returns results in Sources section.
+
+### Phase 2c: Mobile Search UX (After 2b)
+- [ ] Convert `CommandMenu` on small screens to a true **bottom sheet** (full-height, swipe-down to close).
+- [ ] Add larger touch targets and clearer result type differentiation.
+- [ ] Test on real mobile device: open, search, select, close all feel smooth.
+
+---
+
+## TRACK 3: TorahReader (Tanya → Generic)
+
+**Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
+
+### Phase 3a: Extract & Generalize (IMMEDIATE)
+- [ ] Rename `TanyaChapterReader` → `TorahReader`.
+- [ ] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
+- [ ] Keep reading from local `likkutei-amarim-1.ts` for now; reader is data-agnostic.
+- [ ] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
+
+### Phase 3b: Directus Modeling (After 3a)
+- [ ] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus.
+- [ ] Add `translations` collection entries for Hebrew/English pairs.
+- [ ] Wire `[perek]/page.tsx` to fetch from Directus instead of local file.
+
+### Phase 3c: Commentary & Translation UI (After 3b)
+- [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
+- [ ] Add support for inline commentary blocks (type: 'commentary' in statements).
+- [ ] Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.
+
+---
+
+## TRACK 5: Content Editor (Lower priority, after core tracks)
+
+**Goal**: Build a WYSIWYG editor for content creators to easily edit topics and books, aligned with the current Directus model. Behind authentication with Editor role.
+
+### Phase 5a: MVP Editor Forms (After Phase 1b)
+- [ ] Build simple authenticated forms for Topics: title, slug, topic_type, description, metadata.
+- [ ] Build simple authenticated forms for Documents: title, doc_type, metadata.
+- [ ] Gate behind Editor role (use existing Directus auth or Next.js auth).
+- [ ] Save directly to Directus via API with proper permissions.
+- [ ] Test: Content team can create/edit topics and documents without touching Directus UI.
+
+### Phase 5b: Rich Text & Order Management (After Phase 5a)
+- [ ] Add rich-text WYSIWYG for `description` and metadata fields (Markdown/HTML support).
+- [ ] Build Paragraphs editor with order-key generation (auto-increment LexoRank).
+- [ ] Build Statements editor with inline topic tagging interface.
+- [ ] Add bulk import/export for JSON files (aligned with DATA_INGESTION_SPEC_v2).
+- [ ] Test: Editors can structure a full sefer hierarchy and tag statements.
+
+### Phase 5c: Translation & Review UI (After Phase 5b)
+- [ ] Add side-by-side translation interface for statements/paragraphs.
+- [ ] Build review workflow for translation quality levels.
+- [ ] Add preview mode to see how content renders in frontend.
+- [ ] Test: Translators can work efficiently and preview changes.
+
+---
+
+## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
+
+- [ ] Decide final Directus public-access model: which collections/fields readable by static token.
+- [ ] Implement + test permission changes in staging before production.
+- [ ] Add integration tests for topics, search, and TorahReader to catch regressions.
+- [ ] Document the new topics data model and frontend mapping in repo docs.
+- [ ] Re-enable term-linking pipeline (`linkTerms`) once topics schema is stable (Phase 1c).
+
+---
+
+## Execution Order (Recommended)
+
+1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
+2. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
+3. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
+4. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
+5. **Parallel**: TRACK 4 (infrastructure) as needed.
+
+---
+
+## Notes for the Team
+
+- **Each phase is a complete, shippable unit.** Don't move to the next phase until the current one is tested and working.
+- **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
+- **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
+- **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
+
