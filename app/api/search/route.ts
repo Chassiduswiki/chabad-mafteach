@@ -12,49 +12,45 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const [seforim, locations, topics] = await Promise.all([
-            // Search seforim
-            // @ts-ignore
-            directus.request(readItems('seforim', {
+        const [docs, topicsRaw] = await Promise.all([
+            // Search seforim-style documents
+            directus.request(readItems('documents', {
                 filter: {
-                    _or: [
-                        { title: { _contains: query } },
-                        { title_hebrew: { _contains: query } },
-                        { title_transliteration: { _contains: query } }
-                    ]
+                    title: { _contains: query },
                 },
-                fields: ['id', 'title', 'title_hebrew'],
-                limit: 5
+                fields: ['id', 'title'],
+                limit: 5,
             })),
-            // Search locations
-            // @ts-ignore
-            directus.request(readItems('locations', {
-                filter: {
-                    display_name: { _contains: query }
-                },
-                fields: ['id', 'display_name', 'sefer'],
-                limit: 5
-            })),
-            // Search topics - comprehensive search across all content fields
-            // @ts-ignore
+            // Search topics using new schema fields
             directus.request(readItems('topics', {
                 filter: {
                     _or: [
-                        { name: { _contains: query } },
-                        { name_hebrew: { _contains: query } },
-                        { name_transliteration: { _contains: query } },
-                        { definition_short: { _contains: query } },
-                        { overview: { _contains: query } },
-                        { article: { _contains: query } },
-                        { definition_positive: { _contains: query } },
-                        { definition_negative: { _contains: query } },
-                        { historical_context: { _contains: query } }
-                    ]
+                        { canonical_title: { _contains: query } },
+                        { description: { _contains: query } },
+                    ],
                 },
-                fields: ['id', 'name', 'name_hebrew', 'name_transliteration', 'slug', 'definition_short', 'category'],
-                limit: 5
-            }))
+                fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+                limit: 5,
+            })),
         ]);
+
+        const seforim = (docs as any[]).map((d) => ({
+            id: d.id,
+            name: d.title,
+            slug: String(d.id),
+        }));
+
+        const topics = (topicsRaw as any[]).map((t) => ({
+            id: t.id,
+            name: t.canonical_title,
+            name_hebrew: undefined,
+            slug: t.slug,
+            category: t.topic_type,
+            definition_short: t.description,
+        }));
+
+        // locations are not implemented in the new schema yet
+        const locations: any[] = [];
 
         return NextResponse.json({ seforim, locations, topics });
     } catch (error) {

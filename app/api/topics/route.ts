@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
-import { readItems, aggregate } from '@directus/sdk';
+import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 
 export async function GET(request: NextRequest) {
@@ -12,47 +12,41 @@ export async function GET(request: NextRequest) {
     try {
         // MODE: DISCOVERY (Composite data for homepage)
         if (mode === 'discovery') {
-            // 1. Fetch published topics
+            // New schema: topics have canonical_title, topic_type, description.
+            // We map them into the legacy Topic shape expected by the UI
+            // (name, category, definition_short).
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let topics: any[] = [];
+            let rawTopics: any[] = [];
             try {
-                topics = await directus.request(
+                rawTopics = await directus.request(
                     readItems('topics' as any, {
-                        filter: { is_published: { _eq: true } },
-                        fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
-                        limit: 50, // Fetch enough to randomize
+                        fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+                        limit: 50,
                     } as any)
                 ) as any[];
             } catch (error) {
                 console.warn('Failed to fetch topics for discovery:', error);
             }
 
-            // 2. Pick random featured topic
+            const topics = rawTopics.map((t) => ({
+                id: t.id,
+                slug: t.slug,
+                name: t.canonical_title,
+                name_hebrew: null,
+                category: t.topic_type,
+                definition_short: t.description,
+            }));
+
             const featuredTopic = topics.length > 0
                 ? topics[Math.floor(Math.random() * topics.length)]
                 : null;
 
-            // 3. Get recently updated topics
             const recentTopics = topics.slice(0, 5);
 
-            // 4. Fetch recent citations
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let recentSources: any[] = [];
-            try {
-                recentSources = await directus.request(
-                    readItems('topic_citations' as any, {
-                        fields: ['id', 'excerpt', 'location', 'topic'],
-                        deep: {
-                            location: { _fields: ['display_name', 'sefer'] },
-                            topic: { _fields: ['name', 'slug'] }
-                        },
-                        limit: 5,
-                        sort: ['-date_created']
-                    } as any)
-                ) as any[];
-            } catch (error) {
-                console.warn('Failed to fetch recent sources:', error);
-            }
+            // We no longer have topic_citations / locations in the new schema,
+            // so for now expose an empty recentSources array to keep the UI happy.
+            const recentSources: any[] = [];
 
             return NextResponse.json({
                 featuredTopic,
@@ -63,53 +57,53 @@ export async function GET(request: NextRequest) {
 
         // MODE: FEATURED (Random topics with citation counts)
         if (mode === 'featured') {
-            // 1. Fetch all published topics
+            // New schema: fetch all topics and map to legacy shape
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const topics = await directus.request(
+            const rawTopics = await directus.request(
                 readItems('topics' as any, {
-                    filter: { is_published: { _eq: true } },
-                    fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
+                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                     limit: -1,
                 } as any)
             ) as any[];
 
-            // 2. Shuffle and take N
-            const shuffled = topics.sort(() => Math.random() - 0.5);
+            const allTopics = rawTopics.map((t) => ({
+                id: t.id,
+                slug: t.slug,
+                name: t.canonical_title,
+                name_hebrew: null,
+                category: t.topic_type,
+                definition_short: t.description,
+            }));
+
+            const shuffled = allTopics.sort(() => Math.random() - 0.5);
             const selectedTopics = shuffled.slice(0, limit || 3);
 
-            // 3. Fetch citation counts
-            const topicsWithCounts = await Promise.all(
-                selectedTopics.map(async (topic) => {
-                    let citationCount = 0;
-                    try {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const result = await directus.request(
-                            aggregate('topic_citations' as any, {
-                                aggregate: { count: '*' },
-                                query: {
-                                    filter: { topic: { _eq: topic.id } }
-                                }
-                            } as any)
-                        ) as any;
-                        citationCount = result?.[0]?.count || 0;
-                    } catch (e) {
-                        console.warn(`Failed count for topic ${topic.id}`, e);
-                    }
-                    return { ...topic, citation_count: citationCount };
-                })
-            );
+            // We no longer have topic_citations; expose citation_count = 0 for now.
+            const topicsWithCounts = selectedTopics.map((topic) => ({
+                ...topic,
+                citation_count: 0,
+            }));
 
             return NextResponse.json({ topics: topicsWithCounts });
         }
 
         // DEFAULT: List topics
-        const filter = category ? { category: { _eq: category as any } } : {};
+        const filter = category ? { topic_type: { _eq: category as any } } : {};
 
-        const topics = await directus.request(readItems('topics', {
+        const rawTopics = await directus.request(readItems('topics', {
             filter,
-            sort: ['name'],
-            fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
+            sort: ['canonical_title'],
+            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
             limit: limit === -1 ? undefined : limit
+        }));
+
+        const topics = (rawTopics as any[]).map((t) => ({
+            id: t.id,
+            slug: t.slug,
+            name: t.canonical_title,
+            name_hebrew: null,
+            category: t.topic_type,
+            definition_short: t.description,
         }));
 
         return NextResponse.json({ topics });
