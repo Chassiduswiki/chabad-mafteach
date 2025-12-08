@@ -7,6 +7,8 @@
 - ✅ Search API stabilized with error handling for permissions.
 - ✅ Mobile search modal layout improved.
 - ✅ Legacy type aliases added for backward compatibility (Sefer→Document, Location→Paragraph, etc.).
+- ✅ **Premium BookReader component created** - transforms seforim page into professional reading experience (Dec 8, 2025).
+- ✅ **Seforim UX issues resolved** - fixed z-index, mobile popup, click-to-close functionality (Dec 8, 2025).
 - ⏳ **Next: Pick one track below and execute.**
 
 ## Schema Migration Notes (Dec 8, 2025)
@@ -69,10 +71,10 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
 
 ### Phase 3a: Extract & Generalize (IMMEDIATE)
-- [ ] Rename `TanyaChapterReader` → `TorahReader`.
-- [ ] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
+- [x] ~~Rename `TanyaChapterReader` → `TorahReader`.~~ **BETTER**: Created `BookReader` component with premium UX.
+- [x] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
 - [x] ~~Keep reading from local `likkutei-amarim-1.ts` for now~~ **DONE**: Now fetches from Directus.
-- [ ] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
+- [x] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
 
 ### Phase 3b: Directus Modeling (After 3a)
 - [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
@@ -82,7 +84,7 @@ The frontend TypeScript types now match the new Directus schema:
 ### Phase 3c: Commentary & Translation UI (After 3b)
 - [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
 - [ ] Add support for inline commentary blocks (type: 'commentary' in statements).
-- [ ] Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.
+- [x] ~~Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.~~ **PARTIAL**: Reader shows Hebrew beautifully with premium UX, translation toggle not yet implemented.
 
 ---
 
@@ -123,13 +125,46 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## Component Cleanup Tasks (Added Dec 8, 2025)
+
+**Priority**: High - Remove unused code to improve maintainability
+
+1. **[HIGH] Remove 3 unused components** - Immediate cleanup to reduce bundle size:
+   - `button` (UI component) - **REMOVED**
+   - `TanyaChapterReader` - **REMOVED** 
+   - `TopicOverview` - **REMOVED**
+
+2. **[HIGH] Complete TopicTabs implementation** - Currently only renders OverviewTab, needs full tab functionality
+
+3. **[MEDIUM] Reconfigure topic components for new DB schema** - Future implementation:
+   - `TopicArticle` - Connect to Document + paragraph/statement system
+   - `RelatedTab` - Link to existing related topics in DB
+   - `SourcesTab` - Reconfigure for new Directus schema
+   - `TopicSidebar` - Shelve for future use
+
+4. **[MEDIUM] Review and split large components** - Consider breaking down:
+   - `BookReader` (346 lines) - consider lazy loading
+   - `CommandMenu` (302 lines) - extract business logic
+   - `SourcesTab` (231 lines) - if re-used
+   - `OverviewTab` (208 lines) - if re-used
+
+5. **[MEDIUM] Add component documentation** - Document complex features and interfaces
+
+6. **[LOW] Extract business logic from UI components** - Separate concerns where appropriate
+
+7. **[LOW] Implement lazy loading for large components** - Optimize bundle size and loading performance
+
+---
+
 ## Execution Order (Recommended)
 
 1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
-2. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
-3. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
-4. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
-5. **Parallel**: TRACK 4 (infrastructure) as needed.
+2. **Then Component Cleanup Task #1** (Remove unused components): immediate code quality improvement, ~0.5 day.
+3. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
+4. **Then Component Cleanup Task #2** (Complete TopicTabs): unblock topic functionality, ~0.5 day.
+5. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
+6. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
+7. **Parallel**: Remaining component cleanup tasks (#3-6) and TRACK 4 (infrastructure) as needed.
 
 ---
 
