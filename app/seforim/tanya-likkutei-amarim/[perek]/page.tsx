@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { TanyaChapterReader } from '@/components/tanya/TanyaChapterReader';
+import { BookReader } from '@/components/tanya/BookReader';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,6 @@ export default async function TanyaChapterPage({
 }) {
   const { perek } = await params;
 
-  const chapterData = await getChapterData(perek);
-
-  if (!chapterData || chapterData.statements.length === 0) {
-    notFound();
-  }
-
-  const paragraphText = chapterData.paragraphs.map((p: any) => p.text).join(' ');
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-5xl px-6 py-8 sm:px-8">
@@ -74,22 +67,33 @@ export default async function TanyaChapterPage({
           className="mb-6"
         />
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Tanya – Likutei Amarim – Perek {perek}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Click a sentence to see related topics and sources.
-          </p>
-        </div>
-
-        <TanyaChapterReader
-          paragraphText={paragraphText}
-          statements={chapterData.statements}
-          topicsInPerek={[]}
-          sources={[]}
-        />
+        <Suspense fallback={<div>Loading chapter...</div>}>
+          <TanyaChapterContent perek={perek} />
+        </Suspense>
       </div>
     </div>
+  );
+}
+
+async function TanyaChapterContent({ perek }: { perek: string }) {
+  const chapterData = await getChapterData(perek);
+  const currentPerek = parseInt(perek);
+
+  if (!chapterData || chapterData.statements.length === 0) {
+    notFound();
+  }
+
+  const paragraphText = chapterData.paragraphs.map((p: any) => p.text).join(' ');
+
+  return (
+    <BookReader
+      paragraphText={paragraphText}
+      statements={chapterData.statements}
+      topicsInPerek={[]}
+      sources={[]}
+      currentPerek={currentPerek}
+      totalPerek={10}
+      isLoading={false}
+    />
   );
 }
