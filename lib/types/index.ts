@@ -29,6 +29,7 @@ export interface Document {
     metadata?: Record<string, unknown>;
     published_at?: string;
     created_by?: string;
+    parent_id?: number | Document;
     
     // Legacy compatibility fields for citation system
     hebrewbooks_id?: number;
