@@ -2,10 +2,18 @@
 
 ## Current Status
 - ✅ Topics pages simplified to use minimal Directus fields (canonical_title, topic_type, description).
-- ✅ Tanya prototype wired to local Chapter 1 data file.
+- ✅ **TypeScript schema aligned with new Directus data model** (Dec 8, 2025).
+- ✅ Tanya reader now fetches from Directus (paragraphs/statements) instead of hardcoded data.
 - ✅ Search API stabilized with error handling for permissions.
 - ✅ Mobile search modal layout improved.
+- ✅ Legacy type aliases added for backward compatibility (Sefer→Document, Location→Paragraph, etc.).
 - ⏳ **Next: Pick one track below and execute.**
+
+## Schema Migration Notes (Dec 8, 2025)
+The frontend TypeScript types now match the new Directus schema:
+- **Collections**: `documents`, `paragraphs`, `statements`, `topics`, `statement_topics`, `sources`, `source_links`, `translations`
+- **Removed**: `seforim`, `locations`, `texts`, `topic_citations` (replaced with new collections)
+- **See**: `Documentation/New-directus-data-model.md` for complete schema reference
 
 ---
 
@@ -63,13 +71,13 @@
 ### Phase 3a: Extract & Generalize (IMMEDIATE)
 - [ ] Rename `TanyaChapterReader` → `TorahReader`.
 - [ ] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
-- [ ] Keep reading from local `likkutei-amarim-1.ts` for now; reader is data-agnostic.
+- [x] ~~Keep reading from local `likkutei-amarim-1.ts` for now~~ **DONE**: Now fetches from Directus.
 - [ ] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
 
 ### Phase 3b: Directus Modeling (After 3a)
-- [ ] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus.
+- [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
 - [ ] Add `translations` collection entries for Hebrew/English pairs.
-- [ ] Wire `[perek]/page.tsx` to fetch from Directus instead of local file.
+- [x] Wire `[perek]/page.tsx` to fetch from Directus instead of local file. **DONE** (Dec 8, 2025)
 
 ### Phase 3c: Commentary & Translation UI (After 3b)
 - [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
@@ -109,8 +117,9 @@
 - [ ] Decide final Directus public-access model: which collections/fields readable by static token.
 - [ ] Implement + test permission changes in staging before production.
 - [ ] Add integration tests for topics, search, and TorahReader to catch regressions.
-- [ ] Document the new topics data model and frontend mapping in repo docs.
+- [x] Document the new topics data model and frontend mapping in repo docs. **DONE** (See `lib/types/index.ts` and `Documentation/New-directus-data-model.md`)
 - [ ] Re-enable term-linking pipeline (`linkTerms`) once topics schema is stable (Phase 1c).
+- [x] Align TypeScript types with new Directus schema. **DONE** (Dec 8, 2025)
 
 ---
 
