@@ -8,6 +8,7 @@ interface StatementWithTopics {
   order_key: string;
   text: string;
   topics: Topic[];
+  sources: { id: number; title: string; external_url?: string | null; relationship_type?: string; page_number?: string; verse_reference?: string }[];
 }
 
 interface TanyaChapterReaderProps {
@@ -38,9 +39,6 @@ export function TanyaChapterReader({
     <>
       {/* Main paragraph composed of statement spans */}
       <div className="rounded-2xl border border-border bg-background/50 p-4 sm:p-6">
-        <h2 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Text
-        </h2>
         <p className="font-hebrew text-lg leading-relaxed">
           {statements.length > 0
             ? statements.map((s, idx) => (
@@ -113,8 +111,8 @@ export function TanyaChapterReader({
 
       {/* Bottom sheet for selected statement */}
       {selected && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40">
-          <div className="w-full max-w-xl rounded-t-2xl border border-border bg-background p-4 sm:p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={handleClose}>
+          <div className="w-full max-w-xl rounded-t-2xl border border-border bg-background p-4 sm:p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Statement {selected.order_key}
@@ -146,15 +144,37 @@ export function TanyaChapterReader({
               </div>
             )}
 
-            {sources.length > 0 && (
+            {selected.sources.length > 0 && (
               <div>
                 <div className="mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Sources in Chapter
+                  Sources & Citations
                 </div>
-                <ul className="space-y-1 text-xs">
-                  {sources.map((s) => (
-                    <li key={s.id} className="flex flex-col">
-                      <span>{s.title}</span>
+                <ul className="space-y-2 text-xs">
+                  {selected.sources.map((s) => (
+                    <li key={s.id} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{s.title}</span>
+                        {s.relationship_type && (
+                          <span className="text-muted-foreground capitalize">{s.relationship_type}</span>
+                        )}
+                      </div>
+                      {(s.page_number || s.verse_reference) && (
+                        <div className="text-muted-foreground">
+                          {s.verse_reference && <span>{s.verse_reference}</span>}
+                          {s.verse_reference && s.page_number && <span> • </span>}
+                          {s.page_number && <span>Page {s.page_number}</span>}
+                        </div>
+                      )}
+                      {s.external_url && (
+                        <a
+                          href={s.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          View Source →
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>

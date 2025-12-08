@@ -38,6 +38,7 @@ async function getChapterData(perek: string) {
         order_key: s.order_key,
         text: s.text,
         topics: [],
+        sources: [] // Empty sources for now - will implement proper source linking later
       }))
     };
   } catch (error) {
