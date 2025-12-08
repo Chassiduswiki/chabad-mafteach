@@ -12,17 +12,28 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const [docs, topicsRaw] = await Promise.all([
-            // Search seforim-style documents
-            directus.request(readItems('documents', {
-                filter: {
-                    title: { _contains: query },
-                },
-                fields: ['id', 'title'],
-                limit: 5,
-            })),
-            // Search topics using new schema fields
-            directus.request(readItems('topics', {
+        let docs: any[] = [];
+        let topicsRaw: any[] = [];
+
+        // Fetch documents, but gracefully handle permission errors (403)
+        try {
+            docs = await directus.request(
+                readItems('documents', {
+                    filter: {
+                        title: { _contains: query },
+                    },
+                    fields: ['id', 'title', 'doc_type'],
+                    limit: 5,
+                })
+            ) as any[];
+        } catch (error) {
+            console.warn('Search seforim query failed (permissions or missing collection):', error);
+            docs = [];
+        }
+
+        // Fetch topics (if this fails, we still let handleApiError surface it)
+        topicsRaw = await directus.request(
+            readItems('topics', {
                 filter: {
                     _or: [
                         { canonical_title: { _contains: query } },
@@ -31,13 +42,13 @@ export async function GET(request: NextRequest) {
                 },
                 fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                 limit: 5,
-            })),
-        ]);
+            })
+        ) as any[];
 
-        const seforim = (docs as any[]).map((d) => ({
+        const seforim = (docs || []).map((d) => ({
             id: d.id,
-            name: d.title,
-            slug: String(d.id),
+            title: d.title as string,
+            doc_type: d.doc_type as string | undefined,
         }));
 
         const topics = (topicsRaw as any[]).map((t) => ({

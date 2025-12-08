@@ -14,8 +14,8 @@ export const dynamic = 'force-dynamic';
 
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
-        // New schema: topics use canonical_title, topic_type, description.
-        // We map them into the legacy Topic shape used across the UI.
+        // Topics use canonical_title, topic_type, description in the database.
+        // We map them to include legacy alias fields (name, category, definition_short).
 
         const filter: any = {};
         if (category) {
@@ -34,25 +34,13 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
         const topics: Topic[] = (rawTopics as any[]).map((t) => ({
             id: t.id,
             slug: t.slug,
+            canonical_title: t.canonical_title,
+            topic_type: t.topic_type,
+            description: t.description,
+            // Legacy aliases
             name: t.canonical_title,
-            name_hebrew: undefined,
-            name_transliteration: undefined,
-            alternate_names: [],
             category: t.topic_type,
             definition_short: t.description,
-            definition_positive: undefined,
-            definition_negative: undefined,
-            overview: undefined,
-            article: undefined,
-            practical_takeaways: undefined,
-            common_confusions: [],
-            key_concepts: [],
-            historical_context: undefined,
-            difficulty_level: undefined,
-            estimated_read_time: undefined,
-            view_count: undefined,
-            is_published: undefined,
-            meta_description: undefined,
         }));
 
         // Get total count with same filter

@@ -112,7 +112,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
                                     {source.location?.sefer?.title || 'Source'}
                                 </p>
                                 <p className="text-xs text-muted-foreground truncate">
-                                    {source.location?.display_name} → {source.topic?.name}
+                                    {source.location?.order_key} → {source.topic?.name}
                                 </p>
                             </Link>
                         </li>

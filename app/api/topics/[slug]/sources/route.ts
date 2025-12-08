@@ -22,32 +22,19 @@ export async function GET(
 
         const topicId = topics[0].id;
 
-        // Fetch topic_citations with expanded location and sefer
-        const citations = await directus.request(readItems('topic_citations', {
-            filter: { topic: { _eq: topicId } },
-            // @ts-ignore - Directus SDK doesn't properly type nested field expansion
-            fields: [
-                'id',
-                'citation_role',
-                'importance',
-                'quoted_text',
-                'quoted_text_english',
-                'context_note',
-                'page_reference',
-                'sort_order',
-                'location.id',
-                'location.reference_text',
-                'location.reference_hebrew',
-                'location.full_path',
-                'location.sefer.id',
-                'location.sefer.title',
-                'location.sefer.title_hebrew',
-                'location.sefer.author'
-            ] as any,
-            sort: ['sort_order', 'importance']
-        }));
+        // Fetch statement_topics with expanded statement data
+        let statementTopics: any[] = [];
+        try {
+            statementTopics = await directus.request(readItems('statement_topics', {
+                filter: { topic_id: { _eq: topicId } } as any,
+                fields: ['*', { statement_id: ['id', 'text', 'order_key'] }] as any,
+                sort: ['-relevance_score'] as any
+            })) as any[];
+        } catch (error) {
+            console.warn('Failed to fetch statement_topics:', error);
+        }
 
-        return NextResponse.json({ sources: citations });
+        return NextResponse.json({ sources: statementTopics });
     } catch (error) {
         console.error('Failed to fetch topic sources:', error);
         return NextResponse.json({ error: 'Failed to fetch sources' }, { status: 500 });
