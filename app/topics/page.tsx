@@ -14,31 +14,56 @@ export const dynamic = 'force-dynamic';
 
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
-        // Build filter - add category if provided
-        const filter: any = { is_published: { _eq: true } };
+        // New schema: topics use canonical_title, topic_type, description.
+        // We map them into the legacy Topic shape used across the UI.
+
+        const filter: any = {};
         if (category) {
-            filter.category = { _eq: category };
+            filter.topic_type = { _eq: category };
         }
 
-        // Get paginated topics
-        // @ts-ignore
-        const topics = await directus.request(readItems('topics', {
-            sort: ['name'],
-            fields: ['id', 'name', 'name_hebrew', 'slug', 'category', 'definition_short'],
+        // Get paginated topics from Directus
+        const rawTopics = await directus.request(readItems('topics', {
+            sort: ['canonical_title'],
+            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
             limit,
             offset,
-            filter
+            filter,
+        }));
+
+        const topics: Topic[] = (rawTopics as any[]).map((t) => ({
+            id: t.id,
+            slug: t.slug,
+            name: t.canonical_title,
+            name_hebrew: undefined,
+            name_transliteration: undefined,
+            alternate_names: [],
+            category: t.topic_type,
+            definition_short: t.description,
+            definition_positive: undefined,
+            definition_negative: undefined,
+            overview: undefined,
+            article: undefined,
+            practical_takeaways: undefined,
+            common_confusions: [],
+            key_concepts: [],
+            historical_context: undefined,
+            difficulty_level: undefined,
+            estimated_read_time: undefined,
+            view_count: undefined,
+            is_published: undefined,
+            meta_description: undefined,
         }));
 
         // Get total count with same filter
-        const allPublishedTopics = await directus.request(readItems('topics', {
+        const allTopics = await directus.request(readItems('topics', {
             fields: ['id'],
-            filter
+            filter,
         }));
 
-        const totalCount = Array.isArray(allPublishedTopics) ? allPublishedTopics.length : 0;
+        const totalCount = Array.isArray(allTopics) ? allTopics.length : 0;
 
-        return { topics: topics as Topic[], totalCount };
+        return { topics, totalCount };
     } catch (error) {
         console.error('Failed to fetch topics:', error);
         return { topics: [], totalCount: 0 };
