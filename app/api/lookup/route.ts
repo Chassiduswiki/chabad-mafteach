@@ -16,12 +16,12 @@ export async function GET(request: NextRequest) {
         const topics = await directus.request(readItems('topics', {
             filter: {
                 _or: [
-                    { name: { _eq: term } },
-                    { name: { _icontains: term } },
-                    { name_hebrew: { _icontains: term } }
+                    { canonical_title: { _eq: term } },
+                    { canonical_title: { _icontains: term } },
+                    { slug: { _icontains: term } }
                 ]
             },
-            fields: ['id', 'name', 'name_hebrew', 'slug', 'definition_short'],
+            fields: ['id', 'canonical_title', 'slug', 'description'],
             limit: 1
         }));
 
@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             found: true,
-            term: topic.name,
-            hebrew: topic.name_hebrew,
-            quickDefinition: topic.definition_short || '',
-            fullDefinition: topic.definition_short || '',
+            term: topic.canonical_title,
+            hebrew: undefined, // Not available in new schema
+            quickDefinition: topic.description || '',
+            fullDefinition: topic.description || '',
             slug: topic.slug
         });
     } catch (error) {

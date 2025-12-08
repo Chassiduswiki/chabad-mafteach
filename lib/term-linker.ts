@@ -12,18 +12,25 @@ export function linkTerms(content: string, terms: Topic[]): string {
 
     // Sort terms by length (descending) to prioritize longer phrases
     // e.g. "Ahavas Yisroel" before "Ahavas"
-    const sortedTerms = [...terms].sort((a, b) => b.name.length - a.name.length);
+    const sortedTerms = [...terms].sort((a, b) => {
+        const aName = a.name || a.canonical_title || '';
+        const bName = b.name || b.canonical_title || '';
+        return bName.length - aName.length;
+    });
 
     // Create a map of placeholders to final links to avoid nested linking
     // e.g. preventing [Bittul] becoming [[Bittul]...]
     const replacements: { placeholder: string; link: string }[] = [];
 
     sortedTerms.forEach((term, index) => {
+        const termName = term.name || term.canonical_title;
+        if (!termName) return;
+        
         // Skip if already linked (though we only link first occurrence, this helps if we have synonyms)
         if (linkedTerms.has(term.slug)) return;
 
         // Escape regex special characters
-        const escapedName = term.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedName = termName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         // Look for whole words only, case insensitive
         const regex = new RegExp(`\\b(${escapedName})\\b`, 'i');
