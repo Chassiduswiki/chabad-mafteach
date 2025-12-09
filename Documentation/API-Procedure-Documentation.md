@@ -670,3 +670,126 @@ relevance_score,is_primary,statement_id,topic_id
 curl -X POST "$BASE_URL/import/statement_topics" \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@tanya_perek1_statement_topics.csv"
+
+---
+
+## AI API Endpoints (Phase 3)
+
+### OpenRouter Integration
+
+The system now includes AI-powered processing using OpenRouter API with free-tier DeepSeek models for Hebrew text processing.
+
+**Environment Setup:**
+```bash
+# Add to .env.local
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+**Available Models:** DeepSeek R1 (free tier, excellent for reasoning tasks)
+
+### Statement Breaking API
+
+**Endpoint:** `POST /api/statements/break`
+
+Breaks paragraph text into logical statements using AI.
+
+**Request:**
+```json
+{
+  "paragraph_id": 123,
+  "document_id": 456
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "statements_created": 3,
+  "statements": [...]
+}
+```
+
+### OCR Correction API
+
+**Endpoint:** `POST /api/ocr/correct`
+
+Corrects OCR errors in Hebrew text using AI.
+
+**Request:**
+```json
+{
+  "text": "text with potential OCR errors",
+  "statement_id": 123
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "original_text": "original",
+  "corrected_text": "corrected",
+  "confidence": 0.85,
+  "changes_made": ["corrections list"]
+}
+```
+
+### Citation Detection API
+
+**Endpoint:** `POST /api/citations/detect`
+
+Detects Jewish source citations in text using AI pattern recognition.
+
+**Request:**
+```json
+{
+  "text": "text containing citations like תניא אגרת התשובה פרק ב׳"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "citations_found": 2,
+  "citations": [
+    {
+      "text": "תניא אגרת התשובה פרק ב׳",
+      "type": "tanya",
+      "confidence": 0.9
+    }
+  ]
+}
+```
+
+### Topic Tagging API
+
+**Endpoint:** `POST /api/topics/tag`
+
+Automatically tags documents with relevant Jewish philosophical topics.
+
+**Request:**
+```json
+{
+  "text": "document content for topic analysis"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "topics_found": 5,
+  "topics": [
+    {
+      "name": "Free Will",
+      "hebrew_name": "בחירה חפשית",
+      "category": "philosophy",
+      "confidence": 0.8
+    }
+  ]
+}
+```
+
+**Cost:** Free tier allows 50 requests/day, perfect for testing and development.

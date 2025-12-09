@@ -3,8 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PopupProvider } from "@/lib/popup-context";
 import { GlobalPopupRenderer } from "@/components/features/popups/GlobalPopupRenderer";
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { SearchProvider } from "@/lib/search-context";
 import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
@@ -42,8 +40,6 @@ export default function RootLayout({
             </SearchProvider>
           </QueryProvider>
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );
