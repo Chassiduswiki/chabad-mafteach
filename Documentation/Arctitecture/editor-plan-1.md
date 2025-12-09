@@ -412,7 +412,16 @@ User opens in Editor
    - ✅ Detailed reasoning for OCR recommendations
    - **Enhancement:** `/app/api/ingest/pdf/route.ts` - Added `detectOCRNeed()` function
 
-3. **Ingestion UI Update** (✅ COMPLETED - 0.5 days)
+3. **Tesseract OCR Integration** (✅ COMPLETED - 1 day)
+   - ✅ Integrated `tesseract.js` with Hebrew language support (heb+eng)
+   - ✅ Added `pdf2pic` for PDF-to-image conversion (300 DPI)
+   - ✅ Intelligent OCR application (only when needed, based on detection)
+   - ✅ OCR confidence scoring and quality assessment
+   - ✅ Hebrew text post-processing and cleanup
+   - ✅ Fallback to native text when OCR fails
+   - **Files Created:** `/lib/ocr-processor.ts`
+
+4. **Ingestion UI Update** (✅ COMPLETED - 0.5 days)
    - ✅ Added PDF upload tab to IngestionModal
    - ✅ Processing status display with file size warnings
    - ✅ User feedback for PDF processing progress
@@ -436,13 +445,14 @@ User opens in Editor
    - Provide confidence scores and reasoning ✅
    - **Deliverable:** Accurate OCR need assessment with 80%+ confidence ✅
 
-3. **Tesseract OCR Integration** (5-6 days)
-   - Configure **Tesseract** on the backend (Hebrew language pack + custom dictionary)
-   - Render PDF pages via Fitz or a rasterizer to images
-   - Run OCR on each page in the worker process
-   - Capture confidence scores
-   - Store raw OCR output + confidence in metadata
-   - **Deliverable:** Can OCR Hebrew PDFs with confidence scores
+3. **Tesseract OCR Integration** (5-6 days) ✅ COMPLETED
+   - Configure **Tesseract** on the backend (Hebrew language pack + custom dictionary) ✅
+   - Render PDF pages via pdf2pic to images (300 DPI) ✅
+   - Run OCR on each page in the worker process ✅
+   - Capture confidence scores and word-level data ✅
+   - Store raw OCR output + confidence in metadata ✅
+   - Intelligent application (only when text quality is poor) ✅
+   - **Deliverable:** Can OCR Hebrew PDFs with confidence scores ✅
 
 4. **Footnote Detection v1** (6-7 days)
    - **This is the hardest part**
@@ -477,7 +487,7 @@ User opens in Editor
 **Success Criteria:**
 - [x] Can upload PDF and extract all text ✅ (text-based PDFs only)
 - [x] Can detect if PDF needs OCR vs has native text ✅ (80%+ confidence)
-- [ ] Can OCR scanned Hebrew PDFs
+- [x] Can OCR scanned Hebrew PDFs ✅ (with confidence scores)
 - [ ] Footnotes detected with 60%+ accuracy
 - [ ] User sees processing progress
 - [ ] Processed document appears in editor
@@ -805,8 +815,9 @@ User opens in Editor
 - [x] 5+ books imported from Sefaria ✅ (API ready)
 
 **Phase 2 (Weeks 6-9):**
-- [x] 3+ PDFs successfully processed 
-- [x] OCR need detection with 80%+ confidence 
+- [x] 3+ PDFs successfully processed ✅ (text-based PDFs)
+- [x] OCR need detection with 80%+ confidence ✅ (comprehensive analysis)
+- [x] OCR confidence tracked ✅ (Hebrew OCR with confidence scores)
 - [ ] Footnotes detected with 60%+ accuracy
 - [ ] OCR confidence tracked
 
