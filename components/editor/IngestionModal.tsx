@@ -200,7 +200,7 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
         if (status.status === 'completed') {
           setFeedback({
             type: 'success',
-            message: `✅ PDF Processing Complete!\n📄 ${status.result?.pdfInfo?.pages || 0} pages processed\n📝 ${status.result?.pdfInfo?.paragraphs_created || 0} paragraphs created\n📊 Quality: ${status.result?.pdfInfo?.text_quality || 'unknown'}`
+            message: `✅ PDF Processing Complete!\n📄 ${status.result?.pdfInfo?.pages || 0} pages processed\n📝 ${status.result?.pdfInfo?.paragraphs_created || 0} paragraphs created\n📚 ${status.result?.pdfInfo?.footnotes_detected || 0} footnotes detected\n📊 Quality: ${status.result?.pdfInfo?.text_quality || 'unknown'}`
           });
           onDocumentCreated?.(status.result?.documentId);
           stopPolling();
