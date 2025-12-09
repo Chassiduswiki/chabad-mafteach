@@ -1,4 +1,4 @@
-import { Topic } from '@/lib/directus';
+
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function TopicsListSkeleton() {

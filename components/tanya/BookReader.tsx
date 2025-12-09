@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Topic } from '@/lib/directus';
+import type { Topic } from '@/lib/types';
 import { Loader2, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -63,7 +63,7 @@ export function BookReader({
     <div className="min-h-screen bg-background text-foreground">
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
-        <div 
+        <div
           className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-500 ease-out"
           style={{ width: `${readingProgress}%` }}
         />
@@ -180,15 +180,15 @@ export function BookReader({
       {/* Enhanced Mobile Bottom Sheet */}
       {selected && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={handleClose}>
-          <div 
-            className="w-full max-w-2xl rounded-t-2xl bg-background border-t border-border shadow-2xl" 
+          <div
+            className="w-full max-w-2xl rounded-t-2xl bg-background border-t border-border shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle Bar */}
             <div className="flex justify-center py-3">
               <div className="h-1.5 w-12 bg-muted-foreground/30 rounded-full" />
             </div>
-            
+
             <div className="px-4 pb-6 sm:px-6">
               <div className="mb-4 flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -201,7 +201,7 @@ export function BookReader({
                   Close
                 </button>
               </div>
-              
+
               <div className="font-serif text-[17px] leading-relaxed mb-6 text-foreground bg-muted/30 rounded-lg p-4 border border-border">
                 {selected.text}
               </div>
