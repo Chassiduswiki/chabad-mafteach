@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
-import { readItems } from '@directus/sdk';
-import directus, { Topic } from '@/lib/directus';
+import { getTopicBySlug } from '@/lib/api/topics';
 import TopicTabs from '@/components/topics/TopicTabs';
 import { TopicHeader } from '@/components/topics/TopicHeader';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
@@ -9,30 +8,15 @@ import { TopicTracker } from '@/components/shared/TopicTracker';
 
 export const dynamic = 'force-dynamic';
 
-async function getTopicData(slug: string): Promise<{ topic: Topic; relatedTopics?: any[] } | null> {
-    try {
-        console.log('Fetching topic data for slug:', slug);
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/topics/${slug}`, {
-            cache: 'no-store'
-        });
-
-        if (!response.ok) {
-            console.log('API response not ok:', response.status);
-            return null;
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching topic data:', error);
-        return null;
-    }
-}
-
 export default async function TopicDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const topicData = await getTopicData(slug);
+    
+    let topicData = null;
+    try {
+        topicData = await getTopicBySlug(slug);
+    } catch (error) {
+        console.error('Error fetching topic data:', error);
+    }
 
     if (!topicData) {
         notFound();
