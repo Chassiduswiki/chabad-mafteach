@@ -57,7 +57,7 @@ export class FootnoteDetector {
     if (bottomRegionResult.footnotes.length > 0) {
       footnotes.push(...bottomRegionResult.footnotes);
       mainText = bottomRegionResult.mainText;
-      totalConfidence += bottomRegionResult.confidence;
+      totalConfidence += bottomRegionResult.detectionStats.confidence;
     }
 
     // Method 2: Inline footnote detection (less common)
@@ -65,7 +65,7 @@ export class FootnoteDetector {
     if (inlineResult.footnotes.length > 0) {
       footnotes.push(...inlineResult.footnotes);
       mainText = inlineResult.mainText;
-      totalConfidence += inlineResult.confidence * 0.5; // Lower weight for inline
+      totalConfidence += inlineResult.detectionStats.confidence * 0.5; // Lower weight for inline
     }
 
     // Method 3: Endnote detection
@@ -73,7 +73,7 @@ export class FootnoteDetector {
     if (endnoteResult.footnotes.length > 0) {
       footnotes.push(...endnoteResult.footnotes);
       mainText = endnoteResult.mainText;
-      totalConfidence += endnoteResult.confidence * 0.8; // Higher weight for endnotes
+      totalConfidence += endnoteResult.detectionStats.confidence * 0.8; // Higher weight for endnotes
     }
 
     // Calculate overall confidence
