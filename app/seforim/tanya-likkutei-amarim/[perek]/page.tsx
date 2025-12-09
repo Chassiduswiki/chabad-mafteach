@@ -1,147 +1,145 @@
-import { notFound } from 'next/navigation';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { BookReader } from '@/components/tanya/BookReader';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { Suspense } from 'react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+interface Statement {
+    id: number;
+    order_key: string;
+    text: string;
+}
 
-async function getChapterData(perek: string) {
-  try {
-    console.log('Fetching paragraphs for perek:', perek);
-    // Find paragraphs for this chapter (order_key starts with perek number)
-    const paragraphs = await directus.request(readItems('paragraphs', {
-      fields: ['id', 'order_key', 'text'],
-      sort: ['order_key'],
-      limit: 10
-    })) as any[];
+export default function TanyaPerekPage() {
+    const params = useParams();
+    const router = useRouter();
+    const perek = parseInt(params.perek as string) || 1;
+    const [statements, setStatements] = useState<Statement[]>([]);
+    const [loading, setLoading] = useState(true);
+    const totalPerek = 10; // Default total chapters
 
-    console.log('All paragraphs sample:', paragraphs.slice(0, 3).map(p => ({ id: p.id, order_key: p.order_key })));
+    useEffect(() => {
+        const fetchStatements = async () => {
+            try {
+                // For now, return placeholder data since we removed the specific entries
+                const placeholderStatements: Statement[] = [
+                    { id: 1, order_key: '1', text: 'This sefer content has been temporarily removed. The library structure is preserved but the specific entries are no longer available.' },
+                    { id: 2, order_key: '2', text: 'You can browse other available seforim from the main seforim page.' },
+                ];
+                setStatements(placeholderStatements);
+            } catch (error) {
+                console.error('Error fetching statements:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    // Filter for this perek
-    const perekParagraphs = paragraphs.filter(p => p.order_key.startsWith(perek) || p.order_key.startsWith(`${perek}.`));
+        fetchStatements();
+    }, [perek]);
 
-    console.log('Filtered paragraphs for perek:', perekParagraphs.length);
-
-    if (!perekParagraphs || perekParagraphs.length === 0) {
-      return null;
-    }
-
-    // Get statements for these paragraphs
-    const paragraphIds = perekParagraphs.map(p => p.id);
-    console.log('Fetching statements for paragraph IDs:', paragraphIds);
-    const statements = await directus.request(readItems('statements', {
-      filter: {
-        paragraph_id: { _in: paragraphIds }
-      } as any,
-      fields: ['id', 'order_key', 'text', 'paragraph_id'],
-      sort: ['order_key']
-    })) as any[];
-
-    console.log('Found statements:', statements.length);
-
-    // Get source links for these statements
-    const statementIds = statements.map(s => s.id);
-    let sourceLinks: any[] = [];
-    if (statementIds.length > 0) {
-      try {
-        sourceLinks = await directus.request(readItems('source_links', {
-          filter: {
-            statement_id: { _in: statementIds }
-          } as any,
-          fields: [
-            'id', 'relationship_type', 'page_number', 'verse_reference', 'section_reference',
-            'statement_id', 
-            { source_id: ['id', 'title', 'external_url', 'citation_text'] }
-          ]
-        })) as any[];
-      } catch (error) {
-        console.warn('Failed to fetch source_links:', error);
-        // Continue with empty sourceLinks
-      }
-    }
-
-    // Group source links by statement
-    const sourcesByStatement: Record<number, any[]> = {};
-    sourceLinks.forEach(link => {
-      const statementId = link.statement_id;
-      if (!sourcesByStatement[statementId]) {
-        sourcesByStatement[statementId] = [];
-      }
-      sourcesByStatement[statementId].push({
-        id: link.source_id.id,
-        title: link.source_id.title,
-        external_url: link.source_id.external_url,
-        relationship_type: link.relationship_type,
-        page_number: link.page_number,
-        verse_reference: link.verse_reference,
-        section_reference: link.section_reference
-      });
-    });
-
-    return {
-      paragraphs: perekParagraphs,
-      statements: statements.map((s, index) => ({
-        id: s.id,
-        order_key: s.order_key,
-        text: s.text,
-        topics: [],
-        sources: sourcesByStatement[s.id] || []
-      }))
+    const navigateToChapter = (chapter: number) => {
+        if (chapter >= 1 && chapter <= totalPerek) {
+            router.push(`/seforim/tanya-likkutei-amarim/${chapter}`);
+        }
     };
-  } catch (error) {
-    console.error('Failed to fetch chapter data:', error);
-    return null;
-  }
-}
 
-export default async function TanyaChapterPage({
-  params,
-}: {
-  params: Promise<{ perek: string }>;
-}) {
-  const { perek } = await params;
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background">
+                <div className="container mx-auto px-4 py-8">
+                    <div className="animate-pulse space-y-4">
+                        <div className="h-8 bg-muted rounded-lg w-48"></div>
+                        <div className="space-y-2">
+                            {[...Array(8)].map((_, i) => (
+                                <div key={i} className="h-4 bg-muted rounded"></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-5xl px-6 py-8 sm:px-8">
-        <Breadcrumbs
-          items={[
-            { label: 'Seforim', href: '/seforim' },
-            { label: 'Tanya – Likutei Amarim', href: '/seforim/3' },
-            { label: `Perek ${perek}` },
-          ]}
-          className="mb-6"
-        />
+    return (
+        <div className="min-h-screen bg-background">
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <BookOpen className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-semibold text-foreground">Tanya Likkutei Amarim</h1>
+                            <p className="text-sm text-muted-foreground">Chapter {perek} of {totalPerek}</p>
+                        </div>
+                    </div>
+                    <Link 
+                        href="/seforim"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        ← Back to Seforim
+                    </Link>
+                </div>
 
-        <Suspense fallback={<div>Loading chapter...</div>}>
-          <TanyaChapterContent perek={perek} />
-        </Suspense>
-      </div>
-    </div>
-  );
-}
+                {/* Content */}
+                <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+                    <div className="font-serif text-[18px] sm:text-[19px] lg:text-[21px] leading-[2] text-foreground tracking-wide">
+                        {statements.length > 0 ? (
+                            statements.map((s, idx) => (
+                                <span key={s.id} className="text-foreground">
+                                    {s.text}
+                                    {idx < statements.length - 1 && ' '}
+                                </span>
+                            ))
+                        ) : (
+                            <p className="text-foreground leading-relaxed">
+                                No content available for this chapter.
+                            </p>
+                        )}
+                    </div>
+                </div>
 
-async function TanyaChapterContent({ perek }: { perek: string }) {
-  const chapterData = await getChapterData(perek);
-  const currentPerek = parseInt(perek);
+                {/* Navigation */}
+                <div className="mt-8 flex items-center justify-between gap-4">
+                    <button
+                        onClick={() => navigateToChapter(perek - 1)}
+                        disabled={perek <= 1}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+                            ${perek <= 1 
+                                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
+                                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
+                            }
+                        `}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous Chapter
+                    </button>
 
-  if (!chapterData || chapterData.statements.length === 0) {
-    notFound();
-  }
+                    <div className="text-sm text-muted-foreground">
+                        {perek} of {totalPerek}
+                    </div>
 
-  const paragraphText = chapterData.paragraphs.map((p: any) => p.text).join(' ');
-
-  return (
-    <BookReader
-      paragraphText={paragraphText}
-      statements={chapterData.statements}
-      topicsInPerek={[]}
-      sources={[]}
-      currentPerek={currentPerek}
-      totalPerek={10}
-      isLoading={false}
-    />
-  );
+                    <button
+                        onClick={() => navigateToChapter(perek + 1)}
+                        disabled={perek >= totalPerek}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+                            ${perek >= totalPerek 
+                                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
+                                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
+                            }
+                        `}
+                    >
+                        Next Chapter
+                        <ChevronRight className="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }

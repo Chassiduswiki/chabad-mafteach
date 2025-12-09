@@ -1,6 +1,8 @@
 // Simple in-memory job queue with file-based persistence for Railway compatibility
 // This avoids Redis dependency while providing reliable job processing
 
+import { OCRProcessor } from './ocr-processor';
+
 export interface Job {
   id: string;
   type: 'pdf_processing';
@@ -286,7 +288,6 @@ class JobQueue {
     for (const footnote of allFootnotes) {
       try {
         await directus.request(createItem('statements', {
-          paragraph_id: null, // Footnotes are not attached to paragraphs
           order_key: footnote.id,
           text: footnote.text,
           metadata: {

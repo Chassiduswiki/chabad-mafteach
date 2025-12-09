@@ -1,100 +1,115 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { BookOpen, Search } from 'lucide-react';
 import Link from 'next/link';
-import { BookOpen, ArrowRight } from 'lucide-react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
-export const revalidate = 60; // Revalidate every minute
-
-async function getSeforim() {
-    try {
-        // Use documents collection - filter for sefer type if available
-        const docs = await directus.request(readItems('documents', {
-            sort: ['title'],
-            fields: ['id', 'title', 'doc_type', 'published_at', 'status'],
-            filter: {
-                status: { _eq: 'published' }
-            }
-        }));
-
-        // Map documents into a seforim-like shape
-        return (docs as any[]).map((doc) => ({
-            id: doc.id,
-            title: doc.title,
-            category: doc.doc_type || 'other',
-            author: undefined,
-            year_published: doc.published_at ? new Date(doc.published_at).getFullYear() : undefined,
-        }));
-    } catch (error) {
-        console.error('Failed to fetch seforim:', error);
-        return [];
-    }
+interface Document {
+    id: number;
+    title: string;
+    doc_type?: string;
 }
 
-export default async function SeforimPage() {
-    const seforim = await getSeforim();
+export default function SeforimPage() {
+    const [documents, setDocuments] = useState<Document[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Group by category
-    const grouped = seforim.reduce((acc, sefer) => {
-        const cat = sefer.category || 'Other';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(sefer);
-        return acc;
-    }, {} as Record<string, typeof seforim>);
+    useEffect(() => {
+        const fetchDocuments = async () => {
+            try {
+                const result = await directus.request(readItems('documents', {
+                    filter: { doc_type: { _eq: 'sefer' } },
+                    fields: ['id', 'title', 'doc_type'],
+                    limit: -1
+                }));
+                
+                const docsArray = Array.isArray(result) ? result : result ? [result] : [];
+                setDocuments(docsArray);
+            } catch (error) {
+                console.error('Error fetching documents:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDocuments();
+    }, []);
+
+    const filteredDocuments = documents.filter(doc =>
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background">
+                <div className="container mx-auto px-4 py-8">
+                    <div className="flex items-center gap-2 mb-8">
+                        <BookOpen className="h-8 w-8 text-primary" />
+                        <h1 className="text-3xl font-bold">Seforim Library</h1>
+                    </div>
+                    <div className="animate-pulse space-y-4">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="h-16 bg-muted rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <div className="mx-auto max-w-7xl px-6 py-24 sm:px-8 sm:py-32">
-                <Breadcrumbs
-                    items={[
-                        { label: 'Seforim', href: undefined }
-                    ]}
-                    className="mb-8"
-                />
-                <div className="mb-12">
-                    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Seforim Library</h1>
-                    <p className="mt-4 text-lg text-muted-foreground">
-                        Explore the collection of Chassidic and Torah texts indexed in our system.
-                    </p>
+        <div className="min-h-screen bg-background">
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                        <BookOpen className="h-8 w-8 text-primary" />
+                        <h1 className="text-3xl font-bold">Seforim Library</h1>
+                    </div>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search seforim..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
                 </div>
 
-                <div className="space-y-16">
-                    {Object.entries(grouped).map(([category, items]) => (
-                        <div key={category}>
-                            <h2 className="mb-6 text-2xl font-semibold capitalize flex items-center gap-3">
-                                <span className="h-px flex-1 bg-border"></span>
-                                {category}
-                                <span className="h-px flex-1 bg-border"></span>
-                            </h2>
-
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {items.map((sefer) => (
-                                    <Link
-                                        key={sefer.id}
-                                        href={`/seforim/${sefer.id}`}
-                                        className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-background/50 p-6 transition-all hover:border-primary/20 hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/5"
-                                    >
-                                        <div>
-                                            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                                <BookOpen className="h-5 w-5" />
-                                            </div>
-                                            <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                                                {sefer.title}
-                                            </h3>
-                                            <div className="mt-2 text-sm text-muted-foreground">
-                                                {sefer.author && <p>{sefer.author}</p>}
-                                                {sefer.year_published && <p>{sefer.year_published}</p>}
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-6 flex items-center text-sm font-medium text-primary opacity-0 transition-opacity transform translate-x-2 group-hover:opacity-100 group-hover:translate-x-0">
-                                            View Details <ArrowRight className="ml-2 h-4 w-4" />
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
+                <div className="grid gap-4">
+                    {filteredDocuments.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <BookOpen className="mx-auto h-16 w-16 mb-4 opacity-20" />
+                            <h3 className="text-lg font-medium mb-2">No seforim found</h3>
+                            <p className="text-sm">
+                                {searchQuery ? 'Try adjusting your search terms' : 'No seforim available yet'}
+                            </p>
                         </div>
-                    ))}
+                    ) : (
+                        filteredDocuments.map((doc) => (
+                            <Link
+                                key={doc.id}
+                                href={`/seforim/${doc.id}`}
+                                className="block p-6 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-1">{doc.title}</h3>
+                                        {doc.doc_type && (
+                                            <span className="text-sm text-muted-foreground capitalize">
+                                                {doc.doc_type}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <BookOpen className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </Link>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

@@ -13,6 +13,7 @@ async function getTopic(slug: string): Promise<Topic | null> {
     try {
         console.log('Fetching topic for slug:', slug);
 
+        // 1) Fetch the core topic record
         const rawTopics = await directus.request(readItems('topics', {
             filter: { slug: { _eq: slug } },
             fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description', 'metadata'],
@@ -26,6 +27,58 @@ async function getTopic(slug: string): Promise<Topic | null> {
 
         const t = (Array.isArray(rawTopics) ? rawTopics[0] : rawTopics) as any;
 
+        // 2) Fetch documents of type `entry` that are explicitly linked to this topic
+        const rawDocuments = await directus.request(readItems('documents', {
+            filter: {
+                topic: { _eq: t.id },
+                doc_type: { _eq: 'entry' }
+            },
+            fields: ['id', 'title', 'doc_type'],
+            limit: -1
+        }));
+
+        const documents = Array.isArray(rawDocuments) ? rawDocuments : (rawDocuments ? [rawDocuments] : []);
+
+        // 3) Fetch paragraphs for those documents directly (no reliance on O2M relation)
+        let paragraphsByDocId: Record<number, { id: number; text: string; order_key: string; doc_id: number }[]> = {};
+        if (documents.length > 0) {
+            const docIds = documents.map((d: any) => d.id);
+
+            const rawParagraphs = await directus.request(readItems('paragraphs', {
+                filter: { doc_id: { _in: docIds } },
+                fields: ['id', 'text', 'order_key', 'doc_id'],
+                limit: -1,
+            }));
+
+            const paragraphsArray = Array.isArray(rawParagraphs)
+                ? rawParagraphs
+                : rawParagraphs
+                    ? [rawParagraphs]
+                    : [];
+
+            paragraphsByDocId = paragraphsArray.reduce((acc: typeof paragraphsByDocId, para: any) => {
+                const id = typeof para.doc_id === 'object' ? para.doc_id.id : para.doc_id;
+                if (!id) return acc;
+                if (!acc[id]) acc[id] = [];
+                acc[id].push({
+                    id: para.id,
+                    text: para.text,
+                    order_key: para.order_key,
+                    doc_id: id,
+                });
+                return acc;
+            }, {} as typeof paragraphsByDocId);
+        }
+
+        console.log('Topic documents for Article tab:', {
+            topicId: t.id,
+            slug: t.slug,
+            docCount: documents.length,
+            docIds: documents.map((d: any) => d.id),
+            totalParagraphs: Object.values(paragraphsByDocId).reduce((sum, arr) => sum + arr.length, 0),
+        });
+
+        // 4) Map into our Topic shape, including a flattened paragraphs array
         const mapped: Topic = {
             id: t.id as number,
             slug: t.slug as string,
@@ -38,6 +91,18 @@ async function getTopic(slug: string): Promise<Topic | null> {
             definition_short: t.description,
             definition_positive: t.metadata?.definition_positive,
             definition_negative: t.metadata?.definition_negative,
+            paragraphs: documents.flatMap((doc: any) => {
+                const docParas = paragraphsByDocId[doc.id] || [];
+                return docParas.map((para) => ({
+                    id: para.id,
+                    text: para.text,
+                    order_key: para.order_key,
+                    document_title: doc.title,
+                    statement_text: para.text,
+                    statement_order_key: para.order_key,
+                    relevance_score: 1.0,
+                }));
+            }),
         };
 
         return mapped;

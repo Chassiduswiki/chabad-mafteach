@@ -15,7 +15,7 @@ interface SearchResult {
 
 interface ContextualSearchProps {
     placeholder?: string;
-    searchType: 'topics' | 'seforim';
+    searchType: 'topics' | 'documents';
 }
 
 /**
@@ -23,7 +23,7 @@ interface ContextualSearchProps {
  * Per Task 2.6: Add contextual search on content pages
  * Filters the current page content without opening global modal
  */
-export function ContextualSearch({ placeholder = 'Search...', searchType }: ContextualSearchProps) {
+export default function ContextualSearch({ placeholder = "Search topics...", searchType = 'topics' }: ContextualSearchProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -58,7 +58,7 @@ export function ContextualSearch({ placeholder = 'Search...', searchType }: Cont
             if (searchType === 'topics') {
                 setResults(data.topics || []);
             } else {
-                setResults(data.seforim || []);
+                setResults(data.documents || []);
             }
             setIsOpen(true);
         } catch (error) {
@@ -121,7 +121,7 @@ export function ContextualSearch({ placeholder = 'Search...', searchType }: Cont
                             {results.slice(0, 8).map((result) => (
                                 <li key={result.id}>
                                     <Link
-                                        href={searchType === 'topics' ? `/topics/${result.slug}` : `/seforim/${result.id}`}
+                                        href={searchType === 'topics' ? `/topics/${result.slug}` : `/documents/${result.id}`}
                                         onClick={() => setIsOpen(false)}
                                         className="flex flex-col gap-1 px-4 py-3 hover:bg-muted/50 transition-colors"
                                     >
