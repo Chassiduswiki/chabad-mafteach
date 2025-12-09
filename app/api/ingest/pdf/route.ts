@@ -30,7 +30,7 @@ function detectOCRNeed(pdfData: any, pages: string[]): OCRDetectionResult {
 
   // Basic metrics
   const avgCharsPerPage = totalText.length / totalPages;
-  const totalWords = totalText.split(/\s+/).filter(word => word.length > 0).length;
+  const totalWords = totalText.split(/\s+/).filter((word: string) => word.length > 0).length;
   const avgWordsPerPage = totalWords / totalPages;
 
   reasoning.push(`Average ${avgCharsPerPage.toFixed(1)} characters per page`);
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
 
         // OCR all pages (since we don't know which ones need it specifically)
         const pageNumbers = Array.from({ length: pdfContent.totalPages }, (_, i) => i + 1);
-        const ocrPageResults = await ocrProcessor.processPDFPages(arrayBuffer, pageNumbers);
+        const ocrPageResults = await ocrProcessor.processPDFPages(buffer, pageNumbers);
 
         // Analyze OCR quality
         const ocrQuality = OCRProcessor.analyzeOCRQuality(ocrPageResults);
