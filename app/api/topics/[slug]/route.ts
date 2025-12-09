@@ -30,6 +30,7 @@ export async function GET(
         // Fetch related statements from statement_topics junction table
         let statementTopics: any[] = [];
         let paragraphs: any[] = [];
+        let validStatementTopics: any[] = []; // Filtered to only include valid references
         try {
             statementTopics = await directus.request(readItems('statement_topics', {
                 filter: { topic_id: { _eq: topic.id } } as any,
@@ -95,8 +96,18 @@ export async function GET(
                 const stmt = typeof stmtTopic.statement_id === 'number'
                     ? statementMap[stmtTopic.statement_id]
                     : stmtTopic.statement_id;
+
+                // Skip orphaned records (statements that don't exist)
+                if (!stmt?.id) {
+                    console.warn(`Skipping orphaned statement_topics record ${stmtTopic.id} - statement ${stmtTopic.statement_id} not found`);
+                    continue;
+                }
+
                 const para = stmt?.paragraph_id;
                 if (!para?.id) continue;
+
+                // Add to valid statement topics list
+                validStatementTopics.push(stmtTopic);
 
                 if (!paragraphMap[para.id]) {
                     paragraphMap[para.id] = {
@@ -170,7 +181,7 @@ export async function GET(
                 ...topic,
                 paragraphs
             },
-            citations: statementTopics, // Map to citations for backward compatibility
+            citations: validStatementTopics, // Use only valid citations
             relatedTopics
         });
     } catch (error) {
