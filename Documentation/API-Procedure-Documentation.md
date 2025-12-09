@@ -17,7 +17,7 @@
       ],
       "env": {
         "DIRECTUS_URL": "https://directus-production-20db.up.railway.app",
-        "DIRECTUS_TOKEN": "ChassidusWikiAdminToken2025"
+        "DIRECTUS_TOKEN": "[REDACTED_ADMIN_TOKEN]"
       }
     }
   }
@@ -28,7 +28,7 @@
 ```bash
 # Base URL
 BASE_URL="https://directus-production-20db.up.railway.app"
-TOKEN="ChassidusWikiAdminToken2025"
+TOKEN="[REDACTED_ADMIN_TOKEN]"
 
 # Headers
 HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"

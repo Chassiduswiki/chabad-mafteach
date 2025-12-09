@@ -221,3 +221,40 @@ The frontend TypeScript types now match the new Directus schema:
 - **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
 - **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
 - **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
+
+---
+
+## TRACK 7: Security & Reliability (Added from Security Audit)
+
+**Goal**: Secure the application against unauthorized access and ensure stability under load.
+
+### Phase 7a: Authentication & Authorization (High Priority)
+- [ ] **Implement Auth Layer**: Integrate NextAuth.js or Directus Auth for API routes.
+- [ ] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
+- [ ] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
+
+### Phase 7b: Operational Stability
+- [ ] **Rate Limiting**: Implement rate limiting for ingestion and AI endpoints to prevent DoS.
+- [ ] **Testing Framework**: Set up Jest/Vitest for unit testing utility functions (e.g., AI logic).
+- [ ] **Sanitization**: Ensure strict input validation for all API endpoints.
+
+---
+
+## TRACK 8: Innovation & Features (Future Vision)
+
+**Goal**: Transform the platform into a dynamic, collaborative scholar tool.
+
+### Phase 8a: Advanced Editor Features
+- [ ] **Collaborative Editing**: Real-time multi-user editing using ProseMirror + WebSockets.
+- [ ] **AI Citation Verification**: Verify detected citations against external APIs (Sefaria, HebrewBooks).
+
+### Phase 8b: Visualization & Discovery
+- [ ] **Interactive Graph**: Visualize topic connections using react-force-graph-2d.
+- [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
+- [ ] **Personalized Learning**: Recommendation engine based on user reading history.
+
+### Phase 8c: Engagement & Access
+- [ ] **Gamification**: Leaderboards for contributors (verifying links, tagging).
+- [ ] **Offline Mode**: PWA support for downloading topics/books for offline reading.
+- [ ] **Multilingual Sync**: Synced scrolling associated Hebrew/English paragraphs.
+
