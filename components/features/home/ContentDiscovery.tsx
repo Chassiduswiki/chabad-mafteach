@@ -121,12 +121,6 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
                         <li className="text-sm text-muted-foreground">No recent sources</li>
                     )}
                 </ul>
-                <Link
-                    href="/seforim"
-                    className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                    View all sources <ArrowRight className="h-3 w-3" />
-                </Link>
             </div>
 
             {/* Recently Updated */}

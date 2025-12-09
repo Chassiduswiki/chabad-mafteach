@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q');
 
     if (!query) {
-        return NextResponse.json({ seforim: [], locations: [], topics: [] });
+        return NextResponse.json({ documents: [], locations: [], topics: [] });
     }
 
     try {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
                 })
             ) as any[];
         } catch (error) {
-            console.warn('Search seforim query failed (permissions or missing collection):', error);
+            console.warn('Search documents query failed (permissions or missing collection):', error);
             docs = [];
         }
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             })
         ) as any[];
 
-        const seforim = (docs || []).map((d) => ({
+        const documents = (docs || []).map((d) => ({
             id: d.id,
             title: d.title as string,
             doc_type: d.doc_type as string | undefined,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         // locations are not implemented in the new schema yet
         const locations: any[] = [];
 
-        return NextResponse.json({ seforim, locations, topics });
+        return NextResponse.json({ documents, locations, topics });
     } catch (error) {
         return handleApiError(error);
     }

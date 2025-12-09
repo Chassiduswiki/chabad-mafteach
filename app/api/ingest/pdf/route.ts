@@ -1,14 +1,132 @@
 import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { createItem } from '@directus/sdk';
-// @ts-ignore - pdf-parse uses CommonJS exports
-const pdfParse = require('pdf-parse');
+// Dynamic import for pdf-parse to avoid DOMMatrix issues during build
+let pdfParse: any = null;
+// Dynamic import for OCR to avoid DOMMatrix issues during build
+let ocrProcessor: any = null;
+let OCRProcessor: any = null;
 
 interface PDFTextContent {
   text: string;
   pages: string[];
   totalPages: number;
   hasTextLayer: boolean;
+  needsOCR: boolean;
+  ocrConfidence?: number;
+  textQuality: 'excellent' | 'good' | 'poor' | 'none';
+}
+
+interface OCRDetectionResult {
+  hasTextLayer: boolean;
+  needsOCR: boolean;
+  textQuality: 'excellent' | 'good' | 'poor' | 'none';
+  confidence: number;
+  reasoning: string[];
+}
+
+function detectOCRNeed(pdfData: any, pages: string[]): OCRDetectionResult {
+  const totalPages = pdfData.numpages;
+  const totalText = pdfData.text;
+  const reasoning: string[] = [];
+
+  // Basic metrics
+  const avgCharsPerPage = totalText.length / totalPages;
+  const totalWords = totalText.split(/\s+/).filter((word: string) => word.length > 0).length;
+  const avgWordsPerPage = totalWords / totalPages;
+
+  reasoning.push(`Average ${avgCharsPerPage.toFixed(1)} characters per page`);
+  reasoning.push(`Average ${avgWordsPerPage.toFixed(1)} words per page`);
+
+  // Check for Hebrew characters (basic detection)
+  const hebrewChars = /[\u0590-\u05FF]/g;
+  const hasHebrew = hebrewChars.test(totalText);
+  reasoning.push(hasHebrew ? 'Hebrew characters detected' : 'No Hebrew characters found');
+
+  // Text quality assessment
+  let textQuality: 'excellent' | 'good' | 'poor' | 'none' = 'none';
+  let hasTextLayer = false;
+  let needsOCR = false;
+  let confidence = 0;
+
+  if (avgCharsPerPage > 500) {
+    textQuality = 'excellent';
+    hasTextLayer = true;
+    confidence = 95;
+    reasoning.push('Excellent text extraction - native text layer confirmed');
+  } else if (avgCharsPerPage > 200) {
+    textQuality = 'good';
+    hasTextLayer = true;
+    confidence = 85;
+    reasoning.push('Good text extraction - likely native text layer');
+  } else if (avgCharsPerPage > 50) {
+    textQuality = 'poor';
+    hasTextLayer = true;
+    needsOCR = true; // Poor quality suggests OCR might help
+    confidence = 60;
+    reasoning.push('Poor text quality - may benefit from OCR enhancement');
+  } else if (totalText.length < 100) {
+    textQuality = 'none';
+    hasTextLayer = false;
+    needsOCR = true;
+    confidence = 10;
+    reasoning.push('Minimal or no text extracted - likely scanned document needing OCR');
+  } else {
+    textQuality = 'poor';
+    hasTextLayer = true;
+    needsOCR = avgCharsPerPage < 100; // Borderline case
+    confidence = 50;
+    reasoning.push('Borderline text quality - OCR may or may not be needed');
+  }
+
+  // Additional heuristics for scanned PDFs
+  const hasImages = pdfData.info?.Pages?.some((page: any) => page.Resources?.XObject);
+  if (hasImages !== undefined) {
+    reasoning.push(hasImages ? 'PDF contains images' : 'PDF appears text-only');
+    if (hasImages && textQuality === 'none') {
+      needsOCR = true;
+      confidence = Math.max(confidence, 90);
+      reasoning.push('Images present with no text - high confidence OCR needed');
+    }
+  }
+
+  // Check for common OCR indicators
+  const gibberishRatio = getGibberishRatio(totalText);
+  if (gibberishRatio > 0.3) {
+    needsOCR = true;
+    confidence = Math.min(confidence, 30);
+    reasoning.push(`High gibberish ratio (${(gibberishRatio * 100).toFixed(1)}%) - likely OCR errors`);
+  }
+
+  return {
+    hasTextLayer,
+    needsOCR,
+    textQuality,
+    confidence,
+    reasoning
+  };
+}
+
+function getGibberishRatio(text: string): number {
+  // Simple heuristic: count unusual character sequences
+  const words: string[] = text.split(/\s+/).filter((word: string) => word.length > 2);
+  let gibberishCount = 0;
+
+  for (const word of words) {
+    // Count words with too many consecutive consonants (common OCR error)
+    const consecutiveConsonants = word.match(/[bcdfghjklmnpqrstvwxyz]{4,}/gi);
+    if (consecutiveConsonants) {
+      gibberishCount++;
+    }
+
+    // Count words with unusual character combinations
+    if (/[^a-zA-Z\u0590-\u05FF\s]/.test(word)) {
+      // Contains non-letter characters (might be OK for Hebrew)
+      continue;
+    }
+  }
+
+  return gibberishCount / Math.max(words.length, 1);
 }
 
 export async function POST(request: NextRequest) {
@@ -26,143 +144,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only PDF files are supported' }, { status: 400 });
     }
 
-    // Validate file size (max 50MB as per plan)
+    // Validate file size (max 50MB)
     const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
       return NextResponse.json({ error: 'File too large. Maximum size is 50MB.' }, { status: 400 });
     }
 
-    console.log(`Processing PDF: ${file.name}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`Creating async job for PDF: ${file.name}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
-    // Convert File to Buffer for pdf-parse
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Parse PDF
-    const pdfData = await pdfParse(buffer);
-
-    // Extract text from each page
-    const pages: string[] = [];
-    const pageTexts = pdfData.text.split('\f'); // Form feed separates pages
-
-    for (let i = 0; i < pageTexts.length; i++) {
-      const pageText = pageTexts[i].trim();
-      if (pageText.length > 0) {
-        pages.push(pageText);
-      }
-    }
-
-    // Basic text layer detection - if we got meaningful text, assume it has text layer
-    const totalTextLength = pdfData.text.length;
-    const hasTextLayer = totalTextLength > pdfData.numpages * 100; // Rough heuristic
-
-    const pdfContent: PDFTextContent = {
-      text: pdfData.text,
-      pages,
-      totalPages: pdfData.numpages,
-      hasTextLayer
-    };
-
-    console.log(`PDF parsed: ${pdfContent.totalPages} pages, ${totalTextLength} characters, hasTextLayer: ${hasTextLayer}`);
-
-    // Create document entry
-    const document = await directus.request(createItem('documents', {
-      title: title || file.name.replace('.pdf', ''),
-      metadata: {
-        source: 'pdf_upload',
-        filename: file.name,
-        file_size: file.size,
-        total_pages: pdfContent.totalPages,
-        has_text_layer: hasTextLayer,
-        language,
-        uploaded_at: new Date().toISOString(),
-        pdf_info: pdfData.info
-      }
-    }));
-
-    console.log(`Created document: ${document.id}`);
-
-    // Process pages into paragraphs
-    const paragraphs = [];
-    let paragraphOrder = 0;
-
-    for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-      const pageText = pages[pageIndex];
-
-      if (!pageText.trim()) continue;
-
-      // Split page text into paragraphs (similar to text upload)
-      const pageParagraphs = pageText
-        .split(/\n\s*\n|\r\n\s*\r\n/)  // Double line breaks
-        .filter(p => p.trim().length > 0)  // Remove empty paragraphs
-        .map(p => p.trim());  // Clean whitespace
-
-      for (const paragraphText of pageParagraphs) {
-        // Create paragraph with page metadata
-        const paragraph = await directus.request(createItem('paragraphs', {
-          doc_id: document.id,
-          order_key: String(paragraphOrder++),
-          text: paragraphText,
-          metadata: {
-            source_language: language,
-            page_number: pageIndex + 1,
-            has_text_layer: hasTextLayer,
-            auto_generated: false
-          }
-        }));
-
-        paragraphs.push(paragraph);
-
-        // Create initial statement
-        const statement = await directus.request(createItem('statements', {
-          paragraph_id: paragraph.id,
-          order_key: '0',
-          text: paragraphText,
-          metadata: {
-            auto_generated: true,
-            source: 'pdf_upload',
-            page_number: pageIndex + 1,
-            has_text_layer: hasTextLayer
-          }
-        }));
-
-        console.log(`Created paragraph ${paragraph.id} on page ${pageIndex + 1} with statement ${statement.id}`);
-      }
-    }
+    // Add job to queue
+    const jobQueue = (await import('@/lib/job-queue')).getJobQueue();
+    const jobId = await jobQueue.addJob('pdf_processing', {
+      fileName: file.name,
+      fileSize: file.size,
+      title,
+      language,
+      fileBuffer: buffer
+    });
 
     return NextResponse.json({
       success: true,
-      document_id: document.id,
-      pdf_info: {
-        filename: file.name,
-        size: file.size,
-        pages: pdfContent.totalPages,
-        has_text_layer: hasTextLayer,
-        paragraphs_created: paragraphs.length,
-        total_characters: totalTextLength
-      },
-      message: `Successfully processed PDF with ${paragraphs.length} paragraphs across ${pdfContent.totalPages} pages`
+      jobId,
+      message: 'PDF processing job created. Processing will begin shortly.',
+      statusUrl: `/api/jobs/status?jobId=${jobId}`,
+      estimatedTime: file.size > 10 * 1024 * 1024 ? '5-15 minutes' : '1-3 minutes' // Rough estimate based on file size
     });
 
   } catch (error) {
-    console.error('PDF processing error:', error);
-
-    // Provide more specific error messages
-    let errorMessage = 'Internal server error during PDF processing';
-    if (error instanceof Error) {
-      if (error.message.includes('Invalid PDF')) {
-        errorMessage = 'The uploaded file is not a valid PDF or is corrupted';
-      } else if (error.message.includes('password')) {
-        errorMessage = 'This PDF is password-protected and cannot be processed';
-      } else if (error.message.includes('size') || error.message.includes('memory')) {
-        errorMessage = 'PDF is too large or complex to process. Try a smaller file or contact support';
-      } else {
-        errorMessage = `PDF processing failed: ${error.message}`;
-      }
-    }
-
+    console.error('PDF upload error:', error);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to create PDF processing job' },
       { status: 500 }
     );
   }
