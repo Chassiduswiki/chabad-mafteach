@@ -17,7 +17,7 @@ interface TopicTabsProps {
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string }[] = [
     { id: 'overview', label: 'Article', icon: FileText, description: 'Full document content and paragraphs' },
     { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not' },
-    { id: 'sources', label: 'Sources', icon: BookOpen, description: 'References and citations' },
+    { id: 'sources', label: 'Seforim', icon: BookOpen, description: 'References and citations' },
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts' },
 ];
 
@@ -51,9 +51,9 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         <BookOpen className="mx-auto h-16 w-16 mb-4 opacity-20" />
-                        <h3 className="text-lg font-medium mb-2">Sources Coming Soon</h3>
+                        <h3 className="text-lg font-medium mb-2">Seforim Coming Soon</h3>
                         <p className="text-sm max-w-md mx-auto">
-                            Source citations and references will be available once the citation system is fully implemented.
+                            Seforim citations and references will be available once the citation system is fully implemented.
                         </p>
                     </div>
                 );
@@ -89,11 +89,10 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${
-                                    isActive
+                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${isActive
                                         ? 'border-primary text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="h-4 w-4" />
                                 <span className="font-medium">{tab.label}</span>
