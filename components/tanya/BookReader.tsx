@@ -1,0 +1,365 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import type { Topic } from '@/lib/directus';
+import { ChevronLeft, ChevronRight, Loader2, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+interface StatementWithTopics {
+  id: number;
+  order_key: string;
+  text: string;
+  topics: Topic[];
+  sources: { id: number; title: string; external_url?: string | null; relationship_type?: string; page_number?: string; verse_reference?: string }[];
+}
+
+interface BookReaderProps {
+  paragraphText: string;
+  statements: StatementWithTopics[];
+  topicsInPerek: Topic[];
+  sources: { id: number; title: string; external_url?: string | null }[];
+  currentPerek: number;
+  totalPerek?: number;
+  isLoading?: boolean;
+}
+
+export function BookReader({
+  paragraphText,
+  statements,
+  topicsInPerek,
+  sources,
+  currentPerek,
+  totalPerek = 10,
+  isLoading = false
+}: BookReaderProps) {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [viewedStatements, setViewedStatements] = useState<Set<number>>(new Set());
+  const router = useRouter();
+
+  const selected = selectedId != null ? statements.find((s) => s.id === selectedId) || null : null;
+
+  const handleSelect = (id: number) => {
+    setSelectedId(id);
+    // Track reading progress
+    setViewedStatements(prev => new Set(prev).add(id));
+  };
+
+  const handleClose = () => setSelectedId(null);
+
+  const navigateToChapter = (chapter: number) => {
+    router.push(`/seforim/tanya-likkutei-amarim/${chapter}`);
+  };
+
+  // Calculate reading progress
+  useEffect(() => {
+    if (statements.length > 0) {
+      const progress = (viewedStatements.size / statements.length) * 100;
+      setReadingProgress(progress);
+    }
+  }, [viewedStatements, statements.length]);
+
+  if (isLoading) {
+    return <BookReaderSkeleton />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Reading Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
+        <div 
+          className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-500 ease-out"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
+
+      {/* Chapter Header */}
+      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border">
+        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">Perek {currentPerek}</h1>
+                <p className="text-sm text-muted-foreground">Chapter {currentPerek} of {totalPerek}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-8 pb-24 sm:pb-8 sm:px-6 lg:py-12">
+        {/* Book-like Text Container */}
+        <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+          <div className="font-hebrew font-serif text-[18px] sm:text-[19px] lg:text-[21px] leading-[2] text-foreground tracking-wide">
+            {statements.length > 0 ? (
+              statements.map((s, idx) => (
+                <span
+                  key={s.id}
+                  onClick={() => handleSelect(s.id)}
+                  className={`
+                    cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
+                    hover:bg-primary/5 dark:hover:bg-primary/10
+                    ${viewedStatements.has(s.id)
+                      ? 'text-muted-foreground'
+                      : 'text-foreground'
+                    }
+                  `}
+                >
+                  {s.text}
+                  {idx < statements.length - 1 && ' '}
+                </span>
+              ))
+            ) : (
+              <p className="text-foreground leading-relaxed">{paragraphText}</p>
+            )}
+          </div>
+
+          {statements.length > 0 && (
+            <div className="mt-8 flex items-center justify-center">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  Tap any sentence to explore its topics and sources
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Chapter Navigation */}
+        <div className="mt-8 flex items-center justify-between gap-4">
+          <button
+            onClick={() => navigateToChapter(currentPerek - 1)}
+            disabled={currentPerek <= 1}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+              ${currentPerek <= 1 
+                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
+                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
+              }
+            `}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous Perek
+          </button>
+
+          <div className="text-sm text-muted-foreground">
+            {currentPerek} of {totalPerek}
+          </div>
+
+          <button
+            onClick={() => navigateToChapter(currentPerek + 1)}
+            disabled={currentPerek >= totalPerek}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+              ${currentPerek >= totalPerek 
+                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
+                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
+              }
+            `}
+          >
+            Next Perek
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Topics & Sources Sidebar (hidden on mobile) */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-8 mt-12">
+          <div className="lg:col-span-2" />
+          <div className="space-y-6">
+            <div className="bg-background/60 rounded-lg border border-border p-6">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Topics in this Perek
+              </h2>
+              {topicsInPerek.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No topics linked yet.</p>
+              ) : (
+                <ul className="space-y-3 text-sm">
+                  {topicsInPerek.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between p-2 rounded hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">{t.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="bg-background/60 rounded-lg border border-border p-6">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Sources
+              </h2>
+              {sources.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No sources linked yet.</p>
+              ) : (
+                <ul className="space-y-3 text-sm">
+                  {sources.map((s) => (
+                    <li key={s.id} className="flex flex-col p-2 rounded hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">{s.title}</span>
+                      {s.external_url && (
+                        <a
+                          href={s.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline mt-1"
+                        >
+                          View Source →
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Enhanced Mobile Bottom Sheet */}
+      {selected && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={handleClose}>
+          <div 
+            className="w-full max-w-2xl rounded-t-2xl bg-background border-t border-border shadow-2xl" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle Bar */}
+            <div className="flex justify-center py-3">
+              <div className="h-1.5 w-12 bg-muted-foreground/30 rounded-full" />
+            </div>
+            
+            <div className="px-4 pb-6 sm:px-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Statement {selected.order_key}
+                </div>
+                <button
+                  onClick={handleClose}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1 rounded hover:bg-accent"
+                >
+                  Close
+                </button>
+              </div>
+              
+              <div className="font-serif text-[17px] leading-relaxed mb-6 text-foreground bg-muted/30 rounded-lg p-4 border border-border">
+                {selected.text}
+              </div>
+
+              {selected.topics.length > 0 && (
+                <div className="mb-6">
+                  <div className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Topics
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selected.topics.map((t) => (
+                      <span
+                        key={t.id}
+                        className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selected.sources.length > 0 && (
+                <div>
+                  <div className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Sources & Citations
+                  </div>
+                  <div className="space-y-3">
+                    {selected.sources.map((s) => (
+                      <div key={s.id} className="bg-accent/30 rounded-lg p-3 border border-border">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-sm">{s.title}</span>
+                          {s.relationship_type && (
+                            <span className="text-xs text-muted-foreground capitalize">{s.relationship_type}</span>
+                          )}
+                        </div>
+                        {(s.page_number || s.verse_reference) && (
+                          <div className="text-xs text-muted-foreground mb-2">
+                            {s.verse_reference && <span>{s.verse_reference}</span>}
+                            {s.verse_reference && s.page_number && <span> • </span>}
+                            {s.page_number && <span>Page {s.page_number}</span>}
+                          </div>
+                        )}
+                        {s.external_url && (
+                          <a
+                            href={s.external_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline font-medium"
+                          >
+                            View Source →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BookReaderSkeleton() {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Progress Bar Skeleton */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
+        <div className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary animate-pulse" style={{ width: '30%' }} />
+      </div>
+
+      {/* Header Skeleton */}
+      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border">
+        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 animate-pulse">
+                <div className="h-5 w-5 bg-muted rounded" />
+              </div>
+              <div>
+                <div className="h-6 w-24 bg-muted rounded animate-pulse mb-1" />
+                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Skeleton */}
+      <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:py-12">
+        <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+          <div className="space-y-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-5 bg-muted rounded" style={{ width: `${Math.random() * 40 + 60}%` }} />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex items-center justify-center">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border animate-pulse">
+              <div className="w-2 h-2 rounded-full bg-muted" />
+              <div className="h-3 w-48 bg-muted rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Skeleton */}
+        <div className="mt-8 flex items-center justify-between gap-4">
+          <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+          <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+        </div>
+      </main>
+    </div>
+  );
+}

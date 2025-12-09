@@ -2,6 +2,7 @@
 @import "tailwindcss";
 
 /* Crown & Earth Design System - Premium Blue Theme */
+/* stylelint-disable-next-line at-rule-no-unknown */
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -440,4 +441,226 @@ html {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ----------------------------- */
+/*    PROSEMIRROR EDITOR THEME   */
+/* ----------------------------- */
+
+.pm-editor-shell {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.75rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: system-ui, sans-serif;
+  color: #111111;
+  line-height: 1.65;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.pm-editor-shell:focus-within {
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+}
+
+.pm-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pm-editor-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pm-editor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pm-editor-button {
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pm-editor-button:hover,
+.pm-editor-button:focus-visible {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.08);
+}
+
+.pm-editor-button:active {
+  background: #e2e8f0;
+}
+
+.pm-editor-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.pm-editor-surface {
+  min-height: 320px;
+}
+
+.pm-editor-surface .ProseMirror {
+  outline: none;
+  min-height: 320px;
+}
+
+.pm-editor-surface p {
+  margin: 0 0 0.75rem 0;
+}
+
+.pm-editor-surface h1,
+.pm-editor-surface h2,
+.pm-editor-surface h3,
+.pm-editor-surface h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.pm-editor-surface h1 {
+  font-size: 2rem;
+}
+
+.pm-editor-surface h2 {
+  font-size: 1.6rem;
+}
+
+.pm-editor-surface h3 {
+  font-size: 1.3rem;
+}
+
+.pm-editor-surface ul,
+.pm-editor-surface ol {
+  padding-left: 1.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.pm-editor-surface li {
+  padding: 0.15rem 0;
+}
+
+.pm-editor-surface blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.pm-editor-surface code {
+  background: #f3f4f6;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.pm-editor-surface pre {
+  background: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  margin: 1rem 0;
+}
+
+.pm-editor-surface hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2rem 0;
+}
+
+.pm-editor-surface img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.pm-editor-surface table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.pm-editor-surface table th,
+.pm-editor-surface table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+}
+
+.pm-editor-surface table th {
+  background: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+}
+
+.pm-editor-surface .is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
+
+.pm-editor-surface a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.pm-editor-surface .ProseMirror-selectednode {
+  outline: 2px solid #60a5fa;
+}
+
+.pm-editor-shell * {
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.pm-editor-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-top: 1rem;
+  border: 1px solid transparent;
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.04);
+}
+
+.pm-editor-feedback-success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.pm-editor-feedback-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
 }
