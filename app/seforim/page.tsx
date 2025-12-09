@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import directus from '@/lib/directus';
-import { readItems } from '@directus/sdk';
 import { BookOpen, Search } from 'lucide-react';
 import Link from 'next/link';
 
@@ -20,13 +18,11 @@ export default function SeforimPage() {
     useEffect(() => {
         const fetchDocuments = async () => {
             try {
-                const result = await directus.request(readItems('documents', {
-                    filter: { doc_type: { _eq: 'sefer' } },
-                    fields: ['id', 'title', 'doc_type'],
-                    limit: -1
-                }));
-                
-                const docsArray = Array.isArray(result) ? result : result ? [result] : [];
+                const response = await fetch('/api/documents?doc_type=sefer');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch documents');
+                }
+                const docsArray = await response.json();
                 setDocuments(docsArray);
             } catch (error) {
                 console.error('Error fetching documents:', error);
