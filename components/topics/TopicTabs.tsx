@@ -12,6 +12,7 @@ type TabType = 'overview' | 'boundaries' | 'sources' | 'related';
 
 interface TopicTabsProps {
     topic: Topic;
+    relatedTopics?: any[];
 }
 
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string }[] = [
@@ -21,13 +22,13 @@ const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; descri
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts' },
 ];
 
-export default function TopicTabs({ topic }: TopicTabsProps) {
+export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
     const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     // Check which tabs have content
     const hasBoundaries = topic.definition_positive || topic.definition_negative;
     const hasSources = false; // TODO: Implement when topic_citations table exists
-    const hasRelated = topic.topic_type; // At least show category-based related topics
+    const hasRelated = relatedTopics && relatedTopics.length > 0;
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -59,7 +60,7 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
                 );
             case 'related':
                 return hasRelated ? (
-                    <RelatedTab topic={topic} />
+                    <RelatedTab topic={topic} relatedTopics={relatedTopics} />
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         <Sparkles className="mx-auto h-16 w-16 mb-4 opacity-20" />
