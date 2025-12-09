@@ -9,6 +9,121 @@ interface PDFTextContent {
   pages: string[];
   totalPages: number;
   hasTextLayer: boolean;
+  needsOCR: boolean;
+  ocrConfidence?: number;
+  textQuality: 'excellent' | 'good' | 'poor' | 'none';
+}
+
+interface OCRDetectionResult {
+  hasTextLayer: boolean;
+  needsOCR: boolean;
+  textQuality: 'excellent' | 'good' | 'poor' | 'none';
+  confidence: number;
+  reasoning: string[];
+}
+
+function detectOCRNeed(pdfData: any, pages: string[]): OCRDetectionResult {
+  const totalPages = pdfData.numpages;
+  const totalText = pdfData.text;
+  const reasoning: string[] = [];
+
+  // Basic metrics
+  const avgCharsPerPage = totalText.length / totalPages;
+  const totalWords = totalText.split(/\s+/).filter(word => word.length > 0).length;
+  const avgWordsPerPage = totalWords / totalPages;
+
+  reasoning.push(`Average ${avgCharsPerPage.toFixed(1)} characters per page`);
+  reasoning.push(`Average ${avgWordsPerPage.toFixed(1)} words per page`);
+
+  // Check for Hebrew characters (basic detection)
+  const hebrewChars = /[\u0590-\u05FF]/g;
+  const hasHebrew = hebrewChars.test(totalText);
+  reasoning.push(hasHebrew ? 'Hebrew characters detected' : 'No Hebrew characters found');
+
+  // Text quality assessment
+  let textQuality: 'excellent' | 'good' | 'poor' | 'none' = 'none';
+  let hasTextLayer = false;
+  let needsOCR = false;
+  let confidence = 0;
+
+  if (avgCharsPerPage > 500) {
+    textQuality = 'excellent';
+    hasTextLayer = true;
+    confidence = 95;
+    reasoning.push('Excellent text extraction - native text layer confirmed');
+  } else if (avgCharsPerPage > 200) {
+    textQuality = 'good';
+    hasTextLayer = true;
+    confidence = 85;
+    reasoning.push('Good text extraction - likely native text layer');
+  } else if (avgCharsPerPage > 50) {
+    textQuality = 'poor';
+    hasTextLayer = true;
+    needsOCR = true; // Poor quality suggests OCR might help
+    confidence = 60;
+    reasoning.push('Poor text quality - may benefit from OCR enhancement');
+  } else if (totalText.length < 100) {
+    textQuality = 'none';
+    hasTextLayer = false;
+    needsOCR = true;
+    confidence = 10;
+    reasoning.push('Minimal or no text extracted - likely scanned document needing OCR');
+  } else {
+    textQuality = 'poor';
+    hasTextLayer = true;
+    needsOCR = avgCharsPerPage < 100; // Borderline case
+    confidence = 50;
+    reasoning.push('Borderline text quality - OCR may or may not be needed');
+  }
+
+  // Additional heuristics for scanned PDFs
+  const hasImages = pdfData.info?.Pages?.some((page: any) => page.Resources?.XObject);
+  if (hasImages !== undefined) {
+    reasoning.push(hasImages ? 'PDF contains images' : 'PDF appears text-only');
+    if (hasImages && textQuality === 'none') {
+      needsOCR = true;
+      confidence = Math.max(confidence, 90);
+      reasoning.push('Images present with no text - high confidence OCR needed');
+    }
+  }
+
+  // Check for common OCR indicators
+  const gibberishRatio = getGibberishRatio(totalText);
+  if (gibberishRatio > 0.3) {
+    needsOCR = true;
+    confidence = Math.min(confidence, 30);
+    reasoning.push(`High gibberish ratio (${(gibberishRatio * 100).toFixed(1)}%) - likely OCR errors`);
+  }
+
+  return {
+    hasTextLayer,
+    needsOCR,
+    textQuality,
+    confidence,
+    reasoning
+  };
+}
+
+function getGibberishRatio(text: string): number {
+  // Simple heuristic: count unusual character sequences
+  const words: string[] = text.split(/\s+/).filter((word: string) => word.length > 2);
+  let gibberishCount = 0;
+
+  for (const word of words) {
+    // Count words with too many consecutive consonants (common OCR error)
+    const consecutiveConsonants = word.match(/[bcdfghjklmnpqrstvwxyz]{4,}/gi);
+    if (consecutiveConsonants) {
+      gibberishCount++;
+    }
+
+    // Count words with unusual character combinations
+    if (/[^a-zA-Z\u0590-\u05FF\s]/.test(word)) {
+      // Contains non-letter characters (might be OK for Hebrew)
+      continue;
+    }
+  }
+
+  return gibberishCount / Math.max(words.length, 1);
 }
 
 export async function POST(request: NextRequest) {
@@ -52,18 +167,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Basic text layer detection - if we got meaningful text, assume it has text layer
-    const totalTextLength = pdfData.text.length;
-    const hasTextLayer = totalTextLength > pdfData.numpages * 100; // Rough heuristic
+    // Advanced OCR detection
+    const ocrResult = detectOCRNeed(pdfData, pages);
 
     const pdfContent: PDFTextContent = {
       text: pdfData.text,
       pages,
       totalPages: pdfData.numpages,
-      hasTextLayer
+      hasTextLayer: ocrResult.hasTextLayer,
+      needsOCR: ocrResult.needsOCR,
+      ocrConfidence: ocrResult.confidence,
+      textQuality: ocrResult.textQuality
     };
 
-    console.log(`PDF parsed: ${pdfContent.totalPages} pages, ${totalTextLength} characters, hasTextLayer: ${hasTextLayer}`);
+    console.log(`PDF analyzed: ${pdfContent.totalPages} pages, quality: ${ocrResult.textQuality}, needs OCR: ${ocrResult.needsOCR} (${ocrResult.confidence}% confidence)`);
+    console.log(`OCR reasoning:`, ocrResult.reasoning);
 
     // Create document entry
     const document = await directus.request(createItem('documents', {
@@ -73,7 +191,11 @@ export async function POST(request: NextRequest) {
         filename: file.name,
         file_size: file.size,
         total_pages: pdfContent.totalPages,
-        has_text_layer: hasTextLayer,
+        has_text_layer: pdfContent.hasTextLayer,
+        needs_ocr: pdfContent.needsOCR,
+        text_quality: pdfContent.textQuality,
+        ocr_confidence: pdfContent.ocrConfidence,
+        ocr_reasoning: ocrResult.reasoning,
         language,
         uploaded_at: new Date().toISOString(),
         pdf_info: pdfData.info
@@ -106,7 +228,10 @@ export async function POST(request: NextRequest) {
           metadata: {
             source_language: language,
             page_number: pageIndex + 1,
-            has_text_layer: hasTextLayer,
+            has_text_layer: pdfContent.hasTextLayer,
+            needs_ocr: pdfContent.needsOCR,
+            text_quality: pdfContent.textQuality,
+            ocr_confidence: pdfContent.ocrConfidence,
             auto_generated: false
           }
         }));
@@ -122,7 +247,10 @@ export async function POST(request: NextRequest) {
             auto_generated: true,
             source: 'pdf_upload',
             page_number: pageIndex + 1,
-            has_text_layer: hasTextLayer
+            has_text_layer: pdfContent.hasTextLayer,
+            needs_ocr: pdfContent.needsOCR,
+            text_quality: pdfContent.textQuality,
+            ocr_confidence: pdfContent.ocrConfidence
           }
         }));
 
@@ -137,11 +265,17 @@ export async function POST(request: NextRequest) {
         filename: file.name,
         size: file.size,
         pages: pdfContent.totalPages,
-        has_text_layer: hasTextLayer,
+        has_text_layer: pdfContent.hasTextLayer,
+        needs_ocr: pdfContent.needsOCR,
+        text_quality: pdfContent.textQuality,
+        ocr_confidence: pdfContent.ocrConfidence,
+        ocr_reasoning: ocrResult.reasoning,
         paragraphs_created: paragraphs.length,
-        total_characters: totalTextLength
+        total_characters: pdfData.text.length
       },
-      message: `Successfully processed PDF with ${paragraphs.length} paragraphs across ${pdfContent.totalPages} pages`
+      message: pdfContent.needsOCR
+        ? `PDF processed with ${paragraphs.length} paragraphs. OCR recommended (${pdfContent.ocrConfidence}% confidence) - ${pdfContent.textQuality} text quality detected.`
+        : `PDF processed successfully with ${paragraphs.length} paragraphs. High-quality text extraction (${pdfContent.ocrConfidence}% confidence).`
     });
 
   } catch (error) {

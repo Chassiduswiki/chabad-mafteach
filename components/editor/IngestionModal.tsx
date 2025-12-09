@@ -145,14 +145,18 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
       const result = await response.json();
 
       if (result.success) {
+        const ocrInfo = result.pdf_info.needs_ocr
+          ? `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence}% confidence)\n💡 Recommendation: OCR processing suggested`
+          : `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence}% confidence)\n✅ Native text layer sufficient`;
+
         setFeedback({
           type: 'success',
-          message: `✅ Successfully processed PDF "${result.pdf_info.filename}"\n📄 ${result.pdf_info.pages} pages → ${result.pdf_info.paragraphs_created} paragraphs\n📝 ${result.pdf_info.total_characters.toLocaleString()} characters extracted`
+          message: `✅ Successfully processed PDF "${result.pdf_info.filename}"\n📄 ${result.pdf_info.pages} pages → ${result.pdf_info.paragraphs_created} paragraphs\n📝 ${result.pdf_info.total_characters.toLocaleString()} characters extracted\n\n${ocrInfo}`
         });
         onDocumentCreated?.(result.document_id);
 
         // Auto-close after success
-        setTimeout(() => setIsOpen(false), 4000);
+        setTimeout(() => setIsOpen(false), 6000); // Longer delay for OCR info
       } else {
         setFeedback({
           type: 'error',
