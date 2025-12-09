@@ -15,7 +15,8 @@ import {
   Undo,
   Redo,
   Save,
-  Loader2
+  Loader2,
+  Split
 } from 'lucide-react';
 import { IconButton } from '@/components/ui/IconButton';
 
@@ -24,6 +25,7 @@ interface EditorToolbarProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onSave?: () => void;
+  onBreakStatements?: () => void;
   isSaving?: boolean;
   canUndo?: boolean;
   canRedo?: boolean;
@@ -35,6 +37,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onUndo,
   onRedo,
   onSave,
+  onBreakStatements,
   isSaving = false,
   canUndo = false,
   canRedo = false,
@@ -209,6 +212,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       {/* Save Button */}
       <div className="flex items-center gap-2">
+        <IconButton
+          label="Break into Statements"
+          onClick={onBreakStatements}
+          className="p-2 bg-green-600 text-white hover:bg-green-700"
+          title="Automatically split paragraphs into individual statements"
+        >
+          <Split className="w-4 h-4" />
+        </IconButton>
         <button
           onClick={onSave}
           disabled={isSaving}

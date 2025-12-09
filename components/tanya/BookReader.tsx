@@ -64,25 +64,27 @@ export function BookReader({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50/30 via-white to-amber-50/20 dark:from-stone-900/30 dark:via-stone-900 dark:to-stone-900/20">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
         <div 
-          className="h-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-500 ease-out"
+          className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-500 ease-out"
           style={{ width: `${readingProgress}%` }}
         />
       </div>
 
       {/* Chapter Header */}
-      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border/50">
+      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <BookOpen className="h-5 w-5 text-amber-600 dark:text-amber-500" />
-              <h1 className="text-lg font-serif text-foreground">Perek {currentPerek}</h1>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {viewedStatements.size} of {statements.length} sentences read
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">Perek {currentPerek}</h1>
+                <p className="text-sm text-muted-foreground">Chapter {currentPerek} of {totalPerek}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -91,35 +93,41 @@ export function BookReader({
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8 pb-24 sm:pb-8 sm:px-6 lg:py-12">
         {/* Book-like Text Container */}
-        <div className="bg-white/60 dark:bg-stone-800/40 rounded-lg shadow-sm border border-amber-200/30 dark:border-amber-900/30">
-          <div className="p-6 sm:p-8 lg:p-12">
-            <div className="font-hebrew font-serif text-[17px] sm:text-[18px] lg:text-[20px] leading-[1.8] text-stone-800 dark:text-stone-200 tracking-wide">
-              {statements.length > 0 ? (
-                statements.map((s, idx) => (
-                  <span
-                    key={s.id}
-                    onClick={() => handleSelect(s.id)}
-                    className={`
-                      cursor-pointer transition-all duration-200 rounded-sm px-0.5 -mx-0.5
-                      hover:bg-amber-200/40 dark:hover:bg-amber-900/30
-                      ${viewedStatements.has(s.id) ? 'text-stone-600 dark:text-stone-400' : 'text-stone-900 dark:text-stone-100'}
-                    `}
-                  >
-                    {s.text}
-                    {idx < statements.length - 1 && ' '}
-                  </span>
-                ))
-              ) : (
-                <p className="text-stone-700 dark:text-stone-300">{paragraphText}</p>
-              )}
-            </div>
-            
-            {statements.length > 0 && (
-              <p className="mt-6 text-xs text-stone-500 dark:text-stone-400 text-center font-medium uppercase tracking-wide">
-                Tap any sentence to explore its topics and sources
-              </p>
+        <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+          <div className="font-hebrew font-serif text-[18px] sm:text-[19px] lg:text-[21px] leading-[2] text-foreground tracking-wide">
+            {statements.length > 0 ? (
+              statements.map((s, idx) => (
+                <span
+                  key={s.id}
+                  onClick={() => handleSelect(s.id)}
+                  className={`
+                    cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
+                    hover:bg-primary/5 dark:hover:bg-primary/10
+                    ${viewedStatements.has(s.id)
+                      ? 'text-muted-foreground'
+                      : 'text-foreground'
+                    }
+                  `}
+                >
+                  {s.text}
+                  {idx < statements.length - 1 && ' '}
+                </span>
+              ))
+            ) : (
+              <p className="text-foreground leading-relaxed">{paragraphText}</p>
             )}
           </div>
+
+          {statements.length > 0 && (
+            <div className="mt-8 flex items-center justify-center">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  Tap any sentence to explore its topics and sources
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Chapter Navigation */}
@@ -235,7 +243,7 @@ export function BookReader({
                 </button>
               </div>
               
-              <div className="font-serif text-[17px] leading-relaxed mb-6 text-stone-800 dark:text-stone-200">
+              <div className="font-serif text-[17px] leading-relaxed mb-6 text-foreground bg-muted/30 rounded-lg p-4 border border-border">
                 {selected.text}
               </div>
 
@@ -248,7 +256,7 @@ export function BookReader({
                     {selected.topics.map((t) => (
                       <span
                         key={t.id}
-                        className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
+                        className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
                       >
                         {t.name}
                       </span>
@@ -264,7 +272,7 @@ export function BookReader({
                   </div>
                   <div className="space-y-3">
                     {selected.sources.map((s) => (
-                      <div key={s.id} className="bg-accent/30 rounded-lg p-3">
+                      <div key={s.id} className="bg-accent/30 rounded-lg p-3 border border-border">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-medium text-sm">{s.title}</span>
                           {s.relationship_type && (
@@ -303,33 +311,44 @@ export function BookReader({
 
 function BookReaderSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50/30 via-white to-amber-50/20 dark:from-stone-900/30 dark:via-stone-900 dark:to-stone-900/20">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Progress Bar Skeleton */}
       <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
-        <div className="h-full bg-muted animate-pulse" style={{ width: '30%' }} />
+        <div className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary animate-pulse" style={{ width: '30%' }} />
       </div>
 
       {/* Header Skeleton */}
-      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border/50">
+      <div className="sticky top-1 z-20 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-5 w-5 bg-muted rounded animate-pulse" />
-              <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 animate-pulse">
+                <div className="h-5 w-5 bg-muted rounded" />
+              </div>
+              <div>
+                <div className="h-6 w-24 bg-muted rounded animate-pulse mb-1" />
+                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+              </div>
             </div>
-            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
           </div>
         </div>
       </div>
 
       {/* Content Skeleton */}
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:py-12">
-        <div className="bg-white/60 dark:bg-stone-800/40 rounded-lg shadow-sm border border-amber-200/30 dark:border-amber-900/30">
-          <div className="p-6 sm:p-8 lg:p-12">
-            <div className="space-y-3">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-4 bg-muted rounded animate-pulse" style={{ width: `${Math.random() * 30 + 70}%` }} />
-              ))}
+        <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+          <div className="space-y-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-5 bg-muted rounded" style={{ width: `${Math.random() * 40 + 60}%` }} />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex items-center justify-center">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border animate-pulse">
+              <div className="w-2 h-2 rounded-full bg-muted" />
+              <div className="h-3 w-48 bg-muted rounded" />
             </div>
           </div>
         </div>

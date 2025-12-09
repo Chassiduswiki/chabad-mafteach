@@ -1,5 +1,7 @@
 # API Procedure Documentation
 
+**Updated to match New Directus Data Model (v2)** - This documentation now reflects the complete schema with version control, translations, comments, and audit logging.
+
 ## Database Connection & Data Entry Guide
 
 ### 1. Connection Setup
@@ -36,31 +38,43 @@ HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"
 
 #### Core Collections
 - `authors` - Author information
-- `documents` - Document content
-- `paragraphs` - Paragraph data
-- `source_links` - Source references
-- `sources` - Source materials
-- `statements` - Statement data
-- `statement_topics` - Statement-topic relationships
-- `topics` - Topic information
-- `topic_relationships` - Topic relationships
+- `documents` - Document content and metadata
+- `paragraphs` - Paragraph data with ordering
+- `statements` - Statement/claim data with dispute tracking
+- `sources` - Source materials with external system integration
+- `source_links` - Source references with relationship types
+- `topics` - Topic information with hierarchical types
+- `topic_relationships` - Topic hierarchies and relationships
+- `statement_topics` - Statement-topic mappings with relevance scoring
+- `translations` - Multilingual content translations
+- `document_versions` - Version control for documents
+- `paragraph_versions` - Version control for paragraphs
+- `statement_versions` - Version control for statements
+- `comments` - Threaded comments on content
+- `audit_log` - Change tracking and audit trail
+- `directus_users` - Extended user information (system collection)
 
 ### 3. Data Entry Order (Dependencies)
 
 #### Phase 1: Foundation Data
 1. **authors** - No dependencies
-2. **sources** - No dependencies  
+2. **sources** - May depend on authors
 3. **topics** - No dependencies
 
 #### Phase 2: Content Data
-4. **documents** - Depends on authors
+4. **documents** - No direct dependencies (can reference parent documents)
 5. **paragraphs** - Depends on documents
-6. **statements** - Depends on documents
+6. **statements** - Depends on paragraphs
 
 #### Phase 3: Relationship Data
-7. **source_links** - Depends on sources, documents, paragraphs
+7. **source_links** - Depends on sources, statements
 8. **statement_topics** - Depends on statements, topics
 9. **topic_relationships** - Depends on topics
+
+#### Phase 4: Enhanced Features
+10. **translations** - Depends on any translatable entity
+11. **comments** - Depends on statements
+12. **audit_log** - Auto-generated during operations
 
 ### 4. API Procedures by Collection
 
@@ -86,101 +100,311 @@ curl -X PATCH $HEADERS "$BASE_URL/items/authors/{id}" \
 
 #### Sources Collection
 ```bash
+# List sources
+curl $HEADERS "$BASE_URL/items/sources"
+
 # Create source
 curl -X POST $HEADERS "$BASE_URL/items/sources" \
   -d '{
     "title": "Source Title",
+    "original_lang": "he",
     "publication_year": 1820,
-    "type": "sefer",
-    "language": "hebrew",
-    "publisher": "Publisher Name"
+    "publisher": "Publisher Name",
+    "isbn": "978-1234567890",
+    "is_external": false,
+    "author_id": "uuid-of-author"
   }'
+
+# Create external source
+curl -X POST $HEADERS "$BASE_URL/items/sources" \
+  -d '{
+    "title": "External Source",
+    "original_lang": "he",
+    "is_external": true,
+    "external_system": "sefaria",
+    "external_id": "sefaria-identifier",
+    "external_url": "https://sefaria.org/...",
+    "citation_text": "Citation reference"
+  }'
+
+# Update source
+curl -X PATCH $HEADERS "$BASE_URL/items/sources/{id}" \
+  -d '{"publication_year": 1821}'
 ```
 
 #### Topics Collection
 ```bash
+# List topics
+curl $HEADERS "$BASE_URL/items/topics"
+
 # Create topic
 curl -X POST $HEADERS "$BASE_URL/items/topics" \
   -d '{
-    "name": "Topic Name",
-    "description": "Topic description",
-    "category": "philosophy"
+    "canonical_title": "Topic Name",
+    "original_lang": "en",
+    "slug": "topic-name",
+    "topic_type": "concept",
+    "description": "Topic description"
   }'
+
+# Update topic
+curl -X PATCH $HEADERS "$BASE_URL/items/topics/{id}" \
+  -d '{"description": "Updated description"}'
 ```
 
 #### Documents Collection
 ```bash
+# List documents
+curl $HEADERS "$BASE_URL/items/documents"
+
 # Create document
 curl -X POST $HEADERS "$BASE_URL/items/documents" \
   -d '{
     "title": "Document Title",
-    "author_id": 1,
-    "source_id": 1,
-    "language": "hebrew",
-    "year_written": 1825,
-    "summary": "Document summary"
+    "doc_type": "sefer",
+    "original_lang": "he",
+    "status": "draft",
+    "has_ocr": false,
+    "page_count": 100,
+    "source_format": "pdf",
+    "metadata": {"key": "value"}
   }'
+
+# Create child document (subsection)
+curl -X POST $HEADERS "$BASE_URL/items/documents" \
+  -d '{
+    "title": "Chapter Title",
+    "doc_type": "entry",
+    "parent_id": "uuid-of-parent-document",
+    "status": "draft"
+  }'
+
+# Update document
+curl -X PATCH $HEADERS "$BASE_URL/items/documents/{id}" \
+  -d '{"status": "reviewed"}'
 ```
 
 #### Paragraphs Collection
 ```bash
+# List paragraphs
+curl $HEADERS "$BASE_URL/items/paragraphs"
+
 # Create paragraph
 curl -X POST $HEADERS "$BASE_URL/items/paragraphs" \
   -d '{
-    "document_id": 1,
-    "paragraph_number": 1,
-    "content": "Paragraph content in Hebrew or English",
-    "translation": "English translation if needed"
+    "order_key": "doc_001_001",
+    "original_lang": "he",
+    "text": "Paragraph content in Hebrew or English",
+    "status": "draft",
+    "page_number": 1,
+    "column_number": 1,
+    "doc_id": "uuid-of-document"
   }'
+
+# Update paragraph
+curl -X PATCH $HEADERS "$BASE_URL/items/paragraphs/{id}" \
+  -d '{"status": "reviewed"}'
 ```
 
 #### Statements Collection
 ```bash
+# List statements
+curl $HEADERS "$BASE_URL/items/statements?filter={is_deleted:{_eq:false}}"
+
 # Create statement
 curl -X POST $HEADERS "$BASE_URL/items/statements" \
   -d '{
-    "document_id": 1,
-    "paragraph_id": 1,
-    "content": "Statement text",
-    "type": "halachic",
-    "importance": "high"
+    "order_key": "stmt_001_001_a",
+    "original_lang": "he",
+    "text": "Statement text",
+    "status": "draft",
+    "importance_score": 0.8,
+    "is_disputed": false,
+    "paragraph_id": "uuid-of-paragraph"
   }'
+
+# Mark statement as disputed
+curl -X PATCH $HEADERS "$BASE_URL/items/statements/{id}" \
+  -d '{"is_disputed": true}'
+
+# Soft delete statement
+curl -X PATCH $HEADERS "$BASE_URL/items/statements/{id}" \
+  -d '{"is_deleted": true, "deleted_at": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}'
 ```
 
 #### Source Links Collection
 ```bash
+# List source links
+curl $HEADERS "$BASE_URL/items/source_links"
+
 # Create source link
 curl -X POST $HEADERS "$BASE_URL/items/source_links" \
   -d '{
-    "source_id": 1,
-    "document_id": 1,
-    "paragraph_id": 1,
-    "page_number": 123,
-    "reference_text": "Exact quote reference"
+    "relationship_type": "quotes",
+    "page_number": "123a",
+    "confidence_level": "high",
+    "notes": "Direct citation from Talmud",
+    "statement_id": "uuid-of-statement",
+    "source_id": "uuid-of-source"
   }'
+
+# Create verse reference
+curl -X POST $HEADERS "$BASE_URL/items/source_links" \
+  -d '{
+    "relationship_type": "references",
+    "verse_reference": "Berachot 17a",
+    "confidence_level": "medium",
+    "statement_id": "uuid-of-statement",
+    "source_id": "uuid-of-source"
+  }'
+
+# Verify source link
+curl -X PATCH $HEADERS "$BASE_URL/items/source_links/{id}" \
+  -d '{"verified_at": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}'
 ```
 
 #### Statement Topics Collection
 ```bash
+# List statement topics
+curl $HEADERS "$BASE_URL/items/statement_topics"
+
 # Link statement to topic
 curl -X POST $HEADERS "$BASE_URL/items/statement_topics" \
   -d '{
-    "statement_id": 1,
-    "topic_id": 1,
-    "relevance_score": 0.8
+    "statement_id": "uuid-of-statement",
+    "topic_id": "uuid-of-topic",
+    "relevance_score": 0.8,
+    "is_primary": true,
+    "notes": "Primary topic for this statement"
   }'
+
+# Update relevance score
+curl -X PATCH $HEADERS "$BASE_URL/items/statement_topics/{id}" \
+  -d '{"relevance_score": 0.9}'
 ```
 
 #### Topic Relationships Collection
 ```bash
+# List topic relationships
+curl $HEADERS "$BASE_URL/items/topic_relationships"
+
 # Create topic relationship
 curl -X POST $HEADERS "$BASE_URL/items/topic_relationships" \
   -d '{
-    "parent_topic_id": 1,
-    "child_topic_id": 2,
-    "relationship_type": "subtopic",
-    "strength": 0.7
+    "parent_topic_id": "uuid-of-parent-topic",
+    "child_topic_id": "uuid-of-child-topic",
+    "relation_type": "subcategory",
+    "strength": 0.8,
+    "display_order": 1,
+    "description": "Tzaddik is a subcategory of Beinoni"
   }'
+
+# Update relationship strength
+curl -X PATCH $HEADERS "$BASE_URL/items/topic_relationships/{id}" \
+  -d '{"strength": 0.9}'
+```
+
+#### Translations Collection
+```bash
+# List translations
+curl $HEADERS "$BASE_URL/items/translations"
+
+# Create translation
+curl -X POST $HEADERS "$BASE_URL/items/translations" \
+  -d '{
+    "entity_type": "statement",
+    "entity_id": "uuid-of-statement",
+    "field_name": "text",
+    "target_lang": "en",
+    "translated_text": "English translation of the statement",
+    "translation_quality": "human_verified"
+  }'
+
+# Update translation quality
+curl -X PATCH $HEADERS "$BASE_URL/items/translations/{id}" \
+  -d '{"translation_quality": "professional"}'
+```
+
+#### Document Versions Collection
+```bash
+# List document versions
+curl $HEADERS "$BASE_URL/items/document_versions?filter={document_id:{_eq:\"uuid-of-document\"}}"
+
+# Create document version (usually auto-generated via Flows)
+curl -X POST $HEADERS "$BASE_URL/items/document_versions" \
+  -d '{
+    "document_id": "uuid-of-document",
+    "version_number": 2,
+    "title": "Updated Title",
+    "change_type": "title_updated",
+    "change_summary": "Corrected title spelling"
+  }'
+```
+
+#### Paragraph Versions Collection
+```bash
+# List paragraph versions
+curl $HEADERS "$BASE_URL/items/paragraph_versions?filter={paragraph_id:{_eq:\"uuid-of-paragraph\"}}"
+
+# Create paragraph version
+curl -X POST $HEADERS "$BASE_URL/items/paragraph_versions" \
+  -d '{
+    "paragraph_id": "uuid-of-paragraph",
+    "version_number": 1,
+    "text": "Updated paragraph content",
+    "change_type": "content_edited"
+  }'
+```
+
+#### Statement Versions Collection
+```bash
+# List statement versions
+curl $HEADERS "$BASE_URL/items/statement_versions?filter={statement_id:{_eq:\"uuid-of-statement\"}}"
+
+# Create statement version
+curl -X POST $HEADERS "$BASE_URL/items/statement_versions" \
+  -d '{
+    "statement_id": "uuid-of-statement",
+    "version_number": 1,
+    "text": "Updated statement text",
+    "change_type": "text_edited"
+  }'
+```
+
+#### Comments Collection
+```bash
+# List comments for a statement
+curl $HEADERS "$BASE_URL/items/comments?filter={statement_id:{_eq:\"uuid-of-statement\"}}"
+
+# Create comment
+curl -X POST $HEADERS "$BASE_URL/items/comments" \
+  -d '{
+    "statement_id": "uuid-of-statement",
+    "text": "This statement needs verification",
+    "status": "open",
+    "thread_depth": 0
+  }'
+
+# Reply to comment
+curl -X POST $HEADERS "$BASE_URL/items/comments" \
+  -d '{
+    "statement_id": "uuid-of-statement",
+    "parent_comment_id": "uuid-of-parent-comment",
+    "text": "I agree, let's check the source",
+    "thread_depth": 1
+  }'
+
+# Resolve comment
+curl -X PATCH $HEADERS "$BASE_URL/items/comments/{id}" \
+  -d '{"status": "resolved"}'
+```
+
+#### Audit Log Collection
+```bash
+# List audit entries (read-only, auto-generated)
+curl $HEADERS "$BASE_URL/items/audit_log?filter={entity_type:{_eq:\"statement\"}}&sort=-action_timestamp"
+
+# Note: Audit log entries are created automatically via Flows or hooks
 ```
 
 ### 5. Batch Operations
@@ -207,19 +431,29 @@ curl -X POST "$BASE_URL/import/authors" \
 
 ### 6. Query Examples
 
-#### Get Document with Author
+#### Get Document with Author (via Sources)
 ```bash
-curl $HEADERS "$BASE_URL/items/documents?fields=*,authors.*&filter={author_id:{_eq:1}}"
+curl $HEADERS "$BASE_URL/items/documents?fields=*,sources.authors.*&filter={sources:{author_id:{_eq:\"uuid-of-author\"}}}"
 ```
 
 #### Get Paragraphs with Statements
 ```bash
-curl $HEADERS "$BASE_URL/items/paragraphs?fields=*,statements.*&filter={document_id:{_eq:1}}"
+curl $HEADERS "$BASE_URL/items/paragraphs?fields=*,statements.*&filter={doc_id:{_eq:\"uuid-of-document\"}}"
 ```
 
 #### Get Topics with Statement Count
 ```bash
 curl $HEADERS "$BASE_URL/items/topics?fields=*,statement_topics.statements.*"
+```
+
+#### Get Statement with Sources and Translations
+```bash
+curl $HEADERS "$BASE_URL/items/statements?fields=*,source_links.sources.*,translations.*&filter={id:{_eq:\"uuid-of-statement\"}}"
+```
+
+#### Get Document Hierarchy (with nested content)
+```bash
+curl $HEADERS "$BASE_URL/items/documents?fields=*,paragraphs.statements.*&filter={id:{_eq:\"uuid-of-document\"}}"
 ```
 
 ### 7. Error Handling
@@ -233,9 +467,22 @@ curl $HEADERS "$BASE_URL/items/topics?fields=*,statement_topics.statements.*"
 
 #### Validation Rules
 - `authors.canonical_name`: Required, unique
-- `documents.author_id`: Must exist in authors table
-- `paragraphs.document_id`: Must exist in documents table
-- `statements.document_id`: Must exist in documents table
+- `sources.author_id`: Must exist in authors table (if provided)
+- `documents.parent_id`: Must exist in documents table (if provided)
+- `paragraphs.doc_id`: Must exist in documents table
+- `statements.paragraph_id`: Must exist in paragraphs table
+- `source_links.statement_id`: Must exist in statements table
+- `source_links.source_id`: Must exist in sources table
+- `statement_topics.statement_id`: Must exist in statements table
+- `statement_topics.topic_id`: Must exist in topics table
+- `topic_relationships.parent_topic_id`: Must exist in topics table
+- `topic_relationships.child_topic_id`: Must exist in topics table
+- `translations.entity_id`: Must exist in the specified entity_type table
+- `comments.parent_comment_id`: Must exist in comments table (if provided)
+- `ocr_confidence`: Min: 0, Max: 1
+- `importance_score`: Min: 0, Max: 1
+- `relevance_score`: Min: 0, Max: 1
+- `strength`: Min: 0, Max: 1
 
 ### 8. MCP Tool Usage
 
@@ -302,14 +549,14 @@ order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
 - `status`: e.g. `draft` or `reviewed`
 - `page_number` / `column_number`: optional (page/column in Tanya)
 - `metadata`: JSON string (optional), e.g. `{"perek":1}`
-- `doc_id`: numeric ID of `Tanya – Likutei Amarim` in `documents`
+- `doc_id`: UUID of `Tanya – Likutei Amarim` in `documents`
 
 **Example rows (conceptual)**
 
 ```text
 order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
-"tanya_1_001","he","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>","draft",1,1,"{\"perek\":1}",3
-"tanya_1_001","en","<p>It is written in the end of chapter...</p>","draft",1,1,"{\"perek\":1}",3
+"tanya_1_001","he","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
+"tanya_1_001","en","<p>It is written in the end of chapter...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
 ```
 
 **Bulk import**
@@ -328,12 +575,12 @@ Key available fields:
 - `order_key` (required)
 - `original_lang` (`he` | `en`)
 - `text` (required)
-- `is_deleted` (boolean, default `false`)
 - `status` (`draft` | `reviewed` | `published`)
+- `is_deleted` (boolean, default `false`)
 - `is_disputed` (boolean)
 - `importance_score` (float 0–1)
 - `metadata` (json)
-- `paragraph_id` (integer FK → `paragraphs.id`)
+- `paragraph_id` (UUID FK → `paragraphs.id`)
 
 **CSV headers (tanya_perek1_statements.csv)**
 
@@ -345,11 +592,11 @@ order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,meta
 
 ```text
 order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,metadata,paragraph_id
-"tanya_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"{\"note\":\"core definition\"}",<PARAGRAPH_ID_HEBREW>
-"tanya_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"{\"note\":\"EN paraphrase\"}",<PARAGRAPH_ID_ENGLISH>
+"tanya_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"{\"note\":\"core definition\"}","uuid-hebrew-paragraph"
+"tanya_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"{\"note\":\"EN paraphrase\"}","uuid-english-paragraph"
 ```
 
-Replace `<PARAGRAPH_ID_HEBREW>` / `<PARAGRAPH_ID_ENGLISH>` with real IDs from `paragraphs` after importing paragraphs.
+Replace `uuid-hebrew-paragraph` / `uuid-english-paragraph` with real UUIDs from `paragraphs` after importing paragraphs.
 
 **Bulk import**
 
@@ -368,8 +615,8 @@ Key available fields:
 - `page_number` (string; can hold daf/siman, e.g. `Berachot 17a`)
 - `confidence_level` (`low` | `medium` | `high`, default `medium`)
 - `notes` (text)
-- `statement_id` (integer, M2O → `statements.id`)
-- `source_id` (integer, M2O → `sources.id`)
+- `statement_id` (UUID, M2O → `statements.id`)
+- `source_id` (UUID, M2O → `sources.id`)
 
 **CSV headers (tanya_perek1_source_links.csv)**
 
@@ -381,8 +628,8 @@ relationship_type,page_number,confidence_level,notes,statement_id,source_id
 
 ```text
 relationship_type,page_number,confidence_level,notes,statement_id,source_id
-"quotes","Berachot 17a","high","Direct citation of Gemara.",<STATEMENT_ID_A>,<SOURCE_ID_GEMARA>
-"references","Hilchot Teshuva 3:1","medium","Conceptual parallel in Rambam.",<STATEMENT_ID_B>,<SOURCE_ID_RAMBAM>
+"quotes","Berachot 17a","high","Direct citation of Gemara.","uuid-statement-a","uuid-gemara-source"
+"references","Hilchot Teshuva 3:1","medium","Conceptual parallel in Rambam.","uuid-statement-b","uuid-rambam-source"
 ```
 
 **Bulk import**
@@ -400,8 +647,8 @@ Collection: `statement_topics`
 Key available fields:
 - `relevance_score` (float, default 1)
 - `is_primary` (boolean, default true)
-- `statement_id` (integer FK → `statements.id`)
-- `topic_id` (integer FK → `topics.id`)
+- `statement_id` (UUID FK → `statements.id`)
+- `topic_id` (UUID FK → `topics.id`)
 
 **CSV headers (tanya_perek1_statement_topics.csv)**
 
@@ -413,8 +660,8 @@ relevance_score,is_primary,statement_id,topic_id
 
 ```text
 relevance_score,is_primary,statement_id,topic_id
-1,true,<STATEMENT_ID_TZADIK_DEF>,<TOPIC_ID_TZADIK>
-0.8,false,<STATEMENT_ID_TZADIK_DEF>,<TOPIC_ID_BEINONI>
+1,true,"uuid-statement-tzaddik-def","uuid-topic-tzaddik"
+0.8,false,"uuid-statement-tzaddik-def","uuid-topic-beinoni"
 ```
 
 **Bulk import**
