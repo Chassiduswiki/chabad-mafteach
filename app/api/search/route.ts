@@ -31,17 +31,11 @@ export async function GET(request: NextRequest) {
             docs = [];
         }
 
-        // Fetch topics (if this fails, we still let handleApiError surface it)
+        // Fetch topics (fetch broader set and let client-side Fuse.js handle filtering)
         topicsRaw = await directus.request(
             readItems('topics', {
-                filter: {
-                    _or: [
-                        { canonical_title: { _contains: query } },
-                        { description: { _contains: query } },
-                    ],
-                },
                 fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                limit: 5,
+                limit: 100, // Fetch more topics for better client-side filtering
             })
         ) as any[];
 

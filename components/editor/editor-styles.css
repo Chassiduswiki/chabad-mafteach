@@ -1,0 +1,196 @@
+/* Tiptap-like Editor Styles */
+
+.pm-editor-shell {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.pm-editor-surface {
+  min-height: 400px;
+  padding: 1.5rem;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1a202c;
+}
+
+.pm-editor-surface:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* ProseMirror content styles */
+.pm-editor-content h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #1a202c;
+}
+
+.pm-editor-content h2 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #1a202c;
+}
+
+.pm-editor-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #1a202c;
+}
+
+.pm-editor-content p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.pm-editor-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #4a5568;
+}
+
+.pm-editor-content ul, .pm-editor-content ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.pm-editor-content li {
+  margin-bottom: 0.25rem;
+}
+
+.pm-editor-content code {
+  background: #f7fafc;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875em;
+}
+
+.pm-editor-content pre {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.pm-editor-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Placeholder styles */
+.pm-editor-content p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Selection styles */
+.pm-editor-content ::selection {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Feedback styles */
+.pm-editor-feedback {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideIn 0.2s ease-out;
+}
+
+.pm-editor-feedback-success {
+  background: #10b981;
+  color: white;
+}
+
+.pm-editor-feedback-error {
+  background: #ef4444;
+  color: white;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Floating toolbar styles */
+.floating-toolbar {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+/* Improve button hover states */
+.floating-toolbar button:hover {
+  background: #f8fafc;
+}
+
+/* RTL Support for Hebrew Text */
+.pm-editor-content[dir="rtl"],
+.pm-editor-content [dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.pm-editor-content [dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Hebrew-specific font and spacing */
+.pm-editor-content {
+  font-family: 'Times New Roman', serif, 'Arial Hebrew', 'David', sans-serif;
+  line-height: 1.8;
+}
+
+/* Better spacing for Hebrew punctuation */
+.pm-editor-content p:has([dir="rtl"]) {
+  text-align: right;
+}
+
+/* Citation styling for RTL */
+.pm-editor-content [data-type="citation"][dir="rtl"] {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+/* Improved selection for mixed RTL/LTR content */
+.pm-editor-content ::selection {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Ensure toolbar works with RTL */
+.pm-editor-shell[dir="rtl"] .pm-editor-toolbar {
+  direction: rtl;
+}

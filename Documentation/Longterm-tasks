@@ -7,6 +7,8 @@
 - ✅ Search API stabilized with error handling for permissions.
 - ✅ Mobile search modal layout improved.
 - ✅ Legacy type aliases added for backward compatibility (Sefer→Document, Location→Paragraph, etc.).
+- ✅ **Premium BookReader component created** - transforms seforim page into professional reading experience (Dec 8, 2025).
+- ✅ **Seforim UX issues resolved** - fixed z-index, mobile popup, click-to-close functionality (Dec 8, 2025).
 - ⏳ **Next: Pick one track below and execute.**
 
 ## Schema Migration Notes (Dec 8, 2025)
@@ -69,10 +71,10 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
 
 ### Phase 3a: Extract & Generalize (IMMEDIATE)
-- [ ] Rename `TanyaChapterReader` → `TorahReader`.
-- [ ] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
+- [x] ~~Rename `TanyaChapterReader` → `TorahReader`.~~ **BETTER**: Created `BookReader` component with premium UX.
+- [x] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
 - [x] ~~Keep reading from local `likkutei-amarim-1.ts` for now~~ **DONE**: Now fetches from Directus.
-- [ ] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
+- [x] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
 
 ### Phase 3b: Directus Modeling (After 3a)
 - [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
@@ -82,7 +84,7 @@ The frontend TypeScript types now match the new Directus schema:
 ### Phase 3c: Commentary & Translation UI (After 3b)
 - [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
 - [ ] Add support for inline commentary blocks (type: 'commentary' in statements).
-- [ ] Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.
+- [x] ~~Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.~~ **PARTIAL**: Reader shows Hebrew beautifully with premium UX, translation toggle not yet implemented.
 
 ---
 
@@ -112,6 +114,45 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## TRACK 6: Editor Refactor (Phase 2 - COMPLETED)
+
+**Goal**: Clean up the codebase now that citation feature is working.
+
+### Phase 2.1: Extract Citation Plugin (COMPLETED)
+- [x] Move citation logic from `ProseEditor.tsx` into a self-contained ProseMirror plugin in `components/editor/plugins/citations/`
+- [x] Include: cmdk palette, suggestion trigger, node insertion logic
+- [x] Update ProseEditor to use the new comprehensive citation plugin
+- [x] Test: Citation workflow still works after extraction
+
+### Phase 2.2: Extract `useEditor` Hook (COMPLETED)
+- [x] Review current `useEditor` hook implementation
+- [x] Consolidate any remaining data-fetching, state management, and save logic from `app/editor/page.tsx`
+- [x] Ensure page component is clean and isolated editor logic
+
+---
+
+## 🚨 CRITICAL INFRASTRUCTURE ISSUES (URGENT - BLOCKING EDITOR)
+
+### **Directus Permissions Configuration (REQUIRED)**
+**Status:** ❌ NOT DONE - BLOCKING EDITOR FUNCTIONALITY
+**Impact:** Editor completely broken - 403 Forbidden on all API calls
+**Action Required:**
+- Login to Directus Admin: https://directus-production-20db.up.railway.app/admin
+- Go to Settings → Access Control
+- Create/configure "Public" role with READ permissions for:
+  - documents collection (all fields)
+  - topics collection (all fields) 
+  - sources collection (all fields)
+  - authors collection (all fields)
+- Assign static token `Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96` to Public role
+- Test: Editor should load StructureSidebar and citations without 403 errors
+
+**Next Agent:** Check if this has been resolved before proceeding with any editor work!
+
+---
+
+---
+
 ## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
 
 - [ ] Decide final Directus public-access model: which collections/fields readable by static token.
@@ -123,13 +164,54 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## Component Cleanup Tasks (Added Dec 8, 2025)
+
+**Priority**: High - Remove unused code to improve maintainability
+
+1. **[HIGH] Remove 3 unused components** - Immediate cleanup to reduce bundle size:
+   - `button` (UI component) - **REMOVED**
+   - `TanyaChapterReader` - **REMOVED** 
+   - `TopicOverview` - **REMOVED**
+
+2. **[HIGH] Complete TopicTabs implementation** - Currently only renders OverviewTab, needs full tab functionality
+
+3. **[MEDIUM] Reconfigure topic components for new DB schema** - Future implementation:
+   - `TopicArticle` - Connect to Document + paragraph/statement system
+   - `RelatedTab` - Link to existing related topics in DB
+   - `SourcesTab` - Reconfigure for new Directus schema
+   - `TopicSidebar` - Shelve for future use
+
+4. **[MEDIUM] Review and split large components** - Consider breaking down:
+   - `BookReader` (346 lines) - consider lazy loading
+   - `CommandMenu` (302 lines) - extract business logic
+   - `SourcesTab` (231 lines) - if re-used
+   - `OverviewTab` (208 lines) - if re-used
+
+5. **[MEDIUM] Add component documentation** - Document complex features and interfaces
+
+6. **[LOW] Extract business logic from UI components** - Separate concerns where appropriate
+
+7. **[LOW] Implement lazy loading for large components** - Optimize bundle size and loading performance
+
+---
+
+## Remaining Roadmap Items from Editor Audit:
+- Implement full Phase 2 refactor, including consolidating all editor state management into hooks and extracting plugins.
+- Add contextual editing for citations, such as making citation chips clickable for quick edits.
+- Develop collaboration features using Operational Transformation (OT) or CRDTs for real-time editing.
+- Enhance author disambiguation UI for better user prompts and error handling.
+
+---
+
 ## Execution Order (Recommended)
 
 1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
-2. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
-3. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
-4. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
-5. **Parallel**: TRACK 4 (infrastructure) as needed.
+2. **Then Component Cleanup Task #1** (Remove unused components): immediate code quality improvement, ~0.5 day.
+3. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
+4. **Then Component Cleanup Task #2** (Complete TopicTabs): unblock topic functionality, ~0.5 day.
+5. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
+6. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
+7. **Parallel**: Remaining component cleanup tasks (#3-6) and TRACK 4 (infrastructure) as needed.
 
 ---
 
@@ -139,4 +221,3 @@ The frontend TypeScript types now match the new Directus schema:
 - **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
 - **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
 - **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
-
