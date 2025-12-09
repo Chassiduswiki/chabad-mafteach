@@ -99,7 +99,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
             <div className="rounded-2xl border border-border bg-background/40 p-6">
                 <div className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <BookOpen className="h-4 w-4" />
-                    New Sources
+                    New Seforim
                 </div>
                 <ul className="space-y-3">
                     {(data.recentSources || []).slice(0, itemLimit).map((source) => (
