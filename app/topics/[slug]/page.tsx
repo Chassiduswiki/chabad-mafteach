@@ -15,7 +15,7 @@ async function getTopic(slug: string): Promise<Topic | null> {
 
         const rawTopics = await directus.request(readItems('topics', {
             filter: { slug: { _eq: slug } },
-            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description', 'metadata'],
             limit: 1
         }));
 
@@ -36,6 +36,8 @@ async function getTopic(slug: string): Promise<Topic | null> {
             name: (t.canonical_title as string) || (t.slug as string),
             category: t.topic_type,
             definition_short: t.description,
+            definition_positive: t.metadata?.definition_positive,
+            definition_negative: t.metadata?.definition_negative,
         };
 
         return mapped;
