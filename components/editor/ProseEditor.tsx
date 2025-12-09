@@ -14,6 +14,7 @@ import { CitationCommandPalette } from "./CitationCommandPalette";
 import { EditorToolbar } from "./EditorToolbar";
 import { useCitationPalette } from "./hooks/useCitationPalette";
 import { useEditor } from '@/lib/hooks/useEditor';
+import { CitationViewerModal } from "./CitationViewerModal";
 
 interface ProseEditorProps {
   docId: string | null;
@@ -42,6 +43,11 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
   const [feedback, setFeedback] = useState<
     { type: "success" | "error"; message: string } | null
   >(null);
+  const [activeCitation, setActiveCitation] = useState<{
+    source_id: number | string | null;
+    source_title: string | null;
+    reference: string | null;
+  } | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -115,6 +121,9 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
           },
           onDismiss: () => {
             closePalette();
+          },
+          onClick: (citation) => {
+            setActiveCitation(citation);
           },
         })
       ],
@@ -211,6 +220,12 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
           closePalette();
         }}
         onFeedback={(payload) => setFeedback(payload)}
+      />
+
+      <CitationViewerModal
+        open={Boolean(activeCitation)}
+        citation={activeCitation}
+        onClose={() => setActiveCitation(null)}
       />
     </div>
   );
