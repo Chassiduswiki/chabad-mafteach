@@ -39,9 +39,53 @@ export async function GET(
             console.warn('Failed to fetch statement_topics:', error);
         }
 
+        // Fetch related topics from topic_relationships table
+        let relatedTopics: any[] = [];
+        try {
+            // Get relationships where this topic is the parent
+            const parentRelationships = await directus.request(readItems('topic_relationships', {
+                filter: { parent_topic_id: { _eq: topic.id } } as any,
+                fields: ['*', { child_topic_id: ['id', 'canonical_title', 'slug', 'topic_type', 'description'] }] as any,
+                sort: ['-strength'] as any
+            })) as any[];
+
+            // Get relationships where this topic is the child
+            const childRelationships = await directus.request(readItems('topic_relationships', {
+                filter: { child_topic_id: { _eq: topic.id } } as any,
+                fields: ['*', { parent_topic_id: ['id', 'canonical_title', 'slug', 'topic_type', 'description'] }] as any,
+                sort: ['-strength'] as any
+            })) as any[];
+
+            // Combine and map to consistent format
+            const parentTopics = parentRelationships.map(rel => ({
+                ...rel.child_topic_id,
+                relationship: {
+                    type: rel.relation_type,
+                    strength: rel.strength,
+                    description: rel.description,
+                    direction: 'child' // This topic is parent, related is child
+                }
+            }));
+
+            const childTopics = childRelationships.map(rel => ({
+                ...rel.parent_topic_id,
+                relationship: {
+                    type: rel.relation_type,
+                    strength: rel.strength,
+                    description: rel.description,
+                    direction: 'parent' // This topic is child, related is parent
+                }
+            }));
+
+            relatedTopics = [...parentTopics, ...childTopics];
+        } catch (error) {
+            console.warn('Failed to fetch topic_relationships:', error);
+        }
+
         return NextResponse.json({
             topic,
-            citations: statementTopics // Map to citations for backward compatibility
+            citations: statementTopics, // Map to citations for backward compatibility
+            relatedTopics
         });
     } catch (error) {
         console.error('Topic fetch error:', error);

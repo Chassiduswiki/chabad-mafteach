@@ -56,8 +56,9 @@ A living encyclopedia where:
 - **Frontend** (This Repo): Next.js 16 (React, TypeScript)
 - **Backend** (Separate): Directus (Headless CMS)
 - **Database** (Backend): PostgreSQL
-- **Hosting**: Vercel (Frontend) + Directus Cloud (Backend)
+- **Hosting**: Railway (Frontend) + Directus Cloud (Backend)
 - **Styling**: Tailwind CSS with custom "Crown & Earth" theme
+- **Data Fetching**: TanStack Query for efficient API management
 
 ### Key Design Decisions
 - **Separation of Concerns**: Content (Directus) vs Presentation (Next.js)
