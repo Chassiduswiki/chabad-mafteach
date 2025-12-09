@@ -27,7 +27,7 @@ export class OCRProcessor {
     if (this.worker) return;
 
     this.worker = await createWorker('heb+eng', 1, {
-      logger: m => console.log('OCR:', m)
+      logger: (m: any) => console.log('OCR:', m)
     });
 
     // Load Hebrew language data
@@ -94,7 +94,7 @@ export class OCRProcessor {
 
     } catch (error) {
       console.error(`OCR failed for page ${pageNumber}:`, error);
-      throw new Error(`OCR processing failed for page ${pageNumber}: ${error.message}`);
+      throw new Error(`OCR processing failed for page ${pageNumber}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
