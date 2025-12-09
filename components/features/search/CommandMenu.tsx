@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 type SearchResult = {
     id: string;
     title: string;
-    type: 'sefer' | 'location' | 'topic';
+    type: 'document' | 'location' | 'topic';
     subtitle?: string;
     category?: string;
     slug?: string;
@@ -53,22 +53,22 @@ export function CommandMenu() {
                     url: `/topics/${t.slug}`
                 }));
 
-                const seforimResults: SearchResult[] = (data.seforim || []).map((s: any) => ({
-                    id: `sefer-${s.id}`,
+                const documentsResults: SearchResult[] = (data.documents || []).map((s: any) => ({
+                    id: `document-${s.id}`,
                     title: s.title,
-                    type: 'sefer' as const,
-                    subtitle: s.author ?? undefined,
-                    url: `/seforim/${s.id}`
+                    type: 'document' as const,
+                    subtitle: s.doc_type ?? undefined,
+                    url: `/documents/${s.id}`
                 }));
 
                 const locationResults: SearchResult[] = (data.locations || []).map((l: any) => ({
                     id: `loc-${l.id}`,
                     title: l.display_name,
                     type: 'location' as const,
-                    url: `/seforim/${l.sefer}`
+                    url: `/documents/${l.sefer}`
                 }));
 
-                const allResults = [...topicResults, ...seforimResults, ...locationResults];
+                const allResults = [...topicResults, ...documentsResults, ...locationResults];
 
                 // Apply fuzzy search for better matching
                 const fuse = new Fuse(allResults, {
@@ -221,10 +221,10 @@ export function CommandMenu() {
                                             </Command.Group>
                                         )}
 
-                                        {/* Seforim/Sources Group */}
-                                        {results.filter(r => r.type === 'sefer').length > 0 && (
-                                            <Command.Group heading={`Sources (${results.filter(r => r.type === 'sefer').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                                                {results.filter(r => r.type === 'sefer').map((item) => (
+                                        {/* Documents/Sources Group */}
+                                        {results.filter(r => r.type === 'document').length > 0 && (
+                                            <Command.Group heading={`Sources (${results.filter(r => r.type === 'document').length})`} className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                                {results.filter(r => r.type === 'document').map((item) => (
                                                     <Command.Item
                                                         key={item.id}
                                                         value={item.title}

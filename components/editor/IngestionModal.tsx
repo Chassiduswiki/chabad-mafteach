@@ -23,6 +23,9 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SefariaBook[]>([]);
   const [selectedBook, setSelectedBook] = useState<SefariaBook | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<any>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState<string>('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -124,12 +127,10 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
     if (!file) return;
 
     setIsLoading(true);
-    setLoadingMessage('Uploading PDF file...');
+    setLoadingMessage('Creating PDF processing job...');
     setFeedback(null);
 
     try {
-      setLoadingMessage('Processing PDF - this may take a few moments...');
-
       const formData = new FormData();
       formData.append('file', file);
       if (documentTitle) {
@@ -145,18 +146,21 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
       const result = await response.json();
 
       if (result.success) {
+        const jobId = result.jobId;
+        setJobId(jobId);
+
         setFeedback({
           type: 'success',
-          message: `✅ Successfully processed PDF "${result.pdf_info.filename}"\n📄 ${result.pdf_info.pages} pages → ${result.pdf_info.paragraphs_created} paragraphs\n📝 ${result.pdf_info.total_characters.toLocaleString()} characters extracted`
+          message: `📋 PDF Processing Job Created!\n🆔 Job ID: ${jobId}\n⏱️ Estimated time: ${result.estimatedTime}\n🔄 Monitoring progress...`
         });
-        onDocumentCreated?.(result.document_id);
 
-        // Auto-close after success
-        setTimeout(() => setIsOpen(false), 4000);
+        // Start polling for job status
+        startPolling(jobId);
+
       } else {
         setFeedback({
           type: 'error',
-          message: `❌ PDF Processing Failed\n${result.error || 'Unknown error occurred'}`
+          message: `❌ Job Creation Failed\n${result.error || 'Unknown error occurred'}`
         });
       }
     } catch (error) {
@@ -178,6 +182,52 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
     setFile(null);
     setDocumentTitle('');
     setFeedback(null);
+    setJobId(null);
+    setJobStatus(null);
+    stopPolling();
+  };
+
+  const startPolling = (jobId: string) => {
+    stopPolling(); // Clear any existing polling
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/jobs/status?jobId=${jobId}`);
+        const status = await response.json();
+
+        setJobStatus(status);
+
+        if (status.status === 'completed') {
+          setFeedback({
+            type: 'success',
+            message: `✅ PDF Processing Complete!\n📄 ${status.result?.pdfInfo?.pages || 0} pages processed\n📝 ${status.result?.pdfInfo?.paragraphs_created || 0} paragraphs created\n📚 ${status.result?.pdfInfo?.footnotes_detected || 0} footnotes detected\n📊 Quality: ${status.result?.pdfInfo?.text_quality || 'unknown'}`
+          });
+          onDocumentCreated?.(status.result?.documentId);
+          stopPolling();
+          setTimeout(() => setIsOpen(false), 5000);
+        } else if (status.status === 'failed') {
+          setFeedback({
+            type: 'error',
+            message: `❌ PDF Processing Failed\n${status.result?.error || 'Unknown error occurred'}`
+          });
+          stopPolling();
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    };
+
+    // Poll immediately, then every 3 seconds
+    poll();
+    const interval = setInterval(poll, 3000);
+    setPollingInterval(interval);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
   };
 
   return (
@@ -409,8 +459,42 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
               </div>
             )}
 
+            {/* Job Status Display */}
+            {jobStatus && jobStatus.status !== 'completed' && jobStatus.status !== 'failed' && (
+              <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium text-blue-900">
+                    Processing: {jobStatus.fileName}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {jobStatus.status === 'queued' ? 'Queued' :
+                     jobStatus.status === 'processing' ? 'Processing' : 'Unknown'}
+                  </div>
+                </div>
+
+                {jobStatus.progress && (
+                  <>
+                    <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${jobStatus.progress.percentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-blue-700 flex items-center">
+                      <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent mr-2"></div>
+                      {jobStatus.progress.message}
+                    </div>
+                  </>
+                )}
+
+                <div className="text-xs text-blue-600 mt-2">
+                  Started: {jobStatus.startedAt ? new Date(jobStatus.startedAt).toLocaleTimeString() : 'Not started'}
+                </div>
+              </div>
+            )}
+
             {/* Upload Button */}
-            {file && (
+            {file && !jobId && (
               <div className="flex justify-end">
                 <Button
                   onClick={handlePdfFileUpload}

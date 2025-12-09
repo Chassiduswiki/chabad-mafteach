@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorView } from 'prosemirror-view';
-import { mySchema } from '../schema';
+import { mySchema } from './schema';
 import {
   Bold,
   Italic,

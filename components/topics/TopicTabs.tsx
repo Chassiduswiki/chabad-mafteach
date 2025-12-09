@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import OverviewTab from "./OverviewTab";
+import ArticleTab from "./ArticleTab";
 import BoundariesTab from "./BoundariesTab";
 import SourcesTab from "./SourcesTab";
 import RelatedTab from "./RelatedTab";
@@ -15,7 +15,7 @@ interface TopicTabsProps {
 }
 
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string }[] = [
-    { id: 'overview', label: 'Overview', icon: FileText, description: 'Definition and detailed explanation' },
+    { id: 'overview', label: 'Article', icon: FileText, description: 'Full document content and paragraphs' },
     { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not' },
     { id: 'sources', label: 'Sources', icon: BookOpen, description: 'References and citations' },
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts' },
@@ -32,7 +32,7 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'overview':
-                return <OverviewTab topic={topic} />;
+                return <ArticleTab topic={topic} />;
             case 'boundaries':
                 return hasBoundaries ? (
                     <BoundariesTab topic={topic} />
@@ -75,8 +75,8 @@ export default function TopicTabs({ topic }: TopicTabsProps) {
     return (
         <div className="space-y-6">
             {/* Tab Navigation */}
-            <div className="border-b border-border">
-                <div className="flex space-x-8">
+            <div className="border-b border-border -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+                <div className="flex space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide lg:overflow-visible">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Topic } from '@/lib/directus';
-import { ChevronLeft, ChevronRight, Loader2, BookOpen } from 'lucide-react';
+import { Loader2, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface StatementWithTopics {
@@ -46,10 +46,6 @@ export function BookReader({
   };
 
   const handleClose = () => setSelectedId(null);
-
-  const navigateToChapter = (chapter: number) => {
-    router.push(`/seforim/tanya-likkutei-amarim/${chapter}`);
-  };
 
   // Calculate reading progress
   useEffect(() => {
@@ -128,43 +124,6 @@ export function BookReader({
               </div>
             </div>
           )}
-        </div>
-
-        {/* Chapter Navigation */}
-        <div className="mt-8 flex items-center justify-between gap-4">
-          <button
-            onClick={() => navigateToChapter(currentPerek - 1)}
-            disabled={currentPerek <= 1}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-              ${currentPerek <= 1 
-                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
-                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
-              }
-            `}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous Perek
-          </button>
-
-          <div className="text-sm text-muted-foreground">
-            {currentPerek} of {totalPerek}
-          </div>
-
-          <button
-            onClick={() => navigateToChapter(currentPerek + 1)}
-            disabled={currentPerek >= totalPerek}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-              ${currentPerek >= totalPerek 
-                ? 'text-muted-foreground bg-muted cursor-not-allowed' 
-                : 'text-foreground bg-background border border-border hover:bg-accent hover:text-accent-foreground'
-              }
-            `}
-          >
-            Next Perek
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Topics & Sources Sidebar (hidden on mobile) */}

@@ -18,10 +18,9 @@ export const useEditorDocument = (documentId: string | number | null) => {
                 const result = await directus.request(readItem('documents', documentId, {
                     fields: [
                         '*',
-                        'paragraphs.id',
-                        'paragraphs.text',
-                        'paragraphs.order_key',
-                        'paragraphs.status'
+                        {
+                            paragraphs: ['id', 'text', 'order_key', 'status']
+                        }
                     ]
                 })) as unknown as EditorDocument;
 
