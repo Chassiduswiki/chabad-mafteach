@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { createItem } from '@directus/sdk';
-// @ts-ignore - pdf-parse uses CommonJS exports
-const pdfParse = require('pdf-parse');
-import { getOCRProcessor, OCRProcessor, cleanupOCR } from '@/lib/ocr-processor';
+// Dynamic import for pdf-parse to avoid DOMMatrix issues during build
+let pdfParse: any = null;
+// Dynamic import for OCR to avoid DOMMatrix issues during build
+let ocrProcessor: any = null;
+let OCRProcessor: any = null;
 
 interface PDFTextContent {
   text: string;
@@ -154,6 +156,12 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Dynamic import for pdf-parse to avoid DOMMatrix issues during build
+    if (!pdfParse) {
+      // @ts-ignore - pdf-parse uses CommonJS exports
+      pdfParse = (await import('pdf-parse')).default || require('pdf-parse');
+    }
+
     // Parse PDF
     const pdfData = await pdfParse(buffer);
 
@@ -191,7 +199,13 @@ export async function POST(request: NextRequest) {
     if (pdfContent.needsOCR) {
       try {
         console.log('Starting OCR processing...');
-        const ocrProcessor = await getOCRProcessor();
+
+        // Dynamic import to avoid DOMMatrix issues during build
+        if (!ocrProcessor || !OCRProcessor) {
+          const ocrModule = await import('@/lib/ocr-processor');
+          ocrProcessor = await ocrModule.getOCRProcessor();
+          OCRProcessor = ocrModule.OCRProcessor;
+        }
 
         // OCR all pages (since we don't know which ones need it specifically)
         const pageNumbers = Array.from({ length: pdfContent.totalPages }, (_, i) => i + 1);
@@ -328,7 +342,7 @@ export async function POST(request: NextRequest) {
         ocr_confidence: pdfContent.ocrConfidence,
         ocr_reasoning: ocrResult.reasoning,
         ocr_performed: ocrResults !== null,
-        ocr_processing_time: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null,
+        ocr_processing_time: ocrResults ? (OCRProcessor ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null) : null,
         paragraphs_created: paragraphs.length,
         total_characters: finalPages.join(' ').length
       },
@@ -365,7 +379,10 @@ export async function POST(request: NextRequest) {
   } finally {
     // Cleanup OCR resources
     try {
-      await cleanupOCR();
+      if (ocrProcessor) {
+        const ocrModule = await import('@/lib/ocr-processor');
+        await ocrModule.cleanupOCR();
+      }
     } catch (cleanupError) {
       console.warn('OCR cleanup failed:', cleanupError);
     }

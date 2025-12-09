@@ -31,6 +31,9 @@ export interface Document {
     created_by?: string;
     parent_id?: number | Document;
     
+    // Relations
+    paragraphs?: Paragraph[];
+    
     // Legacy compatibility fields for citation system
     hebrewbooks_id?: number;
     title_hebrew?: string;
