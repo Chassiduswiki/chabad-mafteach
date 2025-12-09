@@ -5,14 +5,37 @@ export const citationPluginKey = new PluginKey("citation-plugin");
 interface CitationPluginOptions {
   onTrigger?: (range: { from: number; to: number }) => void;
   onDismiss?: () => void;
+  onClick?: (citation: {
+    source_id: number | string | null;
+    source_title: string | null;
+    reference: string | null;
+  }) => void;
 }
 
 export function createComprehensiveCitationPlugin(options: CitationPluginOptions = {}) {
-  const { onTrigger = () => {}, onDismiss = () => {} } = options;
+  const { onTrigger = () => {}, onDismiss = () => {}, onClick = () => {} } = options;
 
   return new Plugin({
     key: citationPluginKey,
     props: {
+      handleClick(view, pos, event) {
+        const target = event.target as HTMLElement | null;
+        if (!target) return false;
+
+        const citationEl = target.closest("[data-type='citation']") as HTMLElement | null;
+        if (!citationEl) return false;
+
+        const sourceId = citationEl.getAttribute("data-source-id");
+        const sourceTitle = citationEl.getAttribute("data-source-title");
+        const reference = citationEl.getAttribute("data-reference");
+
+        onClick({
+          source_id: sourceId ? Number(sourceId) || sourceId : null,
+          source_title: sourceTitle,
+          reference,
+        });
+        return true;
+      },
       handleKeyDown(view, event) {
         if (event.key === "@") {
           return false; // Let handleTextInput manage it

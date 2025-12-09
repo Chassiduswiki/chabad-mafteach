@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Topic } from '@/lib/types';
 import { FileText, BookOpen, Plus, X, MessageSquare } from 'lucide-react';
 import directus from '@/lib/directus';
@@ -37,6 +37,20 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
 
     const docEntries = Object.entries(paragraphsByDocument);
     const showDocHeaders = docEntries.length > 1;
+
+    // Seed statements map from API payload (document > paragraphs > statements)
+    useEffect(() => {
+        if (!paragraphs.length) return;
+        setStatements(prev => {
+            const next = { ...prev };
+            for (const para of paragraphs) {
+                if (para.statements && para.statements.length > 0) {
+                    next[para.id] = para.statements as Statement[];
+                }
+            }
+            return next;
+        });
+    }, [paragraphs]);
 
     // Fetch statements for a paragraph
     const fetchStatements = async (paragraphId: number) => {
