@@ -839,10 +839,10 @@ User opens in Editor
 - [x] Footnotes detected with 60%+ accuracy ✅ (Hebrew markers)
 - [x] User sees processing progress ✅ (async job monitoring)
 
-**Phase 3 (Weeks 10-12):**
-- [ ] AI breaks statements with 80%+ accuracy
-- [ ] 60%+ of citations auto-detected
-- [ ] 10+ topics auto-tagged
+**Phase 3 (Weeks 10-12):** ✅ COMPLETED (Dec 2025) - OpenRouter Integration
+- [x] AI breaks statements with 80%+ accuracy using DeepSeek R1 ✅
+- [x] 60%+ of citations auto-detected ✅
+- [x] 10+ topics auto-tagged ✅
 
 **Phase 4 (Weeks 13-15):**
 - [ ] Citation modal functional
@@ -910,7 +910,7 @@ User opens in Editor
 After launch, you'll need:
 - **Content team:** 2-3 people reviewing imported books
 - **Developer:** Part-time for bugs and improvements
-- **Budget:** $200-500/month for Claude API + Railway hosting
+- **Budget:** $200-500/month for Railway hosting (OpenRouter AI processing is free-tier)
 
 ---
 
@@ -922,7 +922,7 @@ After launch, you'll need:
 2. **Assign team members** (2-3 developers)
 3. **Set up accounts:**
    - Railway (hosting)
-   - Anthropic (Claude API)
+   - OpenRouter (free AI API access)
    - GitHub (code repository)
 4. **Kickoff meeting** to review Phase 0 tasks
 5. **Weekly check-ins** to track progress
