@@ -3,6 +3,7 @@ import directus from '@/lib/directus';
 import { createItem } from '@directus/sdk';
 // @ts-ignore - pdf-parse uses CommonJS exports
 const pdfParse = require('pdf-parse');
+import { getOCRProcessor, OCRProcessor, cleanupOCR } from '@/lib/ocr-processor';
 
 interface PDFTextContent {
   text: string;
@@ -183,6 +184,58 @@ export async function POST(request: NextRequest) {
     console.log(`PDF analyzed: ${pdfContent.totalPages} pages, quality: ${ocrResult.textQuality}, needs OCR: ${ocrResult.needsOCR} (${ocrResult.confidence}% confidence)`);
     console.log(`OCR reasoning:`, ocrResult.reasoning);
 
+    // If OCR is needed, process with Tesseract
+    let ocrResults = null;
+    let finalPages = [...pages]; // Start with native text
+
+    if (pdfContent.needsOCR) {
+      try {
+        console.log('Starting OCR processing...');
+        const ocrProcessor = await getOCRProcessor();
+
+        // OCR all pages (since we don't know which ones need it specifically)
+        const pageNumbers = Array.from({ length: pdfContent.totalPages }, (_, i) => i + 1);
+        const ocrPageResults = await ocrProcessor.processPDFPages(arrayBuffer, pageNumbers);
+
+        // Analyze OCR quality
+        const ocrQuality = OCRProcessor.analyzeOCRQuality(ocrPageResults);
+        console.log(`OCR completed: ${ocrQuality.quality} quality, ${(ocrQuality.averageConfidence).toFixed(1)}% avg confidence, ${ocrQuality.processingTime}ms total`);
+
+        // Combine native text with OCR results intelligently
+        ocrResults = ocrPageResults;
+
+        // For pages with very poor native text, prefer OCR results
+        for (let i = 0; i < pages.length; i++) {
+          const nativeText = pages[i];
+          const ocrText = ocrPageResults[i]?.ocrResult.text || '';
+
+          // Use OCR if native text is very poor (< 100 chars) and OCR confidence > 50%
+          if (nativeText.length < 100 && ocrPageResults[i]?.ocrResult.confidence > 50) {
+            finalPages[i] = OCRProcessor.postProcessHebrewText(ocrText);
+            console.log(`Page ${i + 1}: Using OCR text (${ocrText.length} chars) over native (${nativeText.length} chars)`);
+          } else if (nativeText.length > 200) {
+            // Keep native text if it's good quality
+            console.log(`Page ${i + 1}: Keeping native text (${nativeText.length} chars)`);
+          } else {
+            // Blend both - append OCR text if it's different and confident
+            const combinedText = nativeText.trim();
+            if (ocrText.length > nativeText.length && ocrPageResults[i]?.ocrResult.confidence > 60) {
+              finalPages[i] = OCRProcessor.postProcessHebrewText(ocrText);
+              console.log(`Page ${i + 1}: Enhanced with OCR (${ocrText.length} chars total)`);
+            }
+          }
+        }
+
+        pdfContent.textQuality = ocrQuality.quality;
+        pdfContent.ocrConfidence = ocrQuality.averageConfidence;
+
+      } catch (ocrError) {
+        console.error('OCR processing failed:', ocrError);
+        // Continue with native text extraction only
+        console.log('Falling back to native text extraction');
+      }
+    }
+
     // Create document entry
     const document = await directus.request(createItem('documents', {
       title: title || file.name.replace('.pdf', ''),
@@ -196,6 +249,8 @@ export async function POST(request: NextRequest) {
         text_quality: pdfContent.textQuality,
         ocr_confidence: pdfContent.ocrConfidence,
         ocr_reasoning: ocrResult.reasoning,
+        ocr_performed: ocrResults !== null,
+        ocr_processing_time: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null,
         language,
         uploaded_at: new Date().toISOString(),
         pdf_info: pdfData.info
@@ -208,8 +263,8 @@ export async function POST(request: NextRequest) {
     const paragraphs = [];
     let paragraphOrder = 0;
 
-    for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-      const pageText = pages[pageIndex];
+    for (let pageIndex = 0; pageIndex < finalPages.length; pageIndex++) {
+      const pageText = finalPages[pageIndex];
 
       if (!pageText.trim()) continue;
 
@@ -232,6 +287,7 @@ export async function POST(request: NextRequest) {
             needs_ocr: pdfContent.needsOCR,
             text_quality: pdfContent.textQuality,
             ocr_confidence: pdfContent.ocrConfidence,
+            ocr_enhanced: ocrResults !== null && finalPages[pageIndex] !== pages[pageIndex],
             auto_generated: false
           }
         }));
@@ -250,7 +306,8 @@ export async function POST(request: NextRequest) {
             has_text_layer: pdfContent.hasTextLayer,
             needs_ocr: pdfContent.needsOCR,
             text_quality: pdfContent.textQuality,
-            ocr_confidence: pdfContent.ocrConfidence
+            ocr_confidence: pdfContent.ocrConfidence,
+            ocr_enhanced: ocrResults !== null && finalPages[pageIndex] !== pages[pageIndex]
           }
         }));
 
@@ -270,12 +327,16 @@ export async function POST(request: NextRequest) {
         text_quality: pdfContent.textQuality,
         ocr_confidence: pdfContent.ocrConfidence,
         ocr_reasoning: ocrResult.reasoning,
+        ocr_performed: ocrResults !== null,
+        ocr_processing_time: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null,
         paragraphs_created: paragraphs.length,
-        total_characters: pdfData.text.length
+        total_characters: finalPages.join(' ').length
       },
       message: pdfContent.needsOCR
-        ? `PDF processed with ${paragraphs.length} paragraphs. OCR recommended (${pdfContent.ocrConfidence}% confidence) - ${pdfContent.textQuality} text quality detected.`
-        : `PDF processed successfully with ${paragraphs.length} paragraphs. High-quality text extraction (${pdfContent.ocrConfidence}% confidence).`
+        ? ocrResults
+          ? `PDF processed with OCR enhancement! ${paragraphs.length} paragraphs created. OCR quality: ${pdfContent.textQuality} (${(pdfContent.ocrConfidence || 0).toFixed(1)}% confidence)`
+          : `PDF processed with native text extraction. ${paragraphs.length} paragraphs created. OCR was recommended but failed - using native text.`
+        : `PDF processed successfully with ${paragraphs.length} paragraphs. High-quality native text extraction (${(pdfContent.ocrConfidence || 0).toFixed(1)}% confidence).`
     });
 
   } catch (error) {
@@ -290,6 +351,8 @@ export async function POST(request: NextRequest) {
         errorMessage = 'This PDF is password-protected and cannot be processed';
       } else if (error.message.includes('size') || error.message.includes('memory')) {
         errorMessage = 'PDF is too large or complex to process. Try a smaller file or contact support';
+      } else if (error.message.includes('OCR') || error.message.includes('tesseract')) {
+        errorMessage = 'OCR processing failed. The PDF may have complex formatting or very poor image quality';
       } else {
         errorMessage = `PDF processing failed: ${error.message}`;
       }
@@ -299,6 +362,13 @@ export async function POST(request: NextRequest) {
       { error: errorMessage },
       { status: 500 }
     );
+  } finally {
+    // Cleanup OCR resources
+    try {
+      await cleanupOCR();
+    } catch (cleanupError) {
+      console.warn('OCR cleanup failed:', cleanupError);
+    }
   }
 }
 

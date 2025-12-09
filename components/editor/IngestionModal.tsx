@@ -125,10 +125,9 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
 
     setIsLoading(true);
     setLoadingMessage('Uploading PDF file...');
-    setFeedback(null);
 
     try {
-      setLoadingMessage('Processing PDF - this may take a few moments...');
+      setLoadingMessage('Analyzing PDF structure and text quality...');
 
       const formData = new FormData();
       formData.append('file', file);
@@ -146,8 +145,10 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
 
       if (result.success) {
         const ocrInfo = result.pdf_info.needs_ocr
-          ? `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence}% confidence)\n💡 Recommendation: OCR processing suggested`
-          : `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence}% confidence)\n✅ Native text layer sufficient`;
+          ? result.pdf_info.ocr_performed
+            ? `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence?.toFixed(1)}% confidence)\n✅ OCR Enhancement Applied - Processing time: ${(result.pdf_info.ocr_processing_time || 0) / 1000}s`
+            : `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence?.toFixed(1)}% confidence)\n⚠️ OCR Recommended but failed - used native text`
+          : `🔍 OCR Analysis: ${result.pdf_info.text_quality} quality (${result.pdf_info.ocr_confidence?.toFixed(1)}% confidence)\n✅ Native text layer sufficient`;
 
         setFeedback({
           type: 'success',
@@ -156,7 +157,7 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
         onDocumentCreated?.(result.document_id);
 
         // Auto-close after success
-        setTimeout(() => setIsOpen(false), 6000); // Longer delay for OCR info
+        setTimeout(() => setIsOpen(false), 8000); // Longer delay for OCR info
       } else {
         setFeedback({
           type: 'error',
