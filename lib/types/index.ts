@@ -134,15 +134,18 @@ export interface Topic {
     key_concepts?: { concept: string; explanation: string; link?: string }[];
     historical_context?: string;
     
-    // Related content
+    // Related content (document > paragraphs > statements)
     paragraphs?: {
         id: number;
         text: string;
         order_key: string;
         document_title?: string;
-        statement_text: string;
-        statement_order_key: string;
         relevance_score?: number;
+        statements?: {
+            id: number;
+            text: string;
+            order_key: string;
+        }[];
     }[];
     
     // Metadata fields
