@@ -144,7 +144,7 @@ class JobQueue {
 
     // Update progress
     await this.updateJob(job.id, {
-      progress: { stage: 'analyzing', percentage: 10, message: 'Analyzing PDF structure...' }
+      progress: { stage: 'extracting', percentage: 30, message: 'Extracting text content...' }
     });
 
     // Dynamic import for pdf-parse
@@ -159,7 +159,7 @@ class JobQueue {
     const pdfData = await pdfParse(fileBuffer);
 
     await this.updateJob(job.id, {
-      progress: { stage: 'extracting', percentage: 30, message: 'Extracting text content...' }
+      progress: { stage: 'processing', percentage: 50, message: 'Processing page content...' }
     });
 
     // Extract text from each page
@@ -173,15 +173,36 @@ class JobQueue {
       }
     }
 
+    await this.updateJob(job.id, {
+      progress: { stage: 'footnotes', percentage: 70, message: 'Detecting footnotes...' }
+    });
+
+    // Process footnotes for each page
+    const footnoteDetector = (await import('@/lib/footnote-detector')).getFootnoteDetector();
+    const processedPages: string[] = [];
+    const allFootnotes: any[] = [];
+
+    for (let i = 0; i < pages.length; i++) {
+      const pageText = pages[i];
+      const footnoteResult = footnoteDetector.detectFootnotes(pageText, i + 1);
+
+      processedPages.push(footnoteResult.mainText);
+      allFootnotes.push(...footnoteResult.footnotes);
+
+      console.log(`Page ${i + 1}: Found ${footnoteResult.footnotes.length} footnotes`);
+    }
+
+    console.log(`Total footnotes detected: ${allFootnotes.length}`);
+
     // OCR detection logic (simplified for background processing)
-    const avgCharsPerPage = pdfData.text.length / pdfData.numpages;
+    const avgCharsPerPage = processedPages.join(' ').length / processedPages.length;
     const needsOCR = avgCharsPerPage < 200; // Simple threshold
 
     await this.updateJob(job.id, {
       progress: { stage: 'ocr_check', percentage: 50, message: needsOCR ? 'OCR analysis required...' : 'Text quality good, skipping OCR...' }
     });
 
-    let finalPages = [...pages];
+    let finalPages = [...processedPages];
     let ocrResults = null;
 
     if (needsOCR) {
@@ -199,10 +220,25 @@ class JobQueue {
 
         ocrResults = ocrPageResults;
 
-        // Use OCR results for low-quality pages
-        for (let i = 0; i < pages.length; i++) {
-          if (pages[i].length < 100 && ocrPageResults[i]?.ocrResult.confidence > 50) {
-            finalPages[i] = ocrModule.OCRProcessor.postProcessHebrewText(ocrPageResults[i].ocrResult.text);
+        // Combine native text with OCR results intelligently
+        for (let i = 0; i < processedPages.length; i++) {
+          const nativeText = processedPages[i];
+          const ocrText = ocrPageResults[i]?.ocrResult.text || '';
+
+          // Use OCR if native text is very poor (< 100 chars) and OCR confidence > 50%
+          if (nativeText.length < 100 && ocrPageResults[i]?.ocrResult.confidence > 50) {
+            finalPages[i] = ocrModule.OCRProcessor.postProcessHebrewText(ocrText);
+            console.log(`Page ${i + 1}: Using OCR text (${ocrText.length} chars) over native (${nativeText.length} chars)`);
+          } else if (nativeText.length > 200) {
+            // Keep native text if it's good quality
+            console.log(`Page ${i + 1}: Keeping native text (${nativeText.length} chars)`);
+          } else {
+            // Blend both - append OCR text if it's different and confident
+            const combinedText = nativeText.trim();
+            if (ocrText.length > nativeText.length && ocrPageResults[i]?.ocrResult.confidence > 60) {
+              finalPages[i] = ocrModule.OCRProcessor.postProcessHebrewText(ocrText);
+              console.log(`Page ${i + 1}: Enhanced with OCR (${ocrText.length} chars total)`);
+            }
           }
         }
 
@@ -222,6 +258,7 @@ class JobQueue {
     const directus = (await import('@/lib/directus')).default;
     const { createItem } = await import('@directus/sdk');
 
+    // Create document entry
     const document = await directus.request(createItem('documents', {
       title: title || fileName.replace('.pdf', ''),
       metadata: {
@@ -232,12 +269,43 @@ class JobQueue {
         has_text_layer: !needsOCR,
         needs_ocr: needsOCR,
         text_quality: needsOCR ? 'poor' : 'good',
+        ocr_confidence: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).averageConfidence : null,
         ocr_performed: ocrResults !== null,
+        footnotes_detected: allFootnotes.length,
+        footnote_confidence: allFootnotes.length > 0 ? allFootnotes.reduce((sum, fn) => sum + fn.confidence, 0) / allFootnotes.length : null,
+        ocr_processing_time: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null,
         language,
         uploaded_at: new Date().toISOString(),
         job_id: job.id
       }
     }));
+
+    console.log(`Created document: ${document.id} with ${allFootnotes.length} footnotes`);
+
+    // Store footnotes as separate statements
+    for (const footnote of allFootnotes) {
+      try {
+        await directus.request(createItem('statements', {
+          paragraph_id: null, // Footnotes are not attached to paragraphs
+          order_key: footnote.id,
+          text: footnote.text,
+          metadata: {
+            auto_generated: true,
+            source: 'pdf_footnote',
+            footnote_marker: footnote.marker,
+            footnote_page: footnote.pageNumber,
+            footnote_position: footnote.position,
+            footnote_confidence: footnote.confidence,
+            footnote_references: footnote.references,
+            page_number: footnote.pageNumber,
+            document_id: document.id
+          }
+        }));
+        console.log(`Stored footnote: ${footnote.id} (${footnote.marker})`);
+      } catch (error) {
+        console.warn(`Failed to store footnote ${footnote.id}:`, error);
+      }
+    }
 
     // Process pages into paragraphs
     const paragraphs = [];
@@ -289,7 +357,7 @@ class JobQueue {
     });
 
     return {
-      documentId: document.id,
+      documentId: String(document.id),
       pdfInfo: {
         filename: fileName,
         pages: pdfData.numpages,
