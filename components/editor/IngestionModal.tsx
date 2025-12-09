@@ -26,6 +26,9 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<any>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [documentTitle, setDocumentTitle] = useState<string>('');
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const handleSefariaSearch = async () => {
     if (!searchQuery.trim()) return;
