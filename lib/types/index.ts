@@ -34,6 +34,9 @@ export interface Document {
     // Relations
     paragraphs?: Paragraph[];
     
+    // Topic association
+    topic?: string | Topic;
+    
     // Legacy compatibility fields for citation system
     hebrewbooks_id?: number;
     title_hebrew?: string;
@@ -130,6 +133,17 @@ export interface Topic {
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
     historical_context?: string;
+    
+    // Related content
+    paragraphs?: {
+        id: number;
+        text: string;
+        order_key: string;
+        document_title?: string;
+        statement_text: string;
+        statement_order_key: string;
+        relevance_score?: number;
+    }[];
     
     // Metadata fields
     difficulty_level?: 'beginner' | 'intermediate' | 'advanced';

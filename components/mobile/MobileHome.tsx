@@ -151,20 +151,18 @@ export function MobileHome() {
                     </Link>
 
                     {/* Recent Sources Card */}
-                    <Link
-                        href="/seforim"
+                    <div
                         className="quick-action-card group flex flex-col items-start justify-between rounded-2xl border border-border bg-background/40 p-4 transition-all hover:border-primary/20 hover:bg-background/60 hover:shadow-lg active:scale-[0.98]"
                         style={{ minHeight: '80px' }}
                     >
-                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-                            <BookOpen className="h-5 w-5 text-amber-500" />
+                        <div className="absolute top-4 right-4 opacity-0 transition-all group-hover:opacity-100">
+                            <BookOpen className="h-5 w-5 text-primary" />
                         </div>
                         <div className="w-full">
                             <h3 className="text-sm font-semibold text-foreground mb-0.5">Sources</h3>
-                            <p className="text-xs text-muted-foreground">All seforim</p>
+                            <p className="text-xs text-muted-foreground">Browse documents</p>
                         </div>
-                        <ArrowRight className="absolute bottom-4 right-4 h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
-                    </Link>
+                    </div>
 
                     {/* Recent Activity Card */}
                     <Link
