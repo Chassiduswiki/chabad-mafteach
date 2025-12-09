@@ -150,7 +150,7 @@ class JobQueue {
     // Dynamic import for pdf-parse
     let pdfParse: any = null;
     try {
-      pdfParse = (await import('pdf-parse')).default || require('pdf-parse');
+      pdfParse = await import('pdf-parse');
     } catch (error) {
       throw new Error('Failed to load PDF parser');
     }
