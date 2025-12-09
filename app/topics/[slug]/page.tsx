@@ -9,16 +9,13 @@ import { TopicTracker } from '@/components/shared/TopicTracker';
 
 export const dynamic = 'force-dynamic';
 
-async function getTopic(slug: string): Promise<Topic | null> {
+async function getTopicData(slug: string): Promise<{ topic: Topic; relatedTopics?: any[] } | null> {
     try {
-        console.log('[getTopic] Starting fetch for slug:', slug);
+        console.log('Fetching topic data for slug:', slug);
 
-        // 1) Fetch the core topic record
-        const rawTopics = await directus.request(readItems('topics', {
-            filter: { slug: { _eq: slug } },
-            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description', 'metadata'],
-            limit: 1
-        }));
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/topics/${slug}`, {
+            cache: 'no-store'
+        });
 
         console.log('[getTopic] Raw topics result:', JSON.stringify(rawTopics, null, 2));
 
@@ -119,18 +116,20 @@ async function getTopic(slug: string): Promise<Topic | null> {
 
         return mapped;
     } catch (error) {
-        console.error('Error fetching topic:', error);
+        console.error('Error fetching topic data:', error);
         return null;
     }
 }
 
 export default async function TopicDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const topic = await getTopic(slug);
+    const topicData = await getTopicData(slug);
 
-    if (!topic) {
+    if (!topicData) {
         notFound();
     }
+
+    const { topic, relatedTopics } = topicData;
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -151,7 +150,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                 </div>
 
                 <div className="w-full">
-                    <TopicTabs topic={topic} />
+                    <TopicTabs topic={topic} relatedTopics={relatedTopics} />
                 </div>
             </main>
         </div>
