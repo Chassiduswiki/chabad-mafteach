@@ -16,6 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://beta.chassiduswiki.com'),
   title: "Chabad Mafteach - Chassidic Concepts Explorer",
   description: "Explore Chassidic concepts with citations and sources",
 };
