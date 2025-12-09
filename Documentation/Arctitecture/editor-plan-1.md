@@ -414,14 +414,24 @@ User opens in Editor
 
 3. **Tesseract OCR Integration** (✅ COMPLETED - 1 day)
    - ✅ Integrated `tesseract.js` with Hebrew language support (heb+eng)
-   - ✅ Added `pdf2pic` for PDF-to-image conversion (300 DPI)
+   - ✅ Added `pdf2pic` for high-quality PDF-to-image conversion (300 DPI)
    - ✅ Intelligent OCR application (only when needed, based on detection)
    - ✅ OCR confidence scoring and quality assessment
    - ✅ Hebrew text post-processing and cleanup
    - ✅ Fallback to native text when OCR fails
    - **Files Created:** `/lib/ocr-processor.ts`
 
-4. **Ingestion UI Update** (✅ COMPLETED - 0.5 days)
+4. **Async Processing Queue** (✅ COMPLETED - 1.5 days)
+   - ✅ Built in-memory job queue with file-based persistence
+   - ✅ Background job processing with status tracking
+   - ✅ Progress updates with detailed messages (analyzing, OCR, saving)
+   - ✅ Job status API endpoint for real-time monitoring
+   - ✅ Error handling and job recovery
+   - ✅ UI polling with progress bars and status displays
+   - **Files Created:** `/lib/job-queue.ts`, `/app/api/jobs/route.ts`
+   - **Enhanced:** `/components/editor/IngestionModal.tsx` - Added async job monitoring
+
+5. **Ingestion UI Update** (✅ COMPLETED - 0.5 days)
    - ✅ Added PDF upload tab to IngestionModal
    - ✅ Processing status display with file size warnings
    - ✅ User feedback for PDF processing progress
@@ -454,7 +464,15 @@ User opens in Editor
    - Intelligent application (only when text quality is poor) ✅
    - **Deliverable:** Can OCR Hebrew PDFs with confidence scores ✅
 
-4. **Footnote Detection v1** (6-7 days)
+4. **Async Processing Queue** (3-4 days) ✅ COMPLETED
+   - Build job queue system for background processing ✅
+   - Add progress tracking and status updates ✅
+   - Create job status API endpoint ✅
+   - Update UI with real-time progress monitoring ✅
+   - Handle long-running PDF processing ✅
+   - **Deliverable:** Async processing with status updates and notifications ✅
+
+5. **Footnote Detection v1** (6-7 days)
    - **This is the hardest part**
    - Identify bottom 25% of page as footnote region
    - Look for common markers:
@@ -466,9 +484,6 @@ User opens in Editor
    - Store footnotes as separate statements with metadata
    - **Deliverable:** 60-70% accurate footnote extraction
 
-4. **Processing Queue** (3 days)
-   - PDFs can take 5-30 minutes to process
-   - Implement job queue (simple Redis or BullMQ)
    - Show processing status to user
    - Send notification when complete
    - **Deliverable:** Async processing with status updates
@@ -488,8 +503,8 @@ User opens in Editor
 - [x] Can upload PDF and extract all text ✅ (text-based PDFs only)
 - [x] Can detect if PDF needs OCR vs has native text ✅ (80%+ confidence)
 - [x] Can OCR scanned Hebrew PDFs ✅ (with confidence scores)
+- [x] User sees processing progress ✅ (async job monitoring)
 - [ ] Footnotes detected with 60%+ accuracy
-- [ ] User sees processing progress
 - [ ] Processed document appears in editor
 
 **Known Issues:**
@@ -818,6 +833,7 @@ User opens in Editor
 - [x] 3+ PDFs successfully processed ✅ (text-based PDFs)
 - [x] OCR need detection with 80%+ confidence ✅ (comprehensive analysis)
 - [x] OCR confidence tracked ✅ (Hebrew OCR with confidence scores)
+- [x] User sees processing progress ✅ (async job monitoring)
 - [ ] Footnotes detected with 60%+ accuracy
 - [ ] OCR confidence tracked
 
