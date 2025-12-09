@@ -18,9 +18,10 @@ import { useEditor } from '@/lib/hooks/useEditor';
 interface ProseEditorProps {
   docId: string | null;
   className?: string;
+  onBreakStatements?: () => Promise<void>;
 }
 
-export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className }) => {
+export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBreakStatements }) => {
   const {
     initialContent,
     editorContent,
@@ -171,6 +172,7 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className }) =>
               setFeedback({ type: "error", message: "Failed to save or nothing to save" });
             }
           }}
+          onBreakStatements={onBreakStatements}
           isSaving={editorIsSaving}
           canUndo={false}
           canRedo={false}

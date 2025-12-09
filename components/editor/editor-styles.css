@@ -156,8 +156,41 @@
   background: #f8fafc;
 }
 
-/* Focus styles */
-.pm-editor-content:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+/* RTL Support for Hebrew Text */
+.pm-editor-content[dir="rtl"],
+.pm-editor-content [dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.pm-editor-content [dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Hebrew-specific font and spacing */
+.pm-editor-content {
+  font-family: 'Times New Roman', serif, 'Arial Hebrew', 'David', sans-serif;
+  line-height: 1.8;
+}
+
+/* Better spacing for Hebrew punctuation */
+.pm-editor-content p:has([dir="rtl"]) {
+  text-align: right;
+}
+
+/* Citation styling for RTL */
+.pm-editor-content [data-type="citation"][dir="rtl"] {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+/* Improved selection for mixed RTL/LTR content */
+.pm-editor-content ::selection {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Ensure toolbar works with RTL */
+.pm-editor-shell[dir="rtl"] .pm-editor-toolbar {
+  direction: rtl;
 }

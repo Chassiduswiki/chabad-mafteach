@@ -20,11 +20,17 @@ const paragraph: NodeSpec = {
     },
   ],
   toDOM(node): DOMOutputSpec {
+    // Detect if content contains Hebrew characters for RTL support
+    const textContent = node.textContent || '';
+    const hasHebrew = /[\u0590-\u05FF]/.test(textContent);
+    const direction = hasHebrew ? 'rtl' : 'ltr';
+    
     return [
       "p",
       {
         "data-id": node.attrs.id,
         "data-status": node.attrs.status,
+        dir: direction,
         class: "mb-4 leading-relaxed text-gray-800 dir-auto", // Tailwind classes
       },
       0,
