@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 async function getTopic(slug: string): Promise<Topic | null> {
     try {
-        console.log('Fetching topic for slug:', slug);
+        console.log('[getTopic] Starting fetch for slug:', slug);
 
         // 1) Fetch the core topic record
         const rawTopics = await directus.request(readItems('topics', {
@@ -20,14 +20,18 @@ async function getTopic(slug: string): Promise<Topic | null> {
             limit: 1
         }));
 
+        console.log('[getTopic] Raw topics result:', JSON.stringify(rawTopics, null, 2));
+
         if (!rawTopics || (Array.isArray(rawTopics) && rawTopics.length === 0)) {
-            console.log('No topic found for slug:', slug);
+            console.log('[getTopic] No topic found for slug:', slug);
             return null;
         }
 
         const t = (Array.isArray(rawTopics) ? rawTopics[0] : rawTopics) as any;
+        console.log('[getTopic] Found topic:', { id: t.id, title: t.canonical_title });
 
         // 2) Fetch documents of type `entry` that are explicitly linked to this topic
+        // CHECK: Is the field name 'topic' or 'topic_id'?
         const rawDocuments = await directus.request(readItems('documents', {
             filter: {
                 topic: { _eq: t.id },
@@ -37,18 +41,24 @@ async function getTopic(slug: string): Promise<Topic | null> {
             limit: -1
         }));
 
+        console.log('[getTopic] Raw documents result:', JSON.stringify(rawDocuments, null, 2));
+
         const documents = Array.isArray(rawDocuments) ? rawDocuments : (rawDocuments ? [rawDocuments] : []);
+        console.log('[getTopic] Processed documents count:', documents.length);
 
         // 3) Fetch paragraphs for those documents directly (no reliance on O2M relation)
         let paragraphsByDocId: Record<number, { id: number; text: string; order_key: string; doc_id: number }[]> = {};
         if (documents.length > 0) {
             const docIds = documents.map((d: any) => d.id);
+            console.log('[getTopic] Fetching paragraphs for docIds:', docIds);
 
             const rawParagraphs = await directus.request(readItems('paragraphs', {
                 filter: { doc_id: { _in: docIds } },
                 fields: ['id', 'text', 'order_key', 'doc_id'],
                 limit: -1,
             }));
+
+            console.log('[getTopic] Raw paragraphs count:', Array.isArray(rawParagraphs) ? rawParagraphs.length : (rawParagraphs ? 1 : 0));
 
             const paragraphsArray = Array.isArray(rawParagraphs)
                 ? rawParagraphs
@@ -68,6 +78,8 @@ async function getTopic(slug: string): Promise<Topic | null> {
                 });
                 return acc;
             }, {} as typeof paragraphsByDocId);
+        } else {
+            console.log('[getTopic] Skipping paragraph fetch because no documents found.');
         }
 
         console.log('Topic documents for Article tab:', {
