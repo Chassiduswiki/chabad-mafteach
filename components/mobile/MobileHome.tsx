@@ -151,7 +151,8 @@ export function MobileHome() {
                     </Link>
 
                     {/* Recent Sources Card */}
-                    <div
+                    <Link
+                        href="/seforim"
                         className="quick-action-card group flex flex-col items-start justify-between rounded-2xl border border-border bg-background/40 p-4 transition-all hover:border-primary/20 hover:bg-background/60 hover:shadow-lg active:scale-[0.98]"
                         style={{ minHeight: '80px' }}
                     >
@@ -162,7 +163,8 @@ export function MobileHome() {
                             <h3 className="text-sm font-semibold text-foreground mb-0.5">Sources</h3>
                             <p className="text-xs text-muted-foreground">Browse documents</p>
                         </div>
-                    </div>
+                        <ArrowRight className="absolute bottom-4 right-4 h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
+                    </Link>
 
                     {/* Recent Activity Card */}
                     <Link

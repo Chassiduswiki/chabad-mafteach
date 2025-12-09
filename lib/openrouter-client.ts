@@ -41,7 +41,7 @@ export class OpenRouterClient {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://beta.chassiduswiki.com',
         'X-Title': 'Chabad Research Platform',
       },
       body: JSON.stringify({
