@@ -1,4 +1,4 @@
-import { Topic, TopicRelationship } from '@/lib/directus';
+import type { Topic, TopicRelationship } from '@/lib/types';
 import { Brain, GitGraph, Link as LinkIcon } from 'lucide-react';
 import { safeJsonParse } from '@/lib/utils';
 import Link from 'next/link';

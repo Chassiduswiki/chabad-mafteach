@@ -1,4 +1,4 @@
-import { Topic } from '@/lib/directus';
+import type { Topic } from '@/lib/types';
 
 interface TopicHeaderProps {
     topic: Topic;
