@@ -104,52 +104,57 @@ export async function getTopicBySlug(slug: string) {
 
             // SECONDARY: Get additional statement_topics for sources/citations
             // Filter out orphaned records where statement doesn't exist
-            const statementTopics = await directus.request(readItems('statement_topics', {
-                filter: {
-                    topic_id: { _eq: topic.id },
-                    statement_id: { _nnull: true } // Only include records where statement_id exists
-                } as any,
-                fields: [
-                    '*',
-                    {
-                        statement_id: [
-                            'id',
-                            'text',
-                            'order_key',
-                            {
-                                paragraph_id: [
-                                    'id',
-                                    'text',
-                                    'order_key',
-                                    { doc_id: ['title'] }
-                                ]
-                            }
-                        ]
-                    }
-                ] as any,
-                sort: ['-relevance_score'] as any
-            })) as any[];
+            try {
+                const statementTopics = await directus.request(readItems('statement_topics', {
+                    filter: {
+                        topic_id: { _eq: topic.id },
+                        statement_id: { _nnull: true } // Only include records where statement_id exists
+                    } as any,
+                    fields: [
+                        '*',
+                        {
+                            statement_id: [
+                                'id',
+                                'text',
+                                'order_key',
+                                {
+                                    paragraph_id: [
+                                        'id',
+                                        'text',
+                                        'order_key',
+                                        { doc_id: ['title'] }
+                                    ]
+                                }
+                            ]
+                        }
+                    ] as any,
+                    sort: ['-relevance_score'] as any
+                })) as any[];
 
-            console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
+                console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
-            // Process statement_topics for additional sources (skip if already in main content)
-            const existingStmtIds = new Set(paragraphs.flatMap(p => p.statements.map((s: any) => s.id)));
+                // Process statement_topics for additional sources (skip if already in main content)
+                const existingStmtIds = new Set(paragraphs.flatMap(p => p.statements.map((s: any) => s.id)));
 
-            for (const stmtTopic of statementTopics) {
-                const stmt = stmtTopic.statement_id;
-                if (!stmt?.id || existingStmtIds.has(stmt.id)) continue; // Skip if already included
+                for (const stmtTopic of statementTopics) {
+                    const stmt = stmtTopic.statement_id;
+                    if (!stmt?.id || existingStmtIds.has(stmt.id)) continue; // Skip if already included
 
-                const para = stmt.paragraph_id;
-                if (!para?.id || !para.doc_id?.title) continue; // Skip if paragraph or document missing
+                    const para = stmt.paragraph_id;
+                    if (!para?.id || !para.doc_id?.title) continue; // Skip if paragraph or document missing
 
-                // Additional validation: ensure statement has valid text
-                if (!stmt.text || stmt.text.trim() === '') continue;
+                    // Additional validation: ensure statement has valid text
+                    if (!stmt.text || stmt.text.trim() === '') continue;
 
-                // Add as additional source
-                validStatementTopics.push(stmtTopic);
+                    // Add as additional source
+                    validStatementTopics.push(stmtTopic);
+                }
+
+                console.log(`After filtering, ${validStatementTopics.length} valid statement_topics remain`);
+            } catch (statementTopicsError) {
+                console.warn('Failed to fetch statement_topics (likely permissions issue):', (statementTopicsError as any)?.message || statementTopicsError);
+                // Continue without statement_topics data - this is not critical
             }
-
-            console.log(`After filtering, ${validStatementTopics.length} valid statement_topics remain`);
         } catch (error) {
             console.warn('Failed to fetch topic content:', error);
         }
@@ -193,8 +198,9 @@ export async function getTopicBySlug(slug: string) {
             }));
 
             relatedTopics = [...parentTopics, ...childTopics];
-        } catch (error) {
-            console.warn('Failed to fetch topic_relationships:', error);
+        } catch (relationshipsError) {
+            console.warn('Failed to fetch topic_relationships (likely permissions issue):', (relationshipsError as any)?.message || relationshipsError);
+            // Continue without related topics - this is not critical
         }
 
         return {
