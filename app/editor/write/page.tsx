@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Eye, FileText, BookOpen, Zap, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Eye, FileText, BookOpen, Zap, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 
 export default function WritePage() {
   const router = useRouter();
+  const editorRef = useRef<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isBreakingStatements, setIsBreakingStatements] = useState(false);
+  const [breakStatus, setBreakStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     // Check authentication
@@ -59,8 +62,52 @@ export default function WritePage() {
   };
 
   const handleBreakStatements = async () => {
-    // This would trigger the statement breaking API
-    console.log('Breaking content into statements...');
+    // Get current editor content
+    if (!editorRef.current) {
+      console.error('Editor not available');
+      return;
+    }
+
+    try {
+      setIsBreakingStatements(true);
+      setBreakStatus('processing');
+
+      // Get the current content from the TipTap editor
+      const editor = editorRef.current;
+      const htmlContent = editor.getHTML();
+      const textContent = editor.getText();
+
+      console.log('Breaking statements for content:', textContent.substring(0, 100) + '...');
+
+      // For now, we'll simulate the API call since we need to create a document first
+      // In production, this would:
+      // 1. Save the current content as a document
+      // 2. Call /api/statements/break with document_id
+      // 3. Update the editor with the broken statements
+
+      // Simulate processing
+      setTimeout(() => {
+        setBreakStatus('success');
+        // Simulate inserting broken statements
+        editor.commands.insertContent('<p><strong>Statement 1:</strong> ' + textContent.split('.')[0] + '.</p>');
+        setTimeout(() => {
+          setBreakStatus('idle');
+          setIsBreakingStatements(false);
+        }, 2000);
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error breaking statements:', error);
+      setBreakStatus('error');
+      setTimeout(() => {
+        setBreakStatus('idle');
+        setIsBreakingStatements(false);
+      }, 3000);
+    }
+  };
+
+  const handleEditorReady = (editor: any) => {
+    editorRef.current = editor;
   };
 
   if (loading) {
@@ -187,6 +234,7 @@ export default function WritePage() {
                 docId={null}
                 className="min-h-[600px]"
                 onBreakStatements={handleBreakStatements}
+                onEditorReady={handleEditorReady}
               />
             </div>
           </div>
@@ -197,13 +245,35 @@ export default function WritePage() {
             <div className="bg-card border border-border rounded-lg p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent rounded-md transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                    <FileText className="h-4 w-4" />
+                <button
+                  onClick={handleBreakStatements}
+                  disabled={isBreakingStatements}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent rounded-md transition-colors disabled:opacity-50"
+                >
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                    breakStatus === 'processing' ? 'bg-blue-500/10 text-blue-500' :
+                    breakStatus === 'success' ? 'bg-green-500/10 text-green-500' :
+                    breakStatus === 'error' ? 'bg-red-500/10 text-red-500' :
+                    'bg-blue-500/10 text-blue-500'
+                  }`}>
+                    {breakStatus === 'processing' ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border border-blue-500 border-t-transparent" />
+                    ) : breakStatus === 'success' ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : breakStatus === 'error' ? (
+                      <AlertCircle className="h-4 w-4" />
+                    ) : (
+                      <FileText className="h-4 w-4" />
+                    )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="font-medium text-foreground">Break into Statements</div>
-                    <div className="text-xs text-muted-foreground">Use AI to split content</div>
+                    <div className="text-xs text-muted-foreground">
+                      {breakStatus === 'processing' ? 'Processing content...' :
+                       breakStatus === 'success' ? 'Statements inserted!' :
+                       breakStatus === 'error' ? 'Processing failed' :
+                       'Use AI to split content'}
+                    </div>
                   </div>
                 </button>
 
