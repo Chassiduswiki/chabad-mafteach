@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { createItem, readItems } from '@directus/sdk';
 import { getOpenRouterClient } from '@/lib/openrouter-client';
+import { requireEditor } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
     const { paragraph_id, document_id } = await request.json();
 
     if (!paragraph_id) {
       return NextResponse.json({ error: 'paragraph_id is required' }, { status: 400 });
     }
+
+    console.log(`User ${context.userId} (${context.role}) breaking paragraph: ${paragraph_id}`);
 
     // Get paragraph content from Directus
     const paragraph = await directus.request(
@@ -86,7 +89,8 @@ Guidelines:
           metadata: {
             created_by_ai: true,
             ai_model: 'deepseek/deepseek-r1',
-            document_id: document_id || paragraph[0].doc_id
+            document_id: document_id || paragraph[0].doc_id,
+            created_by: context.userId
           }
         })
       );
@@ -106,4 +110,4 @@ Guidelines:
       { status: 500 }
     );
   }
-}
+});
