@@ -79,9 +79,9 @@ export function requireAuth(
  * Requires editor or admin role
  */
 export function requireEditor(
-  handler: (request: NextRequest, context: { userId: string; role: string }) => Promise<NextResponse>
+  handler: (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const auth = verifyAuth(request);
 
     if (!auth) {
@@ -98,7 +98,7 @@ export function requireEditor(
       );
     }
 
-    return handler(request, auth as { userId: string; role: string });
+    return handler(request, auth as { userId: string; role: string }, ...args);
   };
 }
 

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { BookOpen, ChevronDown, ChevronRight, FileText, FolderOpen } from 'lucide-react';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { Document } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';

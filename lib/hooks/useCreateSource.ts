@@ -1,5 +1,6 @@
 import { useState } from "react";
-import directus from "@/lib/directus";
+import { createClient } from "@/lib/directus";
+const directus = createClient();
 import { createItem, readItems } from "@directus/sdk";
 import { Author, Source } from "@/lib/types";
 import Fuse from "fuse.js";

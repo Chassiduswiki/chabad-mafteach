@@ -595,7 +595,59 @@ User opens in Editor
 
 ### Phase 4: Editor Improvements (Week 13-15)
 
-**Goal:** Professional editing experience with citations
+**Goal:** Professional editing experience with citations and statement highlighting
+
+#### **✅ COMPLETED: Statement Highlighting System (Dec 2025)**
+
+**Current Implementation:**
+- ✅ **Statement highlighting in reading view** - Yellow clickable highlights in paragraph text
+- ✅ **Citation modals** - Click highlights to view appended_text citations
+- ✅ **LTR/RTL auto-detection** - Proper text direction for English/Hebrew
+- ✅ **HTML preservation** - Italics, links, entities maintained in highlights
+
+**Technical Details:**
+- HTML pattern matching: `/complete&nbsp;<em>rasha</em>/gi`
+- Replaces with: `<span class="statement-highlight" data-statement-id="...">`
+- Event delegation for click handling
+- Modal displays citation content from appended_text field
+
+#### **🔄 STATEMENT TEXT CHANGE MANAGEMENT (Future Enhancement)**
+
+**Problem:** Current highlighting uses HTML pattern matching, breaks when text changes
+
+**Solution 1: Position-Based Statements (Most Robust)**
+```typescript
+statement = {
+  text: "complete rasha",
+  position: { start: 15, end: 29 }, // Character offsets in plain text
+  xpath: "//p[2]/text()[3]",        // DOM path
+  context: "surrounding words..."   // For fuzzy matching
+}
+```
+
+**Solution 2: Editor Integration Architecture**
+- **Real-time Statement Management:**
+  - Rich text editor (ProseMirror/Tiptap) with statement overlays
+  - Live highlighting during editing
+  - Drag-to-select for creating statements
+  - Visual feedback for orphaned statements
+
+- **Cascade Updates:**
+  - Auto-reconciliation when text changes
+  - Conflict resolution UI for moved statements
+  - Version control for statement positions
+  - Batch updates for large text changes
+
+- **UI Patterns:**
+  - 🔴 "Broken link" indicators for orphaned statements
+  - 💡 Auto-suggest re-placement during editing
+  - 📊 Diff view showing statement position changes
+
+**Solution 3: Smart Recovery Systems**
+- **Exact Match:** Try original position first
+- **Fuzzy Match:** Find similar text with Levenshtein distance
+- **Context Match:** Use surrounding words to relocate
+- **Semantic Match:** AI-powered re-finding for paraphrased content
 
 #### Tasks
 
@@ -607,12 +659,14 @@ User opens in Editor
    - Quick-add from Sefaria
    - **Deliverable:** Can add/edit citations inline
 
-2. **Statement Management** (4-5 days)
-   - UI to merge/split statements
-   - Reorder statements (drag & drop)
+2. **Advanced Statement Management** (4-5 days)
+   - **Position-based statement storage** (vs HTML patterns)
+   - UI to merge/split statements with position tracking
+   - Reorder statements (drag & drop) with offset updates
    - Mark statements as deleted (soft delete)
-   - Undo/redo support
-   - **Deliverable:** Full statement editing controls
+   - **Text change reconciliation** - auto-find moved statements
+   - Undo/redo support with position history
+   - **Deliverable:** Robust statement editing with change management
 
 3. **Review Mode** (3-4 days)
    - Side-by-side view: AI suggestions vs. original
@@ -627,9 +681,9 @@ User opens in Editor
    - Cross-reference suggestions
    - **Deliverable:** Can create encyclopedia articles
 
-**Time Estimate:** 2.5-3 weeks  
+**Time Estimate:** 2.5-3 weeks → **3-4 weeks** (with statement enhancement)  
 **Team:** 1 frontend developer + 1 backend developer  
-**Risk Level:** Medium (Tiptap can be tricky)
+**Risk Level:** Medium-High (position tracking complex)
 
 **Issues/Concerns:**
 - Citation extension: Conflicts with existing citation plugin; integrate smoothly.
@@ -639,6 +693,8 @@ User opens in Editor
 - Undo/redo: Extend ProseMirror history for complex operations.
 
 **Success Criteria:**
+- [x] **Statement highlighting works** ✅ (yellow clickable highlights in reading view)
+- [x] **Citation modals functional** ✅ (click highlights show appended_text)
 - [ ] Citations work smoothly inline
 - [ ] Can review and approve AI suggestions efficiently
 - [ ] Editor feels responsive (<100ms interactions)
@@ -845,7 +901,9 @@ User opens in Editor
 - [x] 10+ topics auto-tagged ✅
 
 **Phase 4 (Weeks 13-15):**
-- [ ] Citation modal functional
+- [x] **Statement highlighting works** ✅ (yellow clickable highlights in reading view)
+- [x] **Citation modals functional** ✅ (click highlights show appended_text)
+- [ ] Citations work smoothly inline
 - [ ] Review workflow complete
 - [ ] Can create encyclopedia entries
 
@@ -887,6 +945,7 @@ User opens in Editor
 - Can upload and process PDFs (with manual review)
 - AI assists with 70-80% of work
 - Functional editor for refinement
+- **Statement highlighting system** - clickable highlights in reading view
 - Citation system works
 - Can create encyclopedia entries
 - Production-ready for 10-50 users

@@ -1,4 +1,5 @@
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem, readItems, deleteItem } from '@directus/sdk';
 
 export interface StatementSegment {

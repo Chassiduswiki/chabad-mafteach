@@ -1,5 +1,5 @@
-import directus from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+import { createClient } from '@/lib/directus';
+import { readItems, updateItem } from '@directus/sdk';
 
 /**
  * Get topic by slug with associated content
@@ -16,6 +16,8 @@ import { readItems } from '@directus/sdk';
  */
 export async function getTopicBySlug(slug: string) {
     try {
+        const directus = createClient();
+
         // Fetch the topic by slug
         const topics = await directus.request(readItems('topics', {
             filter: {
@@ -205,6 +207,42 @@ export async function getTopicBySlug(slug: string) {
         };
     } catch (error) {
         console.error('Topic fetch error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update topic by slug
+ *
+ * @param slug Topic slug
+ * @param updates Partial topic data to update
+ * @returns Updated topic or null if not found
+ */
+export async function updateTopic(slug: string, updates: any) {
+    try {
+        const directus = createClient();
+
+        // First get the topic by slug to get its ID
+        const topics = await directus.request(readItems('topics', {
+            filter: {
+                slug: { _eq: slug }
+            },
+            fields: ['id'],
+            limit: 1
+        }));
+
+        if (!topics || topics.length === 0) {
+            return null;
+        }
+
+        const topicId = topics[0].id;
+
+        // Update the topic
+        const updatedTopic = await directus.request(updateItem('topics', topicId, updates));
+
+        return updatedTopic;
+    } catch (error) {
+        console.error('Topic update error:', error);
         throw error;
     }
 }

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';

@@ -1,5 +1,6 @@
 import { Hash } from 'lucide-react';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { Topic } from '@/lib/directus';
 import { TopicsList } from '@/components/topics/TopicsList';

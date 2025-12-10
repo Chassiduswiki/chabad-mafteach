@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { Schema } from '@/lib/types';
 
