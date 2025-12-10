@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem } from '@directus/sdk';
 import { requireEditor } from '@/lib/auth';
 // Dynamic import for pdf-parse to avoid DOMMatrix issues during build

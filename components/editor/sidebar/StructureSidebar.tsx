@@ -1,6 +1,7 @@
 import { Document } from "@/lib/types";
 import { useQuery } from "@tanstack/react-query";
-import directus from "@/lib/directus";
+import { createClient } from "@/lib/directus";
+const directus = createClient();
 import { readItems } from "@directus/sdk";
 import { ChevronRight, ChevronDown, FileText, Folder } from "lucide-react";
 import React, { useState } from "react";

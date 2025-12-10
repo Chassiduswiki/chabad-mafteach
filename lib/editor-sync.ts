@@ -1,4 +1,5 @@
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem, updateItem, deleteItem, readItems } from '@directus/sdk';
 import { Paragraph, Statement } from '@/lib/types';
 

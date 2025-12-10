@@ -1,7 +1,0 @@
-relevance_score,is_primary,statement_id,topic_id
-1,true,,
-0.8,false,,
-1,true,6,1
-0.7,false,7,2
-1,true,8,1
-0.8,false,,

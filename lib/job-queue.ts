@@ -258,7 +258,8 @@ class JobQueue {
     });
 
     // Import Directus and create document
-    const directus = (await import('@/lib/directus')).default;
+    const { createClient } = await import('@/lib/directus');
+    const directus = createClient();
     const { createItem } = await import('@directus/sdk');
 
     // Create document entry

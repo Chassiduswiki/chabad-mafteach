@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Topic } from '@/lib/types';
 import { FileText, BookOpen, Plus, X, MessageSquare } from 'lucide-react';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems, createItem } from '@directus/sdk';
 import { ArticleReader } from './ArticleReader';
 
