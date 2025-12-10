@@ -304,6 +304,31 @@ export default function TopicEditorPage() {
               See how raw document content gets processed into paragraphs, statements, and enriched with appended text (footnotes, sources, etc.)
             </p>
 
+            {/* Processing Types Explanation */}
+            <div className="bg-muted/30 rounded-lg p-4 mb-6">
+              <h4 className="font-medium mb-3 text-foreground">Two Types of Content Processing:</h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents</span>
+                  </div>
+                  <p className="text-blue-800 dark:text-blue-200 text-xs">
+                    Imported books (Tanya, Mishneh Torah, etc.) that get automatically processed into paragraphs and statements with AI.
+                  </p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <span className="font-medium text-green-900 dark:text-green-100">Entry Documents</span>
+                  </div>
+                  <p className="text-green-800 dark:text-green-200 text-xs">
+                    User-written content where citations and footnotes become the "appended text" attached to statements.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {topic?.paragraphs && topic.paragraphs.length > 0 ? (
               <div className="space-y-6">
                 {topic.paragraphs.map((paragraph: any) => (
@@ -482,26 +507,72 @@ export default function TopicEditorPage() {
 
                 <div className="bg-muted/30 rounded-lg p-6 max-w-2xl mx-auto">
                   <h4 className="font-medium mb-3 text-foreground">How the Processing Pipeline Works:</h4>
-                  <div className="space-y-3 text-sm text-left">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
-                      <div>
-                        <strong className="text-blue-900 dark:text-blue-100">Raw Document Ingestion:</strong>
-                        <p className="text-muted-foreground">Upload PDFs, text files, or import from Sefaria to add raw content to the system.</p>
+                  <div className="space-y-4 text-sm text-left">
+                    {/* Sefer Document Processing */}
+                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <BookOpen className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents (Imported)</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
+                          <div>
+                            <strong className="text-blue-900 dark:text-blue-100">Import Raw Content:</strong>
+                            <p className="text-blue-800 dark:text-blue-200">Upload PDFs, text files, or import from Sefaria (Tanya, Mishneh Torah, Talmud, etc.)</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">2</div>
+                          <div>
+                            <strong className="text-blue-900 dark:text-blue-100">AI Processing:</strong>
+                            <p className="text-blue-800 dark:text-blue-200">Content automatically broken into paragraphs and statements</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">3</div>
+                          <div>
+                            <strong className="text-blue-900 dark:text-blue-100">Enrichment:</strong>
+                            <p className="text-blue-800 dark:text-blue-200">Footnotes, sources, and references attached as appended text</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
-                      <div>
-                        <strong className="text-green-900 dark:text-green-100">AI Processing:</strong>
-                        <p className="text-muted-foreground">Content gets automatically broken into paragraphs and statements using AI.</p>
+
+                    {/* Entry Document Processing */}
+                    <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-5 w-5 text-green-600" />
+                        <span className="font-medium text-green-900 dark:text-green-100">Entry Documents (User-Written)</span>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold mt-0.5">3</div>
-                      <div>
-                        <strong className="text-orange-900 dark:text-orange-100">Enrichment:</strong>
-                        <p className="text-muted-foreground">Footnotes, sources, and references get attached as "appended text" to statements.</p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">1</div>
+                          <div>
+                            <strong className="text-green-900 dark:text-green-100">Write Content:</strong>
+                            <p className="text-green-800 dark:text-green-200">Authors write articles, essays, or explanations directly on the platform</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
+                          <div>
+                            <strong className="text-green-900 dark:text-green-100">Add Citations:</strong>
+                            <p className="text-green-800 dark:text-green-200">Inline citations and footnotes become "appended text" attached to statements</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">3</div>
+                          <div>
+                            <strong className="text-green-900 dark:text-green-100">Processing:</strong>
+                            <p className="text-green-800 dark:text-green-200">Content gets broken into statements with attached citations as appended text</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                        <p className="text-sm text-orange-800 dark:text-orange-200">
+                          <strong>⚠️ The "Scary" Part:</strong> When you add citations like [Tanya 1:1] or footnotes in your writing,
+                          these become the "appended text" that gets processed and attached to individual statements for reference tracking.
+                        </p>
                       </div>
                     </div>
                   </div>
