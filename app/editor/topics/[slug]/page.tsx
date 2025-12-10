@@ -297,14 +297,14 @@ export default function TopicEditorPage() {
             </div>
           </div>
 
-          {/* Associated Content */}
-          {topic?.paragraphs && topic.paragraphs.length > 0 && (
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Content Processing Pipeline</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                See how raw document content gets processed into paragraphs, statements, and enriched with appended text (footnotes, sources, etc.)
-              </p>
+          {/* Content Processing Pipeline - Always Show */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Content Processing Pipeline</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              See how raw document content gets processed into paragraphs, statements, and enriched with appended text (footnotes, sources, etc.)
+            </p>
 
+            {topic?.paragraphs && topic.paragraphs.length > 0 ? (
               <div className="space-y-6">
                 {topic.paragraphs.map((paragraph: any) => (
                   <div key={paragraph.id} className="border border-border rounded-lg overflow-hidden">
@@ -471,19 +471,50 @@ export default function TopicEditorPage() {
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Processed Content Yet</h3>
+                <p className="text-sm max-w-md mx-auto mb-4">
+                  This topic doesn't have any associated documents that have been processed into paragraphs and statements.
+                  The content processing pipeline will appear here once you add and process documents.
+                </p>
 
-              {topic.paragraphs.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No Processed Content Yet</p>
-                  <p className="text-sm max-w-md mx-auto">
-                    This topic doesn't have any associated documents that have been processed into paragraphs and statements.
-                    Content will appear here after document ingestion and processing.
-                  </p>
+                <div className="bg-muted/30 rounded-lg p-6 max-w-2xl mx-auto">
+                  <h4 className="font-medium mb-3 text-foreground">How the Processing Pipeline Works:</h4>
+                  <div className="space-y-3 text-sm text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
+                      <div>
+                        <strong className="text-blue-900 dark:text-blue-100">Raw Document Ingestion:</strong>
+                        <p className="text-muted-foreground">Upload PDFs, text files, or import from Sefaria to add raw content to the system.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
+                      <div>
+                        <strong className="text-green-900 dark:text-green-100">AI Processing:</strong>
+                        <p className="text-muted-foreground">Content gets automatically broken into paragraphs and statements using AI.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold mt-0.5">3</div>
+                      <div>
+                        <strong className="text-orange-900 dark:text-orange-100">Enrichment:</strong>
+                        <p className="text-muted-foreground">Footnotes, sources, and references get attached as "appended text" to statements.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>To see this pipeline in action:</strong> Go to <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/editor/import</code> and add some content to process.
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Save Actions */}
           <div className="flex items-center justify-between pt-6 border-t border-border">
