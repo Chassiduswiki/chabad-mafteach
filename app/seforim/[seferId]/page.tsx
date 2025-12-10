@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown } from 'lucide-react';
+import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface Statement {
@@ -41,6 +41,12 @@ interface CitationModal {
     references: any[];
 }
 
+interface ParagraphModal {
+    isOpen: boolean;
+    paragraph: Paragraph | null;
+    isBookmarked: boolean;
+}
+
 export default function SeferPage() {
     const params = useParams();
     const router = useRouter();
@@ -58,6 +64,14 @@ export default function SeferPage() {
         references: []
     });
     const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const [paragraphModal, setParagraphModal] = useState<ParagraphModal>({
+        isOpen: false,
+        paragraph: null,
+        isBookmarked: false
+    });
 
     // Hebrew detection helper
     const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
@@ -225,6 +239,67 @@ export default function SeferPage() {
     // Close citation modal
     const closeCitationModal = () => {
         setCitationModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // Long-press handlers for paragraphs
+    const handleParagraphMouseDown = (paragraph: Paragraph) => {
+        longPressTimer.current = setTimeout(() => {
+            // Check if paragraph has citations
+            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            if (hasCitations) {
+                setParagraphModal({
+                    isOpen: true,
+                    paragraph,
+                    isBookmarked: false // TODO: Check actual bookmark status
+                });
+            }
+        }, 500); // 500ms long press
+    };
+
+    const handleParagraphMouseUp = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    const handleParagraphMouseLeave = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    // Touch handlers for mobile
+    const handleParagraphTouchStart = (paragraph: Paragraph) => {
+        longPressTimer.current = setTimeout(() => {
+            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            if (hasCitations) {
+                setParagraphModal({
+                    isOpen: true,
+                    paragraph,
+                    isBookmarked: false // TODO: Check actual bookmark status
+                });
+            }
+        }, 500);
+    };
+
+    const handleParagraphTouchEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    // Close paragraph modal
+    const closeParagraphModal = () => {
+        setParagraphModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // Toggle bookmark
+    const toggleBookmark = () => {
+        setParagraphModal(prev => ({
+            ...prev,
+            isBookmarked: !prev.isBookmarked
+        }));
+        // TODO: Save bookmark to backend/collections
     };
 
     if (loading) {
@@ -468,11 +543,16 @@ export default function SeferPage() {
                                     data-paragraph-id={paragraph.id}
                                     className={`mb-12 transition-opacity duration-700 ${
                                         visibleParagraphs.has(paragraph.id) ? 'opacity-100' : 'opacity-0'
-                                    }`}
+                                    } ${paragraph.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
                                     style={{
                                         direction: isHebrew(paragraph.text || '') ? 'rtl' : 'ltr',
                                         textAlign: isHebrew(paragraph.text || '') ? 'right' : 'left'
                                     }}
+                                    onMouseDown={() => handleParagraphMouseDown(paragraph)}
+                                    onMouseUp={handleParagraphMouseUp}
+                                    onMouseLeave={handleParagraphMouseLeave}
+                                    onTouchStart={() => handleParagraphTouchStart(paragraph)}
+                                    onTouchEnd={handleParagraphTouchEnd}
                                 >
                                     {paragraph.title && (
                                         <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
@@ -637,8 +717,106 @@ export default function SeferPage() {
                                 )}
                             </div>
                         </div>
+                {/* Paragraph Modal */}
+                {paragraphModal.isOpen && paragraphModal.paragraph && (
+                    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                            onClick={closeParagraphModal}
+                        />
+
+                        {/* Modal */}
+                        <div className="relative w-full max-w-2xl mx-4 mb-4 bg-background rounded-t-2xl border border-border shadow-2xl transform transition-transform duration-300 ease-out animate-slide-up">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-border">
+                                <h3 className="text-lg font-semibold text-foreground">Paragraph Actions</h3>
+                                <button
+                                    onClick={closeParagraphModal}
+                                    className="p-2 rounded-lg hover:bg-accent transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 max-h-96 overflow-y-auto">
+                                {/* Context Preview */}
+                                <div className="mb-4">
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Context</h4>
+                                    <p className="text-foreground italic text-sm">
+                                        "{paragraphModal.paragraph.statements.slice(0, 2).map(s => s.text).join(' ').slice(0, 150)}..."
+                                    </p>
+                                </div>
+
+                                {/* Citations List */}
+                                <div className="mb-4">
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Citations</h4>
+                                    <div className="space-y-2">
+                                        {paragraphModal.paragraph.statements
+                                            .filter(statement => statement.appended_text)
+                                            .map((statement, index) => (
+                                                <button
+                                                    key={statement.id}
+                                                    onClick={() => {
+                                                        closeParagraphModal();
+                                                        handleCitationClick(statement.appended_text, statement);
+                                                    }}
+                                                    className="w-full text-left p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded flex-shrink-0 mt-0.5">
+                                                            {index + 1}
+                                                        </span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm text-foreground line-clamp-2">
+                                                                {statement.text}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                                                                {statement.appended_text.replace(/<[^>]*>/g, '').slice(0, 60)}...
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={toggleBookmark}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
+                                            paragraphModal.isBookmarked
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'border-border hover:bg-accent'
+                                        }`}
+                                    >
+                                        {paragraphModal.isBookmarked ? (
+                                            <BookmarkCheck className="h-4 w-4" />
+                                        ) : (
+                                            <Bookmark className="h-4 w-4" />
+                                        )}
+                                        <span className="text-sm">
+                                            {paragraphModal.isBookmarked ? 'Bookmarked' : 'Bookmark'}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // TODO: Open collections modal for saving
+                                            closeParagraphModal();
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border hover:bg-accent transition-colors"
+                                    >
+                                        <Bookmark className="h-4 w-4" />
+                                        <span className="text-sm">Save to Collection</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
+
             </div>
         </div>
     );
