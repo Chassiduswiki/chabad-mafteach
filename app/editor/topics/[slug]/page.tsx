@@ -306,25 +306,87 @@ export default function TopicEditorPage() {
 
             {/* Processing Types Explanation */}
             <div className="bg-muted/30 rounded-lg p-4 mb-6">
-              <h4 className="font-medium mb-3 text-foreground">Two Types of Content Processing:</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents</span>
+              <h4 className="font-medium mb-4 text-foreground">Document Breakdown Flow</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Understanding how <strong>Document → Paragraph → Statement → Appended Text</strong> works
+              </p>
+
+              <div className="space-y-4">
+                {/* Sefer Document Flow */}
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents (Imported)</span>
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">Already Processed</span>
                   </div>
-                  <p className="text-blue-800 dark:text-blue-200 text-xs">
-                    Imported books (Tanya, Mishneh Torah, etc.) that get automatically processed into paragraphs and statements with AI.
-                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">1. External Source</div>
+                      <div className="text-blue-700 dark:text-blue-300">Sefaria, PDF, etc.</div>
+                      <div className="text-blue-600 dark:text-blue-400 mt-1">Raw content with footnotes</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">2. Document</div>
+                      <div className="text-blue-700 dark:text-blue-300">Imported book</div>
+                      <div className="text-blue-600 dark:text-blue-400 mt-1">doc_type: "sefer"</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">3. Paragraphs</div>
+                      <div className="text-blue-700 dark:text-blue-300">AI splits content</div>
+                      <div className="text-blue-600 dark:text-blue-400 mt-1">Logical sections</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">4. Statements</div>
+                      <div className="text-blue-700 dark:text-blue-300">Individual claims</div>
+                      <div className="text-blue-600 dark:text-blue-400 mt-1">appended_text: footnotes</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-xs text-blue-700 dark:text-blue-300">
+                    <strong>Example:</strong> Import "Tanya" → AI extracts paragraphs → Splits into statements → Footnotes become appended_text
+                  </div>
                 </div>
-                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-900 dark:text-green-100">Entry Documents</span>
+
+                {/* Entry Document Flow */}
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-900 dark:text-green-100">Entry Documents (User-Written)</span>
+                    <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">Real-time Processing</span>
                   </div>
-                  <p className="text-green-800 dark:text-green-200 text-xs">
-                    User-written content where citations and footnotes become the "appended text" attached to statements.
-                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">1. User Writing</div>
+                      <div className="text-green-700 dark:text-green-300">In /editor/write</div>
+                      <div className="text-green-600 dark:text-green-400 mt-1">Add citations while typing</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">2. Document</div>
+                      <div className="text-green-700 dark:text-green-300">User-created content</div>
+                      <div className="text-green-600 dark:text-green-400 mt-1">doc_type: "entry"</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">3. Break Statements</div>
+                      <div className="text-green-700 dark:text-green-300">Click button in editor</div>
+                      <div className="text-green-600 dark:text-green-400 mt-1">AI processes content</div>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">4. Citations → Appended Text</div>
+                      <div className="text-green-700 dark:text-green-300">The "Scary" Part</div>
+                      <div className="text-green-600 dark:text-green-400 mt-1">[Tanya 1:1] becomes appended_text</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                    <p className="text-sm text-orange-800 dark:text-orange-200">
+                      <strong>⚠️ The "Scary" Breakdown:</strong><br/>
+                      <code className="bg-orange-100 dark:bg-orange-900 px-1 rounded">User writes: "As Tanya teaches [1:1]..."</code><br/>
+                      <code className="bg-orange-100 dark:bg-orange-900 px-1 rounded">AI processes: "As Tanya teaches..." + appended_text: "[1:1] reference"</code><br/>
+                      <strong>Citations get separated from main text and attached as metadata!</strong>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
