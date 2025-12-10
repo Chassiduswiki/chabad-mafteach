@@ -246,3 +246,27 @@ export async function updateTopic(slug: string, updates: any) {
         throw error;
     }
 }
+
+export async function getTopicMetadata(slug: string) {
+    try {
+        const directus = createClient();
+
+        // Fetch just the topic by slug
+        const topics = await directus.request(readItems('topics', {
+            filter: {
+                slug: { _eq: slug }
+            },
+            fields: ['*'],
+            limit: 1
+        }));
+
+        if (!topics || topics.length === 0) {
+            return null;
+        }
+
+        return topics[0];
+    } catch (error) {
+        console.error('Topic metadata fetch error:', error);
+        throw error;
+    }
+}
