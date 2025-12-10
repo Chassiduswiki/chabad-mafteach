@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, Type, Minus, Plus, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface Statement {
@@ -41,6 +41,12 @@ interface CitationModal {
     references: any[];
 }
 
+interface ParagraphModal {
+    isOpen: boolean;
+    paragraph: Paragraph | null;
+    isBookmarked: boolean;
+}
+
 export default function SeferPage() {
     const params = useParams();
     const router = useRouter();
@@ -51,13 +57,20 @@ export default function SeferPage() {
     const [showCitations, setShowCitations] = useState(true);
     const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
     const [visibleParagraphs, setVisibleParagraphs] = useState<Set<number>>(new Set());
-    const observerRef = useRef<IntersectionObserver | null>(null);
-    const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const [citationModal, setCitationModal] = useState<CitationModal>({
         isOpen: false,
         citation: '',
         context: '',
         references: []
+    });
+    const [showSettingsPopup, setShowSettingsPopup] = useState(false);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const [paragraphModal, setParagraphModal] = useState<ParagraphModal>({
+        isOpen: false,
+        paragraph: null,
+        isBookmarked: false
     });
 
     // Hebrew detection helper
@@ -208,15 +221,6 @@ export default function SeferPage() {
         fetchData();
     }, [seferId]);
 
-    // Font size controls
-    const cycleFontSize = () => {
-        setFontSize(current => {
-            if (current === 'small') return 'medium';
-            if (current === 'medium') return 'large';
-            return 'small';
-        });
-    };
-
     // Handle citation clicks
     const handleCitationClick = (citation: string, statement: Statement) => {
         // Extract plain text from HTML citation
@@ -235,6 +239,67 @@ export default function SeferPage() {
     // Close citation modal
     const closeCitationModal = () => {
         setCitationModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // Long-press handlers for paragraphs
+    const handleParagraphMouseDown = (paragraph: Paragraph) => {
+        longPressTimer.current = setTimeout(() => {
+            // Check if paragraph has citations
+            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            if (hasCitations) {
+                setParagraphModal({
+                    isOpen: true,
+                    paragraph,
+                    isBookmarked: false // TODO: Check actual bookmark status
+                });
+            }
+        }, 500); // 500ms long press
+    };
+
+    const handleParagraphMouseUp = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    const handleParagraphMouseLeave = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    // Touch handlers for mobile
+    const handleParagraphTouchStart = (paragraph: Paragraph) => {
+        longPressTimer.current = setTimeout(() => {
+            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            if (hasCitations) {
+                setParagraphModal({
+                    isOpen: true,
+                    paragraph,
+                    isBookmarked: false // TODO: Check actual bookmark status
+                });
+            }
+        }, 500);
+    };
+
+    const handleParagraphTouchEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+        }
+    };
+
+    // Close paragraph modal
+    const closeParagraphModal = () => {
+        setParagraphModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // Toggle bookmark
+    const toggleBookmark = () => {
+        setParagraphModal(prev => ({
+            ...prev,
+            isBookmarked: !prev.isBookmarked
+        }));
+        // TODO: Save bookmark to backend/collections
     };
 
     if (loading) {
@@ -362,7 +427,7 @@ export default function SeferPage() {
         <div className="min-h-screen bg-background">
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="sticky top-0 z-40 bg-background/95 backdrop-blur flex items-center justify-between mb-8 border-b border-border/50 pb-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <BookOpen className="h-5 w-5" />
@@ -372,36 +437,97 @@ export default function SeferPage() {
                             <p className="text-sm text-muted-foreground capitalize">{document.doc_type}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        {/* Font Size Control */}
-                        <button
-                            onClick={cycleFontSize}
-                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
-                            title={`Font size: ${fontSize}`}
-                        >
-                            <Type className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                                {fontSize === 'small' && 'Small'}
-                                {fontSize === 'medium' && 'Medium'}
-                                {fontSize === 'large' && 'Large'}
-                            </span>
-                        </button>
+                    <div className="flex items-center gap-4 relative">
+                        {/* Settings Popup */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowSettingsPopup(!showSettingsPopup)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
+                            >
+                                <Settings className="h-4 w-4" />
+                                <span className="hidden sm:inline">Settings</span>
+                                <ChevronDown className="h-3 w-3" />
+                            </button>
 
-                        {/* Citation Toggle */}
-                        <button
-                            onClick={() => setShowCitations(!showCitations)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
-                        >
-                            {showCitations ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            <span className="hidden sm:inline">
-                                {showCitations ? 'Hide Citations' : 'Show Citations'}
-                            </span>
-                        </button>
+                            {/* Settings Dropdown */}
+                            {showSettingsPopup && (
+                                <>
+                                    {/* Backdrop */}
+                                    <div
+                                        className="fixed inset-0 z-30"
+                                        onClick={() => setShowSettingsPopup(false)}
+                                    />
+
+                                    {/* Dropdown */}
+                                    <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-lg shadow-lg p-4 z-40">
+                                        <div className="space-y-4">
+                                            {/* Font Size Control */}
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                                    Font Size
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setFontSize('small')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'small'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Small
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setFontSize('medium')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'medium'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Medium
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setFontSize('large')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'large'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Large
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Citation Toggle */}
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                                    Citations
+                                                </label>
+                                                <button
+                                                    onClick={() => setShowCitations(!showCitations)}
+                                                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded border transition-colors w-full ${
+                                                        showCitations
+                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                            : 'border-border hover:bg-accent'
+                                                    }`}
+                                                >
+                                                    {showCitations ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    {showCitations ? 'Hide Citations' : 'Show Citations'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         <Link
                             href="/seforim"
                             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
-                            ← Back to Seforim
+                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </div>
                 </div>
@@ -417,11 +543,17 @@ export default function SeferPage() {
                                     data-paragraph-id={paragraph.id}
                                     className={`mb-12 transition-opacity duration-700 ${
                                         visibleParagraphs.has(paragraph.id) ? 'opacity-100' : 'opacity-0'
-                                    }`}
+                                    } ${paragraph.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
                                     style={{
                                         direction: isHebrew(paragraph.text || '') ? 'rtl' : 'ltr',
-                                        textAlign: isHebrew(paragraph.text || '') ? 'right' : 'left'
+                                        textAlign: 'justify',
+                                        textAlignLast: isHebrew(paragraph.text || '') ? 'right' : 'left'
                                     }}
+                                    onMouseDown={() => handleParagraphMouseDown(paragraph)}
+                                    onMouseUp={handleParagraphMouseUp}
+                                    onMouseLeave={handleParagraphMouseLeave}
+                                    onTouchStart={() => handleParagraphTouchStart(paragraph)}
+                                    onTouchEnd={handleParagraphTouchEnd}
                                 >
                                     {paragraph.title && (
                                         <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
@@ -589,6 +721,106 @@ export default function SeferPage() {
                     </div>
                 )}
             </div>
+
+            {/* Paragraph Modal */}
+            {paragraphModal.isOpen && paragraphModal.paragraph && (
+                <div className="fixed inset-0 z-[100] flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={closeParagraphModal}
+                    />
+
+                    {/* Modal */}
+                    <div className="relative w-full max-w-2xl mx-4 mb-4 bg-background rounded-t-2xl border border-border shadow-2xl transform transition-transform duration-300 ease-out animate-slide-up">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-border">
+                            <h3 className="text-lg font-semibold text-foreground">Paragraph Actions</h3>
+                            <button
+                                onClick={closeParagraphModal}
+                                className="p-2 rounded-lg hover:bg-accent transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 max-h-96 overflow-y-auto">
+                            {/* Context Preview */}
+                            <div className="mb-4">
+                                <h4 className="text-sm font-medium text-muted-foreground mb-2">Context</h4>
+                                <p className="text-foreground italic text-sm">
+                                    "{paragraphModal.paragraph.statements.slice(0, 2).map(s => s.text).join(' ').slice(0, 150)}..."
+                                </p>
+                            </div>
+
+                            {/* Citations List */}
+                            <div className="mb-4">
+                                <h4 className="text-sm font-medium text-muted-foreground mb-2">Citations</h4>
+                                <div className="space-y-2">
+                                    {paragraphModal.paragraph.statements
+                                        .filter(statement => statement.appended_text)
+                                        .map((statement, index) => (
+                                            <button
+                                                key={statement.id}
+                                                onClick={() => {
+                                                    closeParagraphModal();
+                                                    handleCitationClick(statement.appended_text, statement);
+                                                }}
+                                                className="w-full text-left p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded flex-shrink-0 mt-0.5">
+                                                        {index + 1}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-foreground line-clamp-2">
+                                                            {statement.text}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                                                            {statement.appended_text.replace(/<[^>]*>/g, '').slice(0, 60)}...
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={toggleBookmark}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
+                                        paragraphModal.isBookmarked
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'border-border hover:bg-accent'
+                                    }`}
+                                >
+                                    {paragraphModal.isBookmarked ? (
+                                        <BookmarkCheck className="h-4 w-4" />
+                                    ) : (
+                                        <Bookmark className="h-4 w-4" />
+                                    )}
+                                    <span className="text-sm">
+                                        {paragraphModal.isBookmarked ? 'Bookmarked' : 'Bookmark'}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        // TODO: Open collections modal for saving
+                                        closeParagraphModal();
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border hover:bg-accent transition-colors"
+                                >
+                                    <Bookmark className="h-4 w-4" />
+                                    <span className="text-sm">Save to Collection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
