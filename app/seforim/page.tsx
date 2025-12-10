@@ -1,38 +1,193 @@
-import { BookOpen } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { BookOpen, ChevronDown, ChevronRight, FileText, FolderOpen } from 'lucide-react';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import { Document } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { Suspense } from 'react';
+import Link from 'next/link';
 
 // Force dynamic rendering - always fetch fresh data
 export const dynamic = 'force-dynamic';
 
-async function getSeforim(): Promise<Document[]> {
-    try {
-        const result = await directus.request(readItems('documents', {
-            filter: { doc_type: { _eq: 'sefer' } },
-            fields: ['id', 'title', 'doc_type', 'author', 'category'],
-            sort: ['title'],
-            limit: -1
-        }));
-
-        const docsArray = Array.isArray(result) ? result : result ? [result] : [];
-        return docsArray.map((doc: any) => ({
-            id: doc.id,
-            title: doc.title,
-            doc_type: doc.doc_type,
-            author: doc.author,
-            category: doc.category,
-        }));
-    } catch (error) {
-        console.error('Failed to fetch seforim:', error);
-        return [];
-    }
+interface HierarchicalDocument {
+    id: number;
+    title: string;
+    doc_type?: string;
+    parent_id?: number;
+    author?: string;
+    category?: string;
+    children?: HierarchicalDocument[];
+    hasContent?: boolean;
 }
 
-export default async function SeforimPage() {
-    const seforim = await getSeforim();
+function DocumentTree({ documents, level = 0 }: { documents: HierarchicalDocument[], level?: number }) {
+    const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+    const toggleExpanded = (docId: number) => {
+        const newExpanded = new Set(expanded);
+        if (newExpanded.has(docId)) {
+            newExpanded.delete(docId);
+        } else {
+            newExpanded.add(docId);
+        }
+        setExpanded(newExpanded);
+    };
+
+    return (
+        <div className={`${level > 0 ? 'ml-6 border-l border-border pl-4' : ''}`}>
+            {documents.map((doc) => {
+                const hasChildren = doc.children && doc.children.length > 0;
+                const isExpanded = expanded.has(doc.id);
+
+                return (
+                    <div key={doc.id} className="mb-2">
+                        <div className="flex items-center group">
+                            {/* Expand/Collapse Button */}
+                            {hasChildren ? (
+                                <button
+                                    onClick={() => toggleExpanded(doc.id)}
+                                    className="p-1 rounded hover:bg-accent transition-colors mr-2"
+                                >
+                                    {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                </button>
+                            ) : (
+                                <div className="w-8" /> // Spacer for alignment
+                            )}
+
+                            {/* Document Link */}
+                            <Link
+                                href={`/seforim/${doc.id}`}
+                                className="flex-1 group rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            {/* Icon based on type and content */}
+                                            {doc.hasContent ? (
+                                                <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
+                                            ) : hasChildren ? (
+                                                <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            ) : (
+                                                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            )}
+
+                                            <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                                {doc.title}
+                                            </h3>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            {doc.doc_type && (
+                                                <span className="capitalize">{doc.doc_type}</span>
+                                            )}
+                                            {hasChildren && (
+                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                                    {doc.children!.length} sections
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {doc.author && (
+                                            <p className="text-sm text-muted-foreground mt-1 truncate">
+                                                by {doc.author}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+
+                        {/* Children */}
+                        {hasChildren && isExpanded && (
+                            <div className="mt-2">
+                                <DocumentTree documents={doc.children!} level={level + 1} />
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+export default function SeforimPage() {
+    const [seforim, setSeforim] = useState<HierarchicalDocument[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSeforim = async () => {
+            try {
+                // Fetch all documents
+                const result = await directus.request(readItems('documents', {
+                    fields: ['id', 'title', 'doc_type', 'parent_id', 'author', 'category'],
+                    sort: ['title'],
+                    limit: -1
+                }));
+
+                const docsArray = Array.isArray(result) ? result : result ? [result] : [];
+
+                // Build hierarchical structure
+                const docs: HierarchicalDocument[] = docsArray.map((doc: any) => ({
+                    id: doc.id,
+                    title: doc.title,
+                    doc_type: doc.doc_type,
+                    parent_id: doc.parent_id,
+                    author: doc.author,
+                    category: doc.category,
+                    children: []
+                }));
+
+                // Create parent-child relationships
+                const docMap = new Map<number, HierarchicalDocument>();
+                const roots: HierarchicalDocument[] = [];
+
+                // First pass: create map
+                docs.forEach(doc => {
+                    docMap.set(doc.id, doc);
+                });
+
+                // Second pass: build hierarchy
+                docs.forEach(doc => {
+                    if (doc.parent_id && docMap.has(doc.parent_id)) {
+                        const parent = docMap.get(doc.parent_id)!;
+                        if (!parent.children) parent.children = [];
+                        parent.children.push(doc);
+                    } else {
+                        roots.push(doc);
+                    }
+                });
+
+                // Check which documents have content (paragraphs)
+                for (const doc of docs) {
+                    try {
+                        const paragraphs = await directus.request(readItems('paragraphs', {
+                            filter: { doc_id: { _eq: doc.id } },
+                            limit: 1
+                        }));
+                        const paraArray = Array.isArray(paragraphs) ? paragraphs : paragraphs ? [paragraphs] : [];
+                        doc.hasContent = paraArray.length > 0;
+                    } catch {
+                        doc.hasContent = false;
+                    }
+                }
+
+                setSeforim(roots);
+            } catch (error: any) {
+                console.error('Failed to fetch hierarchical seforim:', error);
+                setSeforim([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSeforim();
+    }, []);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -59,32 +214,50 @@ export default async function SeforimPage() {
                     </p>
                 </div>
 
-                {/* Seforim List */}
+                {/* Clean Grid Layout */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {seforim.map((sefer) => (
-                        <div
+                        <Link
                             key={sefer.id}
-                            className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+                            href={`/seforim/${sefer.id}`}
+                            className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 block"
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                                        {sefer.title}
-                                    </h3>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        {/* Icon based on type and content */}
+                                        {sefer.hasContent ? (
+                                            <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
+                                        ) : sefer.children && sefer.children.length > 0 ? (
+                                            <FolderOpen className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        ) : (
+                                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        )}
+
+                                        <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                            {sefer.title}
+                                        </h3>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {sefer.doc_type && (
+                                            <span className="capitalize">{sefer.doc_type}</span>
+                                        )}
+                                        {sefer.children && sefer.children.length > 0 && (
+                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                                {sefer.children.length} sections
+                                            </span>
+                                        )}
+                                    </div>
+
                                     {sefer.author && (
                                         <p className="text-sm text-muted-foreground mt-1 truncate">
                                             by {sefer.author}
                                         </p>
                                     )}
-                                    {sefer.category && (
-                                        <span className="inline-flex items-center mt-2 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                                            {sefer.category}
-                                        </span>
-                                    )}
                                 </div>
-                                <BookOpen className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-3" />
                             </div>
-                        </div>
+                        </Link>
                     ))}
                 </div>
 

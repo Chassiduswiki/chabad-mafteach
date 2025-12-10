@@ -168,6 +168,7 @@ Add custom fields:
 | `order_key` | String | Input | Required, Max: 50 |
 | `original_lang` | Dropdown | Dropdown | ISO codes |
 | `text` | Text | Textarea | Required |
+| `appended_text` | Text | Textarea (WYSIWYG) | Optional - for footnotes and additional content |
 | `is_deleted` | Boolean | Toggle | Default: `false` |
 | `status` | Dropdown | Dropdown | `draft`, `reviewed`, `published` |
 | `is_disputed` | Boolean | Toggle | Default: `false` |

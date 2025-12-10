@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { Schema } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +24,28 @@ export async function GET() {
         directusError = error.message;
     }
 
+    const collections = [
+        'authors', 'documents', 'paragraphs', 'statements', 'sources', 'source_links',
+        'topics', 'topic_relationships', 'statement_topics', 'translations'
+    ];
+
+    const collectionStatuses: Record<string, { status: string; error: string | null }> = {};
+
+    for (const collection of collections) {
+        try {
+            await directus.request(readItems(collection as keyof Schema, { limit: 1, fields: ['id'] }));
+            collectionStatuses[collection] = { status: 'success', error: null };
+        } catch (error: any) {
+            collectionStatuses[collection] = { status: 'failed', error: error.message || 'Unknown error' };
+        }
+    }
+
     return NextResponse.json({
         config: configStatus,
         directus: {
             status: directusConnection,
             error: directusError
-        }
+        },
+        collections: collectionStatuses
     });
 }

@@ -1,6 +1,6 @@
 # API Procedure Documentation
 
-**Updated to match New Directus Data Model (v2)** - This documentation now reflects the complete schema with version control, translations, comments, and audit logging.
+> **Updated to match New Directus Data Model (v2)** - This documentation now reflects the complete schema with version control, translations, comments, and audit logging.
 
 ## Database Connection & Data Entry Guide
 
@@ -76,7 +76,105 @@ HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"
 11. **comments** - Depends on statements
 12. **audit_log** - Auto-generated during operations
 
-### 4. API Procedures by Collection
+### 4. Paragraphs-to-Statements Relationship Logic
+
+#### Overview
+The system implements a hierarchical data structure: **documents > paragraphs > statements**, where paragraphs contain multiple statements and statements belong to exactly one paragraph. This relationship enables granular topic mapping and citation tracking.
+
+#### Two Relationship Approaches
+
+##### 4.1 Topics API (Reading Existing Data)
+**Purpose:** Display topic-related content by traversing existing relationships.
+
+**Data Flow:**
+```
+topics → statement_topics (junction) → statements → paragraphs → documents
+```
+
+**Logic Steps:**
+1. **Fetch topic** by slug
+2. **Query statement_topics** junction table for matching topic
+3. **Expand relations** to get statements and paragraphs
+4. **Filter orphaned records** (skip statements that don't exist)
+5. **Group statements** under their parent paragraphs
+6. **Sort paragraphs** by `order_key`
+
+**API Endpoint:** `GET /api/topics/[slug]`
+
+**Key Behavior:**
+- Skips orphaned `statement_topics` records where referenced statements don't exist
+- Groups statements under paragraphs for hierarchical display
+- Returns empty paragraphs array if no valid relationships found
+
+##### 4.2 Statement Breaking (Creating New Entries)
+**Purpose:** Generate statement records from paragraph text using AI.
+
+**Data Flow:**
+```
+paragraphs → statements (create new records)
+```
+
+**Logic Steps:**
+1. **Fetch paragraphs** for a document
+2. **Apply sentence boundary detection** on paragraph text
+3. **Delete existing statements** for each paragraph
+4. **Create new statement entries** with metadata
+5. **Track creation metrics**
+
+**API Endpoint:** `POST /api/statements/break` (via `breakDocumentIntoStatements` function)
+
+**Sentence Boundary Patterns:**
+```typescript
+// Hebrew/English sentence detection
+const sentencePatterns = [
+  /(?<=[.!?])\s+(?=\p{L}[\p{L}\s]*[\u0590-\u05FF])/u,  // After punctuation + Hebrew
+  /(?<=
+S[.!?])\s+(?=\p{L})/u,  // After punctuation + any letter
+  /(?<=
+\w[.!?])\s+(?=\w)/,  // Standard English boundaries
+];
+```
+
+**Generated Metadata:**
+```json
+{
+  "auto_generated": true,
+  "confidence": 0.3-1.0,
+  "source": "statement_breaking"
+}
+```
+
+#### Key Differences
+
+| Aspect | Topics API (Reading) | Statement Breaking (Creating) |
+|--------|---------------------|--------------------------------|
+| **Direction** | topics → statements → paragraphs | paragraphs → statements |
+| **Purpose** | Display topic-related content | Generate granular statements |
+| **Data integrity** | Skip orphaned records | Delete/recreate entries |
+| **Relationships** | Many-to-many via junction | One-to-many direct |
+
+#### Usage Examples
+
+**Reading Topic Content:**
+```bash
+# Get all paragraphs/statements for a topic
+curl $HEADERS "$BASE_URL/api/topics/free-will"
+```
+
+**Creating Statements from Paragraphs:**
+```bash
+# Break document paragraphs into statements
+curl -X POST $HEADERS "$BASE_URL/api/statements/break" \
+  -d '{"document_id": "uuid-of-document"}'
+```
+
+#### Data Integrity Considerations
+- **Foreign Key Constraints:** Directus doesn't enforce database-level FK constraints
+- **Orphaned Records:** Topics API gracefully skips invalid statement references
+- **Version Control:** Statement breaking creates new versions when updating existing statements
+- **Audit Trail:** All operations are logged in `audit_log` collection
+
+### 5. API Procedures by Collection
 
 #### Authors Collection
 ```bash
@@ -199,6 +297,24 @@ curl -X POST $HEADERS "$BASE_URL/items/paragraphs" \
     "page_number": 1,
     "column_number": 1,
     "doc_id": "uuid-of-document"
+  }'
+
+# Create paragraph from Chabad Library (with structural data)
+curl -X POST $HEADERS "$BASE_URL/items/paragraphs" \
+  -d '{
+    "order_key": "001",
+    "original_lang": "he",
+    "text": "<h2>הקדמה</h2>כאב שמרגיש בצרת בנו...",
+    "status": "draft",
+    "page_number": 1,
+    "doc_id": "uuid-of-document",
+    "metadata": {
+      "source": "chabad_library",
+      "original_id": 2800530004,
+      "section_title": "הקדמה",
+      "heading_type": "folio_reference",
+      "folio_notation": "1a"
+    }
   }'
 
 # Update paragraph
@@ -407,7 +523,7 @@ curl $HEADERS "$BASE_URL/items/audit_log?filter={entity_type:{_eq:\"statement\"}
 # Note: Audit log entries are created automatically via Flows or hooks
 ```
 
-### 5. Batch Operations
+### 6. Batch Operations
 
 #### Bulk Create Authors
 ```bash
@@ -429,7 +545,7 @@ curl -X POST "$BASE_URL/import/authors" \
   -F "file=@authors.csv"
 ```
 
-### 6. Query Examples
+### 7. Query Examples
 
 #### Get Document with Author (via Sources)
 ```bash
@@ -456,7 +572,7 @@ curl $HEADERS "$BASE_URL/items/statements?fields=*,source_links.sources.*,transl
 curl $HEADERS "$BASE_URL/items/documents?fields=*,paragraphs.statements.*&filter={id:{_eq:\"uuid-of-document\"}}"
 ```
 
-### 7. Error Handling
+### 8. Error Handling
 
 #### Common Errors
 - `400 Bad Request`: Invalid JSON or missing required fields
@@ -484,7 +600,7 @@ curl $HEADERS "$BASE_URL/items/documents?fields=*,paragraphs.statements.*&filter
 - `relevance_score`: Min: 0, Max: 1
 - `strength`: Min: 0, Max: 1
 
-### 8. MCP Tool Usage
+### 9. MCP Tool Usage
 
 #### Available Tools
 - `collections` - Manage collections
@@ -502,7 +618,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","ar
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","arguments":{"collection":"authors","method":"POST","data":{"canonical_name":"Test Author"}}}}' | node directus-mcp-bridge.js
 ```
 
-### 9. Performance Tips
+### 10. Performance Tips
 
 #### Efficient Data Loading
 1. Use batch operations for multiple items
@@ -516,7 +632,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","ar
 3. Create relationships last
 4. Validate data integrity after each phase
 
-### 10. Security Considerations
+### 11. Security Considerations
 
 #### Token Management
 - Store tokens securely
@@ -530,9 +646,9 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","ar
 - Implement client-side validation
 - Handle API errors gracefully
 
-### 11. Tanya Perek 1 Import Templates
+### 12. Tanya Perek 1 Import Templates
 
-#### 11.1 Paragraphs (Hebrew + English)
+#### 12.1 Paragraphs (Hebrew + English)
 
 Collection: `paragraphs`
 
@@ -567,7 +683,7 @@ curl -X POST "$BASE_URL/import/paragraphs" \
   -F "file=@tanya_perek1_paragraphs.csv"
 ```
 
-#### 11.2 Statements (extracted claims / footnotes)
+#### 12.2 Statements (extracted claims / footnotes)
 
 Collection: `statements`
 
@@ -606,7 +722,7 @@ curl -X POST "$BASE_URL/import/statements" \
   -F "file=@tanya_perek1_statements.csv"
 ```
 
-#### 11.3 Source Links (citations for statements)
+#### 12.3 Source Links (citations for statements)
 
 Collection: `source_links`
 
@@ -640,7 +756,7 @@ curl -X POST "$BASE_URL/import/source_links" \
   -F "file=@tanya_perek1_source_links.csv"
 ```
 
-#### 11.4 Statement Topics (mapping Tanya statements to topics)
+#### 12.4 Statement Topics (mapping Tanya statements to topics)
 
 Collection: `statement_topics`
 
@@ -673,9 +789,144 @@ curl -X POST "$BASE_URL/import/statement_topics" \
 
 ---
 
-## AI API Endpoints (Phase 3)
+### 13. Chabad Library Data Population
 
-### OpenRouter Integration
+#### 13.1 Chabad Library Structure
+The Chabad Library scraper extracts books with hierarchical structure:
+- **Top Level:** Section titles (e.g., "ליקוטי אמרים" - Likutei Amarim)
+- **Headings:** Hebrew folio markings (e.g., "א, א" = Folio 1a, "א, ב" = Folio 1b)
+- **Content:** HTML text with `<h2>` section titles and footnote references
+- **Notes:** Structured footnote content with `[ftn_X_Y]` markers
+
+#### 13.2 Population Script
+**Location:** `scripts/populate_chabad_book.js`
+
+**Usage:**
+```bash
+node scripts/populate_chabad_book.js <book_id> "<Book Title>"
+```
+
+**Example:**
+```bash
+node scripts/populate_chabad_book.js 3400000000 "Tanya - Complete Edition"
+```
+
+#### 13.3 Data Transformation
+
+**Hierarchical Document Structure:**
+- **Main Document**: `doc_type: "sefer"` - The complete book
+- **Section Documents**: `doc_type: "entry"` - Major sections like "ליקוטי אמרים", "שער היחוד והאמונה"
+- **Chapter Paragraphs**: Under each section document
+- **Statements**: Under each paragraph with footnote extraction
+
+**Folio Number Conversion:**
+- Hebrew folio markings like "א, א" → Standard notation "1a" (Folio 1a)
+- Hebrew letters map: א=a, ב=b, ג=c, ד=d, ה=e, ו=f, ז=g, ח=h, ט=i, י=j, כ=k, ל=l, מ=m, נ=n, ס=o, ע=p, פ=q, צ=r, ק=s, ר=t, ש=u, ת=v
+- Formula: `folio_number + letter` (e.g., "א, א" = "1a", "ב, ב" = "2b")
+
+**Section Title Extraction:**
+- Parses `<h2>` tags from HTML content
+- Stored in paragraph `metadata.section_title`
+
+**Footnote Processing:**
+- Extracts footnote references `[ftnref_X_Y]` from text
+- Appends formatted footnotes to statement `appended_text` field
+- Format: `<div class="footnote">X.Y footnote content</div>`
+
+**Language Detection:**
+- Analyzes character frequency (>10% Hebrew characters = 'he', else 'en')
+- Applied to both paragraphs and statements
+
+#### 13.4 Generated Hierarchical Structure
+
+**Main Book Document:**
+```json
+{
+  "title": "Tanya - Complete Edition",
+  "doc_type": "sefer",
+  "original_lang": "he",
+  "source_format": "chabad_library",
+  "metadata": {
+    "source": "chabad_library",
+    "scraped_id": 3400000000,
+    "document_type": "main_book"
+  }
+}
+```
+
+**Section Documents (Children of Main Book):**
+```json
+{
+  "title": "ליקוטי אמרים",
+  "doc_type": "entry",
+  "parent_id": "main-book-id",
+  "original_lang": "he",
+  "metadata": {
+    "source": "chabad_library",
+    "section_type": "major_section",
+    "original_id": 3401310001
+  }
+}
+```
+
+**Chapter Paragraphs (Under Section Documents):**
+```json
+{
+  "order_key": "001",
+  "original_lang": "he",
+  "text": "<h2>ליקוטי אמרים</h2>תניא משביעים אותו...",
+  "page_number": 1,
+  "doc_id": "section-document-id",
+  "metadata": {
+    "source": "chabad_library",
+    "original_id": 3401310006,
+    "section_title": "ליקוטי אמרים",
+    "heading_type": "folio_reference",
+    "folio_notation": "1a",
+    "chapter_type": "chapter"
+  }
+}
+```
+
+**Statements (Under Chapter Paragraphs):**
+```json
+{
+  "order_key": "001",
+  "original_lang": "he",
+  "text": "Full chapter text",
+  "appended_text": "<div class=\"footnote\">1.1 Footnote content...</div>",
+  "metadata": {
+    "source": "chabad_library",
+    "auto_generated": true,
+    "page_number": 1,
+    "folio_notation": "1a",
+    "section_title": "ליקוטי אמרים"
+  }
+}
+```
+
+#### 13.5 Navigation Structure
+```
+Tanya - Complete Edition (Main Document - sefer)
+├── ליקוטי אמרים (Section Document - entry)
+│   ├── פרק א (Chapter Paragraph + Statement)
+│   ├── פרק ב (Chapter Paragraph + Statement)
+│   └── ... (51 more chapters)
+├── שער היחוד והאמונה (Section Document - entry)
+│   └── [Chapters under this section]
+├── אגרת התשובה (Section Document - entry)
+│   └── [Chapters under this section]
+├── אגרת הקדש (Section Document - entry)
+│   └── [Chapters under this section]
+└── קונטרס אחרון (Section Document - entry)
+    └── [Chapters under this section]
+```
+
+This hierarchical structure allows for proper organization of complex books with multiple major sections, each containing their own chapters.
+
+### 13. AI API Endpoints (Phase 3)
+
+### 13.1 OpenRouter Integration
 
 The system now includes AI-powered processing using OpenRouter API with free-tier DeepSeek models for Hebrew text processing.
 
@@ -687,7 +938,7 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 **Available Models:** DeepSeek R1 (free tier, excellent for reasoning tasks)
 
-### Statement Breaking API
+### 13.2 Statement Breaking API
 
 **Endpoint:** `POST /api/statements/break`
 
@@ -710,7 +961,7 @@ Breaks paragraph text into logical statements using AI.
 }
 ```
 
-### OCR Correction API
+### 13.3 OCR Correction API
 
 **Endpoint:** `POST /api/ocr/correct`
 
@@ -735,7 +986,7 @@ Corrects OCR errors in Hebrew text using AI.
 }
 ```
 
-### Citation Detection API
+### 13.4 Citation Detection API
 
 **Endpoint:** `POST /api/citations/detect`
 
@@ -763,7 +1014,7 @@ Detects Jewish source citations in text using AI pattern recognition.
 }
 ```
 
-### Topic Tagging API
+### 13.5 Topic Tagging API
 
 **Endpoint:** `POST /api/topics/tag`
 
