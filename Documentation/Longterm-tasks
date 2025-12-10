@@ -50,9 +50,9 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Make search feel responsive and reliable for topics, then extend to seforim.
 
 ### Phase 2a: Topics Search Feel (IMMEDIATE)
-- [ ] Audit `/api/search` topics filter: decide whether to fetch broader set + rely on Fuse, or expand server-side filter to include `slug` + future translation fields.
-- [ ] Test: typing a topic's English name reliably returns that topic (no vanishing as you add letters).
-- [ ] Update `CommandMenu` to show topic results with clear category/type badge.
+- [x] Audit `/api/search` topics filter: decide whether to fetch broader set + rely on Fuse, or expand server-side filter to include `slug` + future translation fields.
+- [x] Test: typing a topic's English name reliably returns that topic (no vanishing as you add letters).
+- [x] Update `CommandMenu` to show topic results with clear category/type badge.
 
 ### Phase 2b: Seforim Search (After 2a)
 - [ ] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection.
