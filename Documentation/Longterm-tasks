@@ -75,6 +75,7 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] Generalized TorahReader component (`/components/TorahReader.tsx`) for flexible content structures
 - [x] Integrated Directus data fetching for all sefer content
 - [x] Tested `/seforim/[seferId]` routes work for any document type
+- [x] Created comprehensive documentation (`TORAH_READER_DOCUMENTATION.md`) with usage examples, API integration, and future extensibility
 
 ### Phase 3b: Directus Modeling (After 3a)
 - [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**

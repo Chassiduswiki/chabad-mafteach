@@ -113,6 +113,7 @@ DIRECTUS_STATIC_TOKEN=your_static_token_here
 
 ## 📚 Documentation
 
+- [TorahReader Component Guide](TORAH_READER_DOCUMENTATION.md) - Complete guide for the generalized Torah reading component
 - [Deployment Guide](Documentation/implementation_plan.md)
 - [Beta Launch Status](Documentation/BETA_LAUNCH_STATUS_DEC2.md)
 - [Comprehensive Task List](Documentation/Comprehensive%20Task%20list.md)
