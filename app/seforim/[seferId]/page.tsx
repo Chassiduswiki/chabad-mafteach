@@ -516,7 +516,7 @@ export default function SeferPage() {
 
                 {/* Citation Modal */}
                 {citationModal.isOpen && (
-                    <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    <div className="fixed inset-0 z-[100] flex items-end justify-center">
                         {/* Backdrop */}
                         <div
                             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -537,19 +537,25 @@ export default function SeferPage() {
                             </div>
 
                             {/* Content */}
-                            <div className="p-6 max-h-96 overflow-y-auto">
-                                {/* Context */}
-                                <div className="mb-4">
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Context</h4>
-                                    <p className="text-foreground italic">"{citationModal.context}"</p>
-                                </div>
-
-                                {/* Citation */}
+                            <div
+                                className="p-6 max-h-96 overflow-y-auto"
+                                style={{
+                                    direction: isHebrew(citationModal.citation) ? 'rtl' : 'ltr',
+                                    textAlign: isHebrew(citationModal.citation) ? 'right' : 'left'
+                                }}
+                            >
+                                {/* Citation - Show First */}
                                 <div className="mb-4">
                                     <h4 className="text-sm font-medium text-muted-foreground mb-2">Citation</h4>
                                     <div className="bg-muted/50 rounded-lg p-4 font-serif text-foreground">
                                         {citationModal.citation}
                                     </div>
+                                </div>
+
+                                {/* Context - Show Second */}
+                                <div className="mb-4">
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Context</h4>
+                                    <p className="text-foreground italic">"{citationModal.context}"</p>
                                 </div>
 
                                 {/* References */}
@@ -558,7 +564,14 @@ export default function SeferPage() {
                                         <h4 className="text-sm font-medium text-muted-foreground mb-2">References</h4>
                                         <div className="space-y-2">
                                             {citationModal.references.map((ref: any, index: number) => (
-                                                <div key={index} className="flex items-center gap-2 text-sm">
+                                                <div
+                                                    key={index}
+                                                    className="flex items-center gap-2 text-sm"
+                                                    style={{
+                                                        direction: isHebrew(ref.text) ? 'rtl' : 'ltr',
+                                                        textAlign: isHebrew(ref.text) ? 'right' : 'left'
+                                                    }}
+                                                >
                                                     <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
                                                         {ref.type}
                                                     </span>
