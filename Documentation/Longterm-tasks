@@ -233,11 +233,6 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
 - [ ] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
 
-### Phase 7b: Operational Stability
-- [ ] **Rate Limiting**: Implement rate limiting for ingestion and AI endpoints to prevent DoS.
-- [ ] **Testing Framework**: Set up Jest/Vitest for unit testing utility functions (e.g., AI logic).
-- [ ] **Sanitization**: Ensure strict input validation for all API endpoints.
-
 ---
 
 ## TRACK 8: Innovation & Features (Future Vision)
@@ -252,6 +247,37 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Interactive Graph**: Visualize topic connections using react-force-graph-2d.
 - [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
 - [ ] **Personalized Learning**: Recommendation engine based on user reading history.
+
+---
+
+## TRACK 9: UX Audit & Fixes (Immediate Priority)
+
+**Goal**: Fix critical user experience issues identified in comprehensive audit.
+
+### Phase 9a: Critical Flow Blockers
+- [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
+- [x] **Fix data integrity issues** - Resolve statement_topics table orphans causing empty article tabs (BLOCKING articles)
+- [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
+
+### Phase 9b: Navigation & Discovery Issues  
+- [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
+- [ ] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
+- [ ] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
+
+### Phase 9c: Visual & Mobile Polish
+- [ ] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
+- [ ] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
+- [ ] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+
+### Phase 9d: System Reliability
+- [ ] **Audit editor permissions** - Resolve 403 errors, ensure proper Directus role configuration for editor functionality
+
+### Phase 9e: Quick Wins (< 2 hours each)
+- [x] **Improve Article empty state** - Replace "Coming Soon" dead end with topic description and helpful next steps
+- [x] **Basic Collections functionality** - Implement localStorage bookmarking for topics with simple UI
+- [x] **Home page onboarding hints** - Add subtle guidance for first-time users
+- [ ] **Navigation link testing** - Verify all header links work, fix any 404s
+- [ ] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets
 
 ---
 
