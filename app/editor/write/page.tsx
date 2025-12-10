@@ -208,8 +208,8 @@ export default function WritePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Editor */}
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Editor - Takes more space now */}
           <div className="lg:col-span-3">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               {/* Features Banner */}
@@ -239,117 +239,185 @@ export default function WritePage() {
             </div>
           </div>
 
-          {/* Sidebar - Clean and Focused */}
-          <div className="space-y-6">
+          {/* User Guide Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
             {/* Getting Started Guide */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">How to Write</h3>
-              <div className="space-y-4 text-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
+            <div className="bg-card border border-border rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">How to Write</h3>
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start gap-2">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
                   <div>
-                    <strong className="text-foreground">Write Your Content</strong>
-                    <p className="text-muted-foreground">Use the editor to write your article, explanation, or insights. Add citations as you write.</p>
+                    <strong className="text-foreground">Write</strong>
+                    <p className="text-muted-foreground">Your article or insights</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
+                <div className="flex items-start gap-2">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
                   <div>
                     <strong className="text-foreground">Add Citations</strong>
-                    <p className="text-muted-foreground">Click the book icon in the toolbar to add references like "Tanya 1:1" or "Mishneh Torah 1:2".</p>
+                    <p className="text-muted-foreground">Click book icon for references</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold mt-0.5">3</div>
+                <div className="flex items-start gap-2">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold mt-0.5">3</div>
                   <div>
-                    <strong className="text-foreground">Process & Save</strong>
-                    <p className="text-muted-foreground">Your citations become "appended text" that gets attached to statements for reference tracking.</p>
+                    <strong className="text-foreground">Process</strong>
+                    <p className="text-muted-foreground">Break into statements</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions - Simplified */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Tools</h3>
-              <div className="space-y-3">
+            {/* Quick Actions */}
+            <div className="bg-card border border-border rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Tools</h3>
+              <div className="space-y-2">
                 <button
                   onClick={handleBreakStatements}
                   disabled={isBreakingStatements}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent rounded-md transition-colors disabled:opacity-50"
+                  className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors disabled:opacity-50 text-xs"
                 >
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                  <div className={`flex h-6 w-6 items-center justify-center rounded ${
                     breakStatus === 'processing' ? 'bg-blue-500/10 text-blue-500' :
                     breakStatus === 'success' ? 'bg-green-500/10 text-green-500' :
                     breakStatus === 'error' ? 'bg-red-500/10 text-red-500' :
                     'bg-blue-500/10 text-blue-500'
                   }`}>
                     {breakStatus === 'processing' ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border border-blue-500 border-t-transparent" />
+                      <div className="animate-spin rounded-full h-3 w-3 border border-blue-500 border-t-transparent" />
                     ) : breakStatus === 'success' ? (
-                      <CheckCircle className="h-4 w-4" />
+                      <CheckCircle className="h-3 w-3" />
                     ) : breakStatus === 'error' ? (
-                      <AlertCircle className="h-4 w-4" />
+                      <AlertCircle className="h-3 w-3" />
                     ) : (
-                      <FileText className="h-4 w-4" />
+                      <FileText className="h-3 w-3" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-foreground">Break into Statements</div>
-                    <div className="text-xs text-muted-foreground">
-                      {breakStatus === 'processing' ? 'Processing content...' :
-                       breakStatus === 'success' ? 'Statements inserted!' :
-                       breakStatus === 'error' ? 'Processing failed' :
-                       'Split content for better organization'}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-foreground truncate">Break Statements</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {breakStatus === 'processing' ? 'Processing...' :
+                       breakStatus === 'success' ? 'Done!' :
+                       breakStatus === 'error' ? 'Failed' :
+                       'AI splitting'}
                     </div>
                   </div>
                 </button>
 
-                <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent rounded-md transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10 text-green-500">
-                    <BookOpen className="h-4 w-4" />
+                <button className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/10 text-green-500">
+                    <BookOpen className="h-3 w-3" />
                   </div>
                   <div>
                     <div className="font-medium text-foreground">Add Citation</div>
-                    <div className="text-xs text-muted-foreground">Reference sources in your writing</div>
-                  </div>
-                </button>
-
-                <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent rounded-md transition-colors">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-foreground">Paste Hebrew Text</div>
-                    <div className="text-xs text-muted-foreground">OCR automatically processes images</div>
+                    <div className="text-xs text-muted-foreground">Reference sources</div>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* Save & Publish */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Ready to Publish?</h3>
-              <div className="space-y-3">
+            {/* Save Actions */}
+            <div className="bg-card border border-border rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Save</h3>
+              <div className="space-y-2">
                 <button
                   onClick={handleSave}
                   disabled={!title.trim()}
-                  className="w-full flex items-center gap-3 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex items-center gap-2 px-2 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
                 >
-                  <Save className="h-4 w-4" />
-                  <div className="text-left">
+                  <Save className="h-3 w-3" />
+                  <div>
                     <div className="font-medium">Save Draft</div>
-                    <div className="text-xs opacity-90">Save for later editing</div>
+                    <div className="text-xs opacity-90">Save for later</div>
                   </div>
                 </button>
+              </div>
+            </div>
+          </div>
 
-                <button className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-md hover:bg-accent transition-colors">
-                  <Eye className="h-4 w-4" />
-                  <div className="text-left">
-                    <div className="font-medium">Preview</div>
-                    <div className="text-xs text-muted-foreground">See how it will look</div>
+          {/* Technical Data Preview - Developer Debug Panel */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex h-5 w-5 items-center justify-center rounded bg-blue-500 text-white text-xs">⚙️</div>
+                <h3 className="text-sm font-semibold text-foreground">Data Preview</h3>
+                <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-1.5 py-0.5 rounded">Debug</span>
+              </div>
+
+              <div className="space-y-3">
+                {/* Current Document Info */}
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <div className="text-xs font-medium text-foreground mb-1">Document</div>
+                  <div className="text-xs space-y-0.5 font-mono">
+                    <div><span className="text-muted-foreground">Title:</span> {title || 'Untitled'}</div>
+                    <div><span className="text-muted-foreground">Type:</span> entry</div>
+                    <div><span className="text-muted-foreground">Lang:</span> he</div>
                   </div>
-                </button>
+                </div>
+
+                {/* Content Statistics */}
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <div className="text-xs font-medium text-foreground mb-1">Content Stats</div>
+                  <div className="text-xs space-y-0.5 font-mono">
+                    <div><span className="text-muted-foreground">Chars:</span> {editorRef.current ? editorRef.current.getText().length : 0}</div>
+                    <div><span className="text-muted-foreground">Words:</span> {editorRef.current ? editorRef.current.getText().split(/\s+/).filter((word: string) => word.length > 0).length : 0}</div>
+                    <div><span className="text-muted-foreground">Paras:</span> {editorRef.current ? editorRef.current.getText().split('\n\n').filter((p: string) => p.trim().length > 0).length : 0}</div>
+                  </div>
+                </div>
+
+                {/* Processing Preview */}
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <div className="text-xs font-medium text-foreground mb-2">Processing Preview</div>
+                  <div className="text-xs space-y-1.5">
+                    <div className="text-muted-foreground mb-1">When "Break Statements" runs:</div>
+
+                    {/* Simulated Paragraph Structure */}
+                    <div className="bg-white dark:bg-gray-800 rounded p-1.5 border text-xs">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-medium text-blue-600 dark:text-blue-400">📄 P1</span>
+                        <span className="text-muted-foreground font-mono">id: p_001</span>
+                      </div>
+                      <div className="text-muted-foreground mb-1 pl-3 border-l-2 border-blue-200 dark:border-blue-700 truncate">
+                        {editorRef.current ? editorRef.current.getText().split('\n\n')[0]?.substring(0, 30) + '...' : 'Your content...'}
+                      </div>
+
+                      {/* Simulated Statements */}
+                      <div className="pl-3 space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-green-600 dark:text-green-400">📝 S1.1</span>
+                          <span className="text-muted-foreground font-mono">id: s_001</span>
+                        </div>
+                        <div className="text-muted-foreground pl-3 border-l-2 border-green-200 dark:border-green-700 text-xs truncate">
+                          {editorRef.current ? editorRef.current.getText().split('.')[0] + '.' : 'Statement...'}
+                        </div>
+
+                        {/* Citations Preview */}
+                        <div className="pl-3 mt-1">
+                          <div className="text-orange-600 dark:text-orange-400 text-xs mb-0.5">📎 Citations:</div>
+                          <div className="bg-orange-50 dark:bg-orange-950/20 rounded p-1 text-xs">
+                            Tanya 1:1 → appended_text
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-muted-foreground text-xs mt-2">
+                      💡 Citations become appended_text attached to statements
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Model Reference */}
+                <div className="bg-muted/30 rounded-lg p-2">
+                  <div className="text-xs font-medium text-foreground mb-1">Data Model</div>
+                  <div className="text-xs space-y-0.5 font-mono">
+                    <div><span className="text-blue-600">documents</span> → containers</div>
+                    <div><span className="text-green-600">paragraphs</span> → sections</div>
+                    <div><span className="text-purple-600">statements</span> → claims</div>
+                    <div><span className="text-orange-600">appended_text</span> → citations</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
