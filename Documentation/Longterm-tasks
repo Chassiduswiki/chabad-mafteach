@@ -24,10 +24,10 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Make `/topics/[slug]` simple, fast, and honest about what data exists.
 
 ### Phase 1a: MVP Detail Page (IMMEDIATE)
-- [ ] Simplify `TopicHeader` to show only: title (canonical_title), category (topic_type), short description.
-- [ ] Remove or feature-flag `BoundariesTab`, `SourcesTab`, `RelatedTab` from `TopicTabs` (mark as "Coming soon").
-- [ ] Remove `TopicSidebar` from detail page layout.
-- [ ] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
+- [x] Simplify `TopicHeader` to show only: title (canonical_title), category (topic_type), short description.
+- [x] Remove or feature-flag `BoundariesTab`, `SourcesTab`, `RelatedTab` from `TopicTabs` (mark as "Coming soon").
+- [x] Remove `TopicSidebar` from detail page layout.
+- [x] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
 
 ### Phase 1b: Rich Content Fields (After Phase 1a)
 - [ ] Add to Directus `topics`: `overview`, `article`, `practical_takeaways`, `historical_context` (rich text fields).
