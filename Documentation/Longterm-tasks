@@ -94,11 +94,12 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Build a WYSIWYG editor for content creators to easily edit topics and books, aligned with the current Directus model. Behind authentication with Editor role.
 
 ### Phase 5a: MVP Editor Forms (After Phase 1b)
-- [ ] Build simple authenticated forms for Topics: title, slug, topic_type, description, metadata.
-- [ ] Build simple authenticated forms for Documents: title, doc_type, metadata.
-- [ ] Gate behind Editor role (use existing Directus auth or Next.js auth).
-- [ ] Save directly to Directus via API with proper permissions.
-- [ ] Test: Content team can create/edit topics and documents without touching Directus UI.
+- [x] Create `/editor/topics/[slug]` page for editing topic definitions
+- [x] Form fields for: canonical_title, description, topic_type, definition_positive, definition_negative
+- [x] Save to Directus via API with authentication
+- [x] Basic validation and error handling
+- [x] Redirect to topic page after save
+- [x] Create `/editor/topics` page for topic management with search and filtering
 
 ### Phase 5b: Rich Text & Order Management (After Phase 5a)
 - [ ] Add rich-text WYSIWYG for `description` and metadata fields (Markdown/HTML support).
