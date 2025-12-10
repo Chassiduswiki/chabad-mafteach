@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Eye, FileText, BookOpen, Zap, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Eye, FileText, BookOpen, Zap, Sparkles, CheckCircle, AlertCircle, RefreshCw, Check } from 'lucide-react';
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
 
 export default function WritePage() {
@@ -15,6 +15,10 @@ export default function WritePage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isBreakingStatements, setIsBreakingStatements] = useState(false);
   const [breakStatus, setBreakStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [isCheckingGrammar, setIsCheckingGrammar] = useState(false);
+  const [grammarStatus, setGrammarStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [isParaphrasing, setIsParaphrasing] = useState(false);
+  const [paraphraseStatus, setParaphraseStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     // Check authentication
@@ -179,6 +183,156 @@ export default function WritePage() {
     editorRef.current = editor;
   };
 
+  const handleGrammarCheck = async () => {
+    if (!editorRef.current) {
+      console.error('Editor not available');
+      return;
+    }
+
+    try {
+      setIsCheckingGrammar(true);
+      setGrammarStatus('processing');
+
+      const editor = editorRef.current;
+      const textContent = editor.getText();
+
+      if (!textContent.trim()) {
+        setGrammarStatus('error');
+        setTimeout(() => {
+          setGrammarStatus('idle');
+          setIsCheckingGrammar(false);
+        }, 2000);
+        return;
+      }
+
+      console.log('Checking grammar for text:', textContent.substring(0, 100) + '...');
+
+      const response = await fetch('/api/editor/grammar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textContent
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Grammar check result:', result);
+
+        // Insert grammar suggestions
+        let insertContent = '\n\n--- GRAMMAR CHECK RESULTS ---\n\n';
+        if (result.analysis && result.analysis.issues_found > 0) {
+          insertContent += `Found ${result.analysis.issues_found} issues:\n\n`;
+          result.analysis.corrections.forEach((correction: any, index: number) => {
+            insertContent += `${index + 1}. **${correction.type.toUpperCase()}**: "${correction.original}" → "${correction.corrected}"\n`;
+            insertContent += `   Reason: ${correction.explanation}\n\n`;
+          });
+        } else {
+          insertContent += '✅ No grammar or spelling issues found!\n\n';
+        }
+
+        if (result.analysis.suggestions && result.analysis.suggestions.length > 0) {
+          insertContent += '💡 Suggestions:\n';
+          result.analysis.suggestions.forEach((suggestion: string, index: number) => {
+            insertContent += `${index + 1}. ${suggestion}\n`;
+          });
+        }
+
+        editor.commands.insertContent(insertContent);
+        setGrammarStatus('success');
+      } else {
+        throw new Error('Grammar check failed');
+      }
+
+      setTimeout(() => {
+        setGrammarStatus('idle');
+        setIsCheckingGrammar(false);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error checking grammar:', error);
+      setGrammarStatus('error');
+      setTimeout(() => {
+        setGrammarStatus('idle');
+        setIsCheckingGrammar(false);
+      }, 3000);
+    }
+  };
+
+  const handleParaphrase = async () => {
+    if (!editorRef.current) {
+      console.error('Editor not available');
+      return;
+    }
+
+    try {
+      setIsParaphrasing(true);
+      setParaphraseStatus('processing');
+
+      const editor = editorRef.current;
+      const textContent = editor.getText();
+
+      if (!textContent.trim()) {
+        setParaphraseStatus('error');
+        setTimeout(() => {
+          setParaphraseStatus('idle');
+          setIsParaphrasing(false);
+        }, 2000);
+        return;
+      }
+
+      console.log('Paraphrasing text:', textContent.substring(0, 100) + '...');
+
+      const response = await fetch('/api/editor/paraphrase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textContent,
+          style: 'academic' // Could be configurable
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Paraphrase result:', result);
+
+        // Insert improved text
+        let insertContent = '\n\n--- IMPROVED VERSION ---\n\n';
+        insertContent += result.result.improved_text;
+        insertContent += '\n\n--- IMPROVEMENTS MADE ---\n\n';
+
+        if (result.result.improvements && result.result.improvements.length > 0) {
+          result.result.improvements.forEach((improvement: any, index: number) => {
+            insertContent += `${index + 1}. **${improvement.type.toUpperCase()}**: ${improvement.reason}\n`;
+            insertContent += `   "${improvement.original}" → "${improvement.improved}"\n\n`;
+          });
+        }
+
+        editor.commands.insertContent(insertContent);
+        setParaphraseStatus('success');
+      } else {
+        throw new Error('Paraphrase failed');
+      }
+
+      setTimeout(() => {
+        setParaphraseStatus('idle');
+        setIsParaphrasing(false);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error paraphrasing:', error);
+      setParaphraseStatus('error');
+      setTimeout(() => {
+        setParaphraseStatus('idle');
+        setIsParaphrasing(false);
+      }, 3000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -303,6 +457,8 @@ export default function WritePage() {
                 docId={null}
                 className="min-h-[600px]"
                 onBreakStatements={handleBreakStatements}
+                onGrammarCheck={handleGrammarCheck}
+                onParaphrase={handleParaphrase}
                 onEditorReady={handleEditorReady}
               />
             </div>
@@ -331,8 +487,8 @@ export default function WritePage() {
                 <div className="flex items-start gap-2">
                   <div className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold mt-0.5">3</div>
                   <div>
-                    <strong className="text-foreground">Process</strong>
-                    <p className="text-muted-foreground">Break into statements</p>
+                    <strong className="text-foreground">AI Writing Tools</strong>
+                    <p className="text-muted-foreground">Grammar check, paraphrase, and smart editing</p>
                   </div>
                 </div>
               </div>
@@ -375,12 +531,22 @@ export default function WritePage() {
                 </button>
 
                 <button className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/10 text-green-500">
-                    <BookOpen className="h-3 w-3" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                    <Check className="h-3 w-3" />
                   </div>
                   <div>
-                    <div className="font-medium text-foreground">Add Citation</div>
-                    <div className="text-xs text-muted-foreground">Reference sources</div>
+                    <div className="font-medium text-foreground">Grammar Check</div>
+                    <div className="text-xs text-muted-foreground">AI-powered spelling & grammar</div>
+                  </div>
+                </button>
+
+                <button className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
+                    <RefreshCw className="h-3 w-3" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-foreground">Paraphrase</div>
+                    <div className="text-xs text-muted-foreground">Improve clarity and flow</div>
                   </div>
                 </button>
               </div>

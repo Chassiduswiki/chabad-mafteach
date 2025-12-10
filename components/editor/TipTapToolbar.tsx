@@ -18,15 +18,19 @@ import {
   Split,
   Image,
   Link,
-  BookOpen
+  BookOpen,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 
 interface TipTapToolbarProps {
-  editor: Editor;
+  editor: any;
   onSave?: () => void;
-  onBreakStatements?: () => void;
+  onBreakStatements?: () => Promise<void>;
   onInsertCitation?: () => void;
   onInsertImage?: () => void;
+  onGrammarCheck?: () => Promise<void>;
+  onParaphrase?: () => Promise<void>;
   isSaving?: boolean;
   className?: string;
 }
@@ -37,6 +41,8 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
   onBreakStatements,
   onInsertCitation,
   onInsertImage,
+  onGrammarCheck,
+  onParaphrase,
   isSaving = false,
   className
 }) => {
@@ -154,6 +160,24 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
 
         {/* Advanced Features */}
         <div className="flex gap-0.5">
+          {onGrammarCheck && (
+            <button
+              onClick={onGrammarCheck}
+              className="p-2 rounded hover:bg-gray-200"
+              title="Check Grammar & Spelling"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+          )}
+          {onParaphrase && (
+            <button
+              onClick={onParaphrase}
+              className="p-2 rounded hover:bg-gray-200"
+              title="Improve & Paraphrase Text"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          )}
           {onInsertImage && (
             <button
               onClick={onInsertImage}
