@@ -229,9 +229,9 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Secure the application against unauthorized access and ensure stability under load.
 
 ### Phase 7a: Authentication & Authorization (High Priority)
-- [ ] **Implement Auth Layer**: Integrate NextAuth.js or Directus Auth for API routes.
-- [ ] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
-- [ ] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
+- [x] **Implement Auth Layer**: Integrate NextAuth.js or Directus Auth for API routes.
+- [x] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
+- [x] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
 
 ---
 
