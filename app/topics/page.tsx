@@ -7,11 +7,15 @@ import { TopicsList } from '@/components/topics/TopicsList';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
-import ContextualSearch from '@/components/features/search/ContextualSearch';
+import Dynamic from 'next/dynamic';
 import { IndexSidebar } from '@/components/layout/IndexSidebar';
 
-// Force dynamic rendering - always fetch fresh data
+// Force dynamic rendering for real-time data
 export const dynamic = 'force-dynamic';
+
+const ContextualSearch = Dynamic(() => import('@/components/features/search/ContextualSearch'), {
+  loading: () => <div className="h-12 bg-muted animate-pulse rounded-lg"></div>
+});
 
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {

@@ -4,11 +4,27 @@ const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 
+// Input validation utilities
+const validateLimit = (limit: string | null): number => {
+    const parsed = parseInt(limit || '10', 10);
+    return isNaN(parsed) || parsed < 1 || parsed > 100 ? 10 : parsed;
+};
+
+const validateMode = (mode: string | null): string | null => {
+    const validModes = ['discovery', 'featured'];
+    return mode && validModes.includes(mode) ? mode : null;
+};
+
+const validateCategory = (category: string | null): string | null => {
+    const validCategories = ['avodah', 'emunah', 'theology', 'kabbalah', 'halacha', 'people', 'places', 'events'];
+    return category && validCategories.includes(category) ? category : null;
+};
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const mode = searchParams.get('mode'); // 'featured' | 'discovery' | null (default list)
-    const category = searchParams.get('category');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const mode = validateMode(searchParams.get('mode'));
+    const category = validateCategory(searchParams.get('category'));
+    const limit = validateLimit(searchParams.get('limit'));
 
     try {
         // MODE: DISCOVERY (Composite data for homepage)

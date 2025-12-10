@@ -1,10 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CommandMenuTrigger } from '@/components/features/search/CommandMenuTrigger';
-import { AnimatedGridPattern } from '@/components/ui/AnimatedGridPattern';
-import { FloatingHebrewLetters } from '@/components/ui/FloatingHebrewLetters';
-import { WordRotate } from '@/components/ui/WordRotate';
+import dynamic from 'next/dynamic';
 import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
 import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
 import { FeaturedTopics } from '@/components/features/home/FeaturedTopics';
@@ -12,6 +9,24 @@ import { MobileHome } from '@/components/mobile/MobileHome';
 import OnboardingHints from '@/components/features/onboarding/OnboardingHints';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
+
+// Lazy load heavy background component
+const FloatingHebrewLetters = dynamic(() => import('@/components/ui/FloatingHebrewLetters').then(mod => ({ default: mod.FloatingHebrewLetters })), {
+  ssr: false,
+  loading: () => null
+});
+
+// Lazy load animated text component
+const WordRotate = dynamic(() => import('@/components/ui/WordRotate').then(mod => ({ default: mod.WordRotate })), {
+  ssr: false,
+  loading: () => <div className="h-12 bg-muted animate-pulse rounded"></div>
+});
+
+// Lazy load command menu
+const CommandMenuTrigger = dynamic(() => import('@/components/features/search/CommandMenuTrigger').then(mod => ({ default: mod.CommandMenuTrigger })), {
+  ssr: false,
+  loading: () => <div className="h-10 bg-muted animate-pulse rounded-lg"></div>
+});
 
 export default function Home() {
   return (

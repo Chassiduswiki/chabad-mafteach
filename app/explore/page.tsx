@@ -3,8 +3,17 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
 import { ExploreCategories } from '@/components/explore/ExploreCategories';
-import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
+import dynamic from 'next/dynamic';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+// Lazy load search component
+const ContextualSearch = dynamic(() => import('@/components/features/search/ContextualSearch'), {
+  loading: () => <div className="h-12 bg-muted animate-pulse rounded-lg"></div>
+});
+
+// Lazy load content discovery
+const ContentDiscovery = dynamic(() => import('@/components/features/home/ContentDiscovery').then(mod => ({ default: mod.ContentDiscovery })), {
+  loading: () => <div className="animate-pulse h-32 bg-muted rounded-lg"></div>
+});
 
 export default function ExplorePage() {
     return (
@@ -25,6 +34,14 @@ export default function ExplorePage() {
                     <p className="text-muted-foreground max-w-2xl mx-auto">
                         Discover Chassidic concepts by category or see what's new
                     </p>
+                </div>
+
+                {/* Search */}
+                <div className="flex justify-center">
+                    <ContextualSearch
+                        placeholder="Search topics, sources or authors..."
+                        searchType="topics"
+                    />
                 </div>
 
                 {/* Categories */}

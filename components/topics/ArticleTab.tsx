@@ -8,6 +8,19 @@ const directus = createClient();
 import { readItems, createItem } from '@directus/sdk';
 import { ArticleReader } from './ArticleReader';
 
+// Input validation utilities
+const sanitizeText = (text: string): string => {
+    return text
+        .trim()
+        .replace(/[<>]/g, '') // Basic XSS prevention
+        .slice(0, 1000); // Limit length
+};
+
+const validateStatementText = (text: string): boolean => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= 3 && sanitized.length <= 1000;
+};
+
 /**
  * ArticleTab Component
  *
@@ -51,6 +64,7 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
     const [newStatementText, setNewStatementText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [loadingStatements, setLoadingStatements] = useState<Set<number>>(new Set());
 
     // Seed statements map from API payload (document > paragraphs > statements)
     useEffect(() => {
@@ -70,6 +84,7 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
     const fetchStatements = async (paragraphId: number) => {
         if (statements[paragraphId]) return; // Already fetched
         
+        setLoadingStatements(prev => new Set(prev).add(paragraphId));
         try {
             const result = await directus.request(readItems('statements', {
                 filter: { paragraph_id: { _eq: paragraphId } },
@@ -82,6 +97,12 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             setStatements(prev => ({ ...prev, [paragraphId]: statementsArray }));
         } catch (error) {
             console.error('Error fetching statements:', error);
+        } finally {
+            setLoadingStatements(prev => {
+                const next = new Set(prev);
+                next.delete(paragraphId);
+                return next;
+            });
         }
     };
 
@@ -95,12 +116,18 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
     // Handle creating new statement
     const handleCreateStatement = async () => {
         if (!selectedParagraph || !newStatementText.trim()) return;
+
+        const sanitizedText = sanitizeText(newStatementText);
+        if (!validateStatementText(sanitizedText)) {
+            alert('Statement must be between 3 and 1000 characters long.');
+            return;
+        }
         
         setIsCreating(true);
         try {
             // Create the statement
             const statement = await directus.request(createItem('statements', {
-                text: newStatementText.trim(),
+                text: sanitizedText,
                 paragraph_id: selectedParagraph.id,
                 order_key: `${statements[selectedParagraph.id]?.length || 0 + 1}`,
                 status: 'draft'
@@ -290,6 +317,24 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                                                 <div className="text-sm leading-relaxed">
                                                     {statement.text}
                                                 </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Loading state for statements */}
+                            {selectedParagraph && loadingStatements.has(selectedParagraph.id) && (
+                                <div className="mb-6">
+                                    <div className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        Loading Statements...
+                                    </div>
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border animate-pulse">
+                                                <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                                                <div className="h-3 bg-muted rounded w-full"></div>
+                                                <div className="h-3 bg-muted rounded w-3/4 mt-1"></div>
                                             </div>
                                         ))}
                                     </div>
