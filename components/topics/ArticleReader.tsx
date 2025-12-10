@@ -62,6 +62,7 @@ export function ArticleReader({
     reference: string | null;
     content?: string; // HTML content of the citation
   } | null>(null);
+  const [isModalClosing, setIsModalClosing] = useState(false);
 
   // Find selected statement across all paragraphs (if any)
   const selected = selectedId != null ? 
@@ -70,6 +71,13 @@ export function ArticleReader({
   // Track paragraph viewing for progress
   const handleParagraphView = (paragraphId: number) => {
     setViewedParagraphs(prev => new Set(prev).add(paragraphId));
+  };
+
+  const handleCloseModal = () => {
+    setIsModalClosing(true);
+    setActiveCitation(null);
+    // Reset the closing flag after a short delay to allow DOM updates
+    setTimeout(() => setIsModalClosing(false), 100);
   };
 
   const handleClose = () => setSelectedId(null);
@@ -193,6 +201,9 @@ export function ArticleReader({
           textAlignLast: textAlign
         }}
         onClick={(e) => {
+          // Prevent clicks during modal closing animation
+          if (isModalClosing) return;
+
           const target = e.target as HTMLElement;
 
           // Handle statement highlights (existing functionality)
@@ -441,7 +452,7 @@ export function ArticleReader({
         open={Boolean(activeCitation)}
         citation={activeCitation}
         citationContent={activeCitation?.content}
-        onClose={() => setActiveCitation(null)}
+        onClose={handleCloseModal}
       />
     </div>
   );
