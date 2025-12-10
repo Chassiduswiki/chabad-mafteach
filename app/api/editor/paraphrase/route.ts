@@ -95,8 +95,23 @@ Guidelines:
 
   } catch (error) {
     console.error('Paraphrase error:', error);
+
+    // Provide more specific error messages
+    let errorMessage = 'Unknown error occurred';
+    if (error instanceof Error) {
+      if (error.message.includes('OPENROUTER_API_KEY')) {
+        errorMessage = 'AI service is not configured. Please contact support.';
+      } else if (error.message.includes('OpenRouter API error')) {
+        errorMessage = 'AI service temporarily unavailable. Please try again later.';
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'AI service rate limit exceeded. Please try again in a few minutes.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

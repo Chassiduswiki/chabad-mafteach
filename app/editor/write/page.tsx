@@ -243,7 +243,32 @@ export default function WritePage() {
         editor.commands.insertContent(insertContent);
         setGrammarStatus('success');
       } else {
-        throw new Error('Grammar check failed');
+        // API call failed - provide better error handling
+        console.error('Grammar check API call failed:', response.status, response.statusText);
+
+        // Try to get error details from response
+        let errorMessage = `API Error (${response.status})`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If we can't parse error response, use generic message
+          errorMessage = response.statusText || 'Unknown API error';
+        }
+
+        console.error('Grammar check error details:', errorMessage);
+
+        // Provide fallback message
+        let insertContent = '\n\n--- GRAMMAR CHECK UNAVAILABLE ---\n\n';
+        insertContent += '**Note:** AI grammar checking service is currently unavailable.\n\n';
+        insertContent += '**Your text:** ' + textContent.substring(0, 200) + (textContent.length > 200 ? '...' : '');
+        insertContent += '\n\n**Error:** ' + errorMessage;
+        insertContent += '\n\n*Try again later when the AI service is available.*';
+
+        editor.commands.insertContent(insertContent);
+        setGrammarStatus('success'); // Mark as success since we provided feedback
       }
 
       setTimeout(() => {
@@ -315,7 +340,37 @@ export default function WritePage() {
         editor.commands.insertContent(insertContent);
         setParaphraseStatus('success');
       } else {
-        throw new Error('Paraphrase failed');
+        // API call failed - provide better error handling
+        console.error('Paraphrase API call failed:', response.status, response.statusText);
+
+        // Try to get error details from response
+        let errorMessage = `API Error (${response.status})`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If we can't parse error response, use generic message
+          errorMessage = response.statusText || 'Unknown API error';
+        }
+
+        console.error('Paraphrase error details:', errorMessage);
+
+        // Provide fallback with basic text improvement
+        const fallbackText = textContent
+          .replace(/\s+/g, ' ') // Normalize spaces
+          .replace(/([.!?])\s*/g, '$1 ') // Ensure space after punctuation
+          .trim();
+
+        let insertContent = '\n\n--- PARAPHRASE UNAVAILABLE ---\n\n';
+        insertContent += '**Note:** AI paraphrase service is currently unavailable. Here\'s your original text with basic formatting cleanup:\n\n';
+        insertContent += fallbackText;
+        insertContent += '\n\n**Error:** ' + errorMessage;
+        insertContent += '\n\n*Try again later when the AI service is available.*';
+
+        editor.commands.insertContent(insertContent);
+        setParaphraseStatus('success'); // Still mark as success since we provided a fallback
       }
 
       setTimeout(() => {
