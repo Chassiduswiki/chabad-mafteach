@@ -22,7 +22,11 @@ export function CitationViewerModal({ open, citation, citationContent, onClose }
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div
         className="w-full max-w-2xl rounded-2xl bg-background shadow-2xl border border-border overflow-hidden max-h-[90vh] overflow-y-auto"
@@ -36,7 +40,11 @@ export function CitationViewerModal({ open, citation, citationContent, onClose }
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             className="rounded-full px-3 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             Close
