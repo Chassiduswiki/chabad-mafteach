@@ -5,12 +5,38 @@ import { Topic } from '@/lib/types';
 import { FileText, BookOpen, Plus, X, MessageSquare } from 'lucide-react';
 import directus from '@/lib/directus';
 import { readItems, createItem } from '@directus/sdk';
+import { ArticleReader } from './ArticleReader';
+
+/**
+ * ArticleTab Component
+ *
+ * Manages topic article display and editing functionality.
+ *
+ * RESPONSIBILITIES:
+ * - Receives topic object with paragraphs from API
+ * - Prepares paragraph data for ArticleReader
+ * - Handles statement annotation/editing
+ * - Provides editing modal for paragraph content
+ *
+ * DATA TRANSFORMATION:
+ * Topic.paragraphs[] → prepareArticleData() → ParagraphWithStatements[] → ArticleReader
+ */
 
 interface Statement {
     id: number;
     order_key: string;
     text: string;
     paragraph_id?: number;
+}
+
+interface StatementWithTopics {
+    id: number;
+    order_key: string;
+    text: string;
+    appended_text?: string; // Citation HTML from API
+    topics: Topic[];
+    sources: { id: number; title: string; external_url?: string | null; relationship_type?: string; page_number?: string; verse_reference?: string }[];
+    document_title?: string;
 }
 
 interface ArticleTabProps {
@@ -24,19 +50,6 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
     const [newStatementText, setNewStatementText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-
-    // Group paragraphs by document
-    const paragraphsByDocument = paragraphs.reduce((acc, para) => {
-        const docTitle = para.document_title || 'Unknown Document';
-        if (!acc[docTitle]) {
-            acc[docTitle] = [];
-        }
-        acc[docTitle].push(para);
-        return acc;
-    }, {} as Record<string, typeof paragraphs>);
-
-    const docEntries = Object.entries(paragraphsByDocument);
-    const showDocHeaders = docEntries.length > 1;
 
     // Seed statements map from API payload (document > paragraphs > statements)
     useEffect(() => {
@@ -113,66 +126,117 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
         }
     };
 
+    // Prepare data for ArticleReader
+    const prepareArticleData = () => {
+        // Transform paragraphs to include statements from both sources
+        // Input: Topic.paragraphs[] (from API)
+        // Output: ParagraphWithStatements[] (for ArticleReader)
+        const paragraphsWithStatements = paragraphs.map(para => {
+            const paraStatements = statements[para.id] || para.statements || [];
+            const statementsWithTopics: StatementWithTopics[] = paraStatements.map((stmt: Statement) => ({
+                id: stmt.id,
+                order_key: stmt.order_key,
+                text: stmt.text,
+                appended_text: (stmt as any).appended_text, // Citation HTML
+                topics: [topic], // For now, just the current topic
+                sources: [], // TODO: Fetch sources when available
+                document_title: para.document_title
+            }));
+
+            return {
+                id: para.id,
+                text: para.text, // Full HTML paragraph content
+                order_key: para.order_key,
+                document_title: para.document_title,
+                statements: statementsWithTopics // Footnotes with citations
+            };
+        });
+
+        // Collect all topics and sources
+        const allTopics = new Map<number, Topic>();
+        const allSources: { id: number; title: string; external_url?: string | null }[] = [];
+
+        paragraphsWithStatements.forEach(para => {
+            para.statements.forEach(stmt => {
+                stmt.topics.forEach(topic => allTopics.set(topic.id, topic));
+            });
+        });
+
+        return {
+            paragraphs: paragraphsWithStatements,
+            topicsInArticle: Array.from(allTopics.values()),
+            sources: allSources
+        };
+    };
+
     if (paragraphs.length === 0) {
         return (
-            <div className="text-center py-12 text-muted-foreground">
-                <FileText className="mx-auto h-16 w-16 mb-4 opacity-20" />
-                <h3 className="text-lg font-medium mb-2">Article Coming Soon</h3>
-                <p className="text-sm max-w-md mx-auto">
-                    The full article content for this topic will be available once the document paragraphs are associated.
-                </p>
+            <div className="text-center py-12">
+                <FileText className="mx-auto h-16 w-16 mb-4 text-muted-foreground/50" />
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Article in Development</h3>
+
+                {/* Show topic description if available */}
+                {topic.description && (
+                    <div className="mb-6 max-w-2xl mx-auto">
+                        <p className="text-muted-foreground leading-relaxed mb-4">
+                            {topic.description}
+                        </p>
+                    </div>
+                )}
+
+                {/* Helpful next steps */}
+                <div className="space-y-4 max-w-md mx-auto">
+                    <p className="text-sm text-muted-foreground">
+                        While we build the full article, explore related content:
+                    </p>
+
+                    <div className="grid gap-3">
+                        {/* Check if we have sources to show */}
+                        <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                            <h4 className="font-medium mb-2 text-foreground">📚 Explore Sources</h4>
+                            <p className="text-xs text-muted-foreground mb-3">
+                                See where this concept appears in Chassidic literature
+                            </p>
+                            <button className="text-xs px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                                View Sources Tab
+                            </button>
+                        </div>
+
+                        {/* Related topics hint */}
+                        <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                            <h4 className="font-medium mb-2 text-foreground">🔗 Related Concepts</h4>
+                            <p className="text-xs text-muted-foreground">
+                                Discover interconnected Chassidic ideas
+                            </p>
+                        </div>
+
+                        {/* Contribution hint */}
+                        <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                            <h4 className="font-medium mb-2 text-foreground">✨ Help Build This</h4>
+                            <p className="text-xs text-muted-foreground">
+                                This platform grows with community contributions
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
 
+    const { paragraphs: articleParagraphs, topicsInArticle, sources } = prepareArticleData();
+
     return (
         <>
-            <div className="space-y-8">
-                {/* Article Content */}
-                {docEntries.map(([docTitle, docParagraphs]) => (
-                    <section key={docTitle} className="space-y-6">
-                        {showDocHeaders && (
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                                    <BookOpen className="w-5 h-5" />
-                                </div>
-                                <h2 className="text-xl font-semibold">{docTitle}</h2>
-                            </div>
-                        )}
+            {/* Article Reader */}
+            <ArticleReader
+                paragraphs={articleParagraphs}
+                topicsInArticle={topicsInArticle}
+                sources={sources}
+                articleTitle={topic.canonical_title || topic.name || 'Article'}
+                isLoading={isLoading}
+            />
 
-                        <div className="space-y-4">
-                            {docParagraphs
-                                .sort((a, b) => a.order_key.localeCompare(b.order_key))
-                                .map((para, index) => (
-                                    <div key={index} className="prose prose-slate dark:prose-invert max-w-none">
-                                        <div className="p-4 rounded-lg border bg-card/50 group hover:bg-card/70 transition-colors">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <p className="text-sm text-muted-foreground mb-2">
-                                                        {para.order_key}
-                                                    </p>
-                                                    <div
-                                                        className="prose-sm dark:prose-invert text-sm leading-relaxed"
-                                                        dangerouslySetInnerHTML={{ __html: para.text }}
-                                                    />
-                                                </div>
-                                                <button
-                                                    onClick={() => handleParagraphClick(para)}
-                                                    className="ml-4 p-2 rounded-lg bg-primary/10 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/20"
-                                                    title="Annotate paragraph"
-                                                >
-                                                    <MessageSquare className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
-                    </section>
-                ))}
-            </div>
-
-            {/* Statement Editing Modal */}
+            {/* Statement Editing Modal - Keep for annotation */}
             {selectedParagraph && (
                 <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSelectedParagraph(null)}>
                     <div 
@@ -187,7 +251,7 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                         <div className="px-4 pb-6 sm:px-6">
                             <div className="mb-4 flex items-center justify-between">
                                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Annotate Paragraph {selectedParagraph.order_key}
+                                    Annotate Paragraph {selectedParagraph?.order_key}
                                 </div>
                                 <button
                                     onClick={() => setSelectedParagraph(null)}
@@ -204,12 +268,12 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                                 </div>
                                 <div 
                                     className="prose-sm dark:prose-invert text-sm leading-relaxed"
-                                    dangerouslySetInnerHTML={{ __html: selectedParagraph.text }}
+                                    dangerouslySetInnerHTML={{ __html: selectedParagraph?.text || '' }}
                                 />
                             </div>
 
                             {/* Existing Statements */}
-                            {statements[selectedParagraph.id] && statements[selectedParagraph.id].length > 0 && (
+                            {selectedParagraph && statements[selectedParagraph.id] && statements[selectedParagraph.id].length > 0 && (
                                 <div className="mb-6">
                                     <div className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                         Existing Statements ({statements[selectedParagraph.id].length})
@@ -246,7 +310,7 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                                     <div className="flex justify-end">
                                         <button
                                             onClick={handleCreateStatement}
-                                            disabled={!newStatementText.trim() || isCreating}
+                                            disabled={!selectedParagraph || !newStatementText.trim() || isCreating}
                                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isCreating ? (
