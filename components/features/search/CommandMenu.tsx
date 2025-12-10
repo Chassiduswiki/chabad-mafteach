@@ -100,21 +100,227 @@ export function CommandMenu() {
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-2 sm:pt-[15vh] sm:px-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setOpen(false)}
-                        className="absolute inset-0 bg-background/60 backdrop-blur-md"
-                    />
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-2 sm:pt-[15vh] sm:px-4 sm:flex sm:items-start sm:justify-center">
+                    {/* Mobile Bottom Sheet */}
+                    <div className="flex sm:hidden items-end justify-center w-full h-full">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setOpen(false)}
+                            className="absolute inset-0 bg-background/60 backdrop-blur-md"
+                        />
 
+                        <motion.div
+                            initial={{ opacity: 0, y: '100%' }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: '100%' }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl border-t border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[90vh] flex flex-col"
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.1}
+                            onDragEnd={(event, info) => {
+                                if (info.offset.y > 100) {
+                                    setOpen(false);
+                                }
+                            }}
+                        >
+                            {/* Mobile Handle Bar */}
+                            <div className="flex justify-center py-3">
+                                <div className="h-1.5 w-12 bg-muted-foreground/30 rounded-full" />
+                            </div>
+
+                            <Command className="w-full">
+                                <div className="flex items-center border-b border-border px-4">
+                                    <Search className="mr-3 h-5 w-5 text-muted-foreground" />
+                                    <Command.Input
+                                        value={search}
+                                        onValueChange={setSearch}
+                                        placeholder="Search for anything..."
+                                        className="flex h-14 w-full rounded-md bg-transparent py-3 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                        autoFocus
+                                    />
+                                    <button
+                                        onClick={() => setOpen(false)}
+                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ml-2"
+                                        aria-label="Close search"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <Command.List className="max-h-[60vh] overflow-y-auto p-2 scrollbar-hide">
+                                    {!search && results.length === 0 && (
+                                        <div className="py-8 text-center text-base text-muted-foreground">
+                                            Start typing to search...
+                                        </div>
+                                    )}
+
+                                    {search && loading && (
+                                        <div className="flex items-center justify-center py-8 text-muted-foreground">
+                                            <LoadingSpinner size="sm" className="mr-2" />
+                                            Searching...
+                                        </div>
+                                    )}
+
+                                    {search && !loading && results.length === 0 && (
+                                        <Command.Empty className="py-8 text-center text-base text-muted-foreground">
+                                            <div className="mb-2 flex justify-center">
+                                                <Search className="h-8 w-8 opacity-20" />
+                                            </div>
+                                            No results found for "{search}".
+                                        </Command.Empty>
+                                    )}
+
+                                    {results.length > 0 && (
+                                        <>
+                                            {/* Topics/Concepts Group */}
+                                            {results.filter(r => r.type === 'topic').length > 0 && (
+                                                <Command.Group heading={`Concepts (${results.filter(r => r.type === 'topic').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'topic').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-4 text-base outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <Brain className="h-6 w-6 text-purple-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            {item.category && (
+                                                                                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                                                                                    {item.category}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">topic</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-sm text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-5 w-5 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+
+                                            {/* Documents/Sources Group */}
+                                            {results.filter(r => r.type === 'document').length > 0 && (
+                                                <Command.Group heading={`Sources (${results.filter(r => r.type === 'document').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'document').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-4 text-base outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <BookOpen className="h-6 w-6 text-blue-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-sm text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-5 w-5 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+
+                                            {/* Locations Group */}
+                                            {results.filter(r => r.type === 'location').length > 0 && (
+                                                <Command.Group heading={`Locations (${results.filter(r => r.type === 'location').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'location').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-4 text-base outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <Hash className="h-6 w-6 text-amber-500" />
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-sm text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-5 w-5 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+                                        </>
+                                    )}
+                                </Command.List>
+                                <div className="flex items-center justify-center border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+                                    <div className="text-center">
+                                        <div className="mb-1">Swipe down or tap outside to close</div>
+                                        <div className="text-[10px] text-muted-foreground/70">Chabad Maftaiach v2.0</div>
+                                    </div>
+                                </div>
+                            </Command>
+                        </motion.div>
+                    </div>
+
+                    {/* Desktop Modal */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[90vh] flex flex-col"
+                        className="hidden sm:flex w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[90vh] flex flex-col"
                     >
                         <Command className="w-full" shouldFilter={false}>
                             <div className="flex items-center border-b border-border px-4">
