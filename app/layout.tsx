@@ -12,6 +12,7 @@ import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
 
 import { MobileNav } from "@/components/mobile/MobileNav";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -20,8 +21,66 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://beta.chassiduswiki.com'),
-  title: "Chabad Mafteach - Chassidic Concepts Explorer",
-  description: "Explore Chassidic concepts with citations and sources",
+  title: {
+    default: "Chabad Mafteach - Chassidic Concepts Explorer",
+    template: "%s | Chabad Mafteach"
+  },
+  description: "Explore Chassidic concepts with citations and sources from Chabad literature. Discover the depth of Jewish mysticism, ethics, and philosophy through our comprehensive index.",
+  keywords: ["Chassidus", "Chabad", "Jewish", "Kabbalah", "Torah", "Mysticism", "Philosophy", "Ethics", "Lubavitch", "Rebbe"],
+  authors: [{ name: "Chabad Mafteach Team" }],
+  creator: "Chabad Mafteach",
+  publisher: "Chabad Mafteach",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+    title: 'Chabad Mafteach - Chassidic Concepts Explorer',
+    description: 'Explore Chassidic concepts with citations and sources from Chabad literature. Discover the depth of Jewish mysticism, ethics, and philosophy.',
+    siteName: 'Chabad Mafteach',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Chabad Mafteach - Chassidic Concepts Explorer',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chabad Mafteach - Chassidic Concepts Explorer',
+    description: 'Explore Chassidic concepts with citations and sources from Chabad literature.',
+    images: ['/og-image.png'],
+    creator: '@chabadmafteach',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Chabad Mafteach',
+  },
 };
 
 export default function RootLayout({
@@ -37,7 +96,9 @@ export default function RootLayout({
             <SearchProvider>
               <OnboardingProvider>
                 <PopupProvider>
-                  {children}
+                  <ErrorBoundary>
+                    {children}
+                  </ErrorBoundary>
                   <GlobalPopupRenderer />
                   <CommandMenu />
                   <MobileNav />

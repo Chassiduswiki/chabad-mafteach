@@ -200,6 +200,7 @@ export function ArticleReader({
           textAlign: textAlign,
           textAlignLast: textAlign
         }}
+        lang={textDirection === 'rtl' ? 'he' : undefined}
         onClick={(e) => {
           // Prevent clicks during modal closing animation
           if (isModalClosing) return;
@@ -243,7 +244,7 @@ export function ArticleReader({
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
         <div
-          className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-500 ease-out"
+          className="h-full bg-primary transition-all duration-500 ease-out"
           style={{ width: `${readingProgress}%` }}
         />
       </div>
@@ -463,7 +464,7 @@ function ArticleReaderSkeleton() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Progress Bar Skeleton */}
       <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
-        <div className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary animate-pulse" style={{ width: '30%' }} />
+        <div className="h-full bg-primary animate-pulse" style={{ width: '30%' }} />
       </div>
 
       {/* Header Skeleton */}
