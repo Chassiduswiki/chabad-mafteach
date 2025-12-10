@@ -76,6 +76,31 @@ export default function EditorPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {/* Write Content - Most Important */}
+          <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow md:col-span-2 lg:col-span-3">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                <Edit3 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">✨ Write Content</h3>
+                <p className="text-sm text-muted-foreground">Create new articles and entries with Hebrew OCR and advanced citations</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Rich text editor • Hebrew OCR • Citation management • AI assistance
+              </div>
+              <a
+                href="/editor/write"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+              >
+                <Edit3 className="h-4 w-4" />
+                Start Writing
+              </a>
+            </div>
+          </div>
+
           {/* Topics Management */}
           <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
