@@ -45,9 +45,9 @@ export function CommandMenu() {
 
                 const topicResults: SearchResult[] = (data.topics || []).map((t: any) => ({
                     id: `topic-${t.id}`,
-                    title: t.title || t.name || 'Untitled',
+                    title: t.name || t.canonical_title || 'Untitled',
                     type: 'topic' as const,
-                    subtitle: t.definition?.substring(0, 80) + (t.definition?.length > 80 ? '...' : ''),
+                    subtitle: t.definition_short || t.description ? (t.definition_short || t.description).substring(0, 100) + ((t.definition_short || t.description)?.length > 100 ? '...' : '') : undefined,
                     category: t.category || t.topic_type,
                     slug: t.slug,
                     url: `/topics/${t.slug}`
@@ -57,8 +57,8 @@ export function CommandMenu() {
                     id: `document-${s.id}`,
                     title: s.title,
                     type: 'document' as const,
-                    subtitle: s.doc_type ?? undefined,
-                    url: `/documents/${s.id}`
+                    subtitle: [s.author, s.doc_type, s.category].filter(Boolean).join(' • ') || s.doc_type || undefined,
+                    url: `/seforim/${s.id}`
                 }));
 
                 const locationResults: SearchResult[] = (data.locations || []).map((l: any) => ({
@@ -72,16 +72,48 @@ export function CommandMenu() {
 
                 // Apply fuzzy search for better matching
                 const fuse = new Fuse(allResults, {
-                    keys: ['title', 'subtitle', 'slug', 'category'],
-                    threshold: 0.4, // 0 = perfect match, 1 = match anything
-                    includeScore: true
+                    keys: [
+                        { name: 'title', weight: 0.4 },
+                        { name: 'subtitle', weight: 0.3 },
+                        { name: 'category', weight: 0.2 },
+                        { name: 'slug', weight: 0.1 }
+                    ],
+                    threshold: 0.3, // More permissive - 0 = perfect match, 1 = match anything
+                    includeScore: true,
+                    ignoreLocation: true, // Search anywhere in the text
+                    findAllMatches: true // Find all matches, not just the first
                 });
 
-                const fuzzyResults = search.length > 2
-                    ? fuse.search(search).map(result => result.item)
-                    : allResults; // Don't use fuzzy for very short queries
+                let filteredResults: SearchResult[];
+                if (search.length >= 3) {
+                    // For longer queries, use fuzzy search with ranking
+                    const fuseResults = fuse.search(search);
+                    filteredResults = fuseResults
+                        .filter(result => (result.score || 0) < 0.6) // Filter out very poor matches
+                        .sort((a, b) => (a.score || 0) - (b.score || 0)) // Sort by relevance
+                        .slice(0, 20) // Limit to top 20 results
+                        .map(result => result.item);
+                } else if (search.length >= 1) {
+                    // For short queries, show direct substring matches first, then fuzzy
+                    const directMatches = allResults.filter(result =>
+                        result.title.toLowerCase().includes(search.toLowerCase()) ||
+                        (result.subtitle && result.subtitle.toLowerCase().includes(search.toLowerCase())) ||
+                        (result.category && result.category.toLowerCase().includes(search.toLowerCase()))
+                    );
 
-                setResults(fuzzyResults);
+                    const fuzzyMatches = fuse.search(search)
+                        .filter(result => (result.score || 0) < 0.5)
+                        .slice(0, 15)
+                        .map(result => result.item)
+                        .filter(item => !directMatches.some(direct => direct.id === item.id)); // Avoid duplicates
+
+                    filteredResults = [...directMatches, ...fuzzyMatches].slice(0, 20);
+                } else {
+                    // For empty search, show popular/recent topics
+                    filteredResults = allResults.slice(0, 10);
+                }
+
+                setResults(filteredResults);
             } catch (error) {
                 console.error('Search failed:', error);
             } finally {

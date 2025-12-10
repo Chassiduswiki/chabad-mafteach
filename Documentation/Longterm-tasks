@@ -261,7 +261,7 @@ The frontend TypeScript types now match the new Directus schema:
 
 ### Phase 9b: Navigation & Discovery Issues  
 - [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
-- [ ] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
+- [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
 - [ ] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
 
 ### Phase 9c: Visual & Mobile Polish
