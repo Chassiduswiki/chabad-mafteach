@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useCitationPalette } from './hooks/useCitationPalette';
@@ -29,6 +29,13 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
     content?: string;
   } | null>(null);
 
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component only renders on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
     isOpen: showCitationPalette,
     range: citationRange,
@@ -39,6 +46,7 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   // Initialize TipTap editor
   const editor = useEditor({
+    immediatelyRender: false, // Fix SSR hydration issues
     extensions: [
       StarterKit.configure({
         // Configure starter kit to match our needs
@@ -134,8 +142,8 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
     }
   };
 
-  // Show loading state while editor initializes
-  if (!editor) {
+  // Show loading state while component mounts or editor initializes
+  if (!mounted || !editor) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent"></div>
