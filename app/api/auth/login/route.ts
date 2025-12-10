@@ -14,7 +14,7 @@ const users = [
   {
     id: '2',
     email: 'admin@chabad.org',
-    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6fYzYXxGK', // 'admin123'
+    password: '$2b$12$cpClpCWgDD4BsphRdRxAN.894tRJXGjaHzi09gj2MSw.Z/Z7eqvNK', // 'admin123'
     role: 'admin',
     name: 'Admin User'
   }
