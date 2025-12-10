@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Upload, FileText, Users, Settings, Edit3 } from 'lucide-react';
+import { BookOpen, Upload, FileText, Users, Settings, Edit3, Search } from 'lucide-react';
 import { IngestionModal } from "@/components/editor/IngestionModal";
 
 export default function EditorPage() {
@@ -76,24 +76,24 @@ export default function EditorPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {/* Write Content - Most Important */}
+          {/* Write & Learn - Most Common Use Case */}
           <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow md:col-span-2 lg:col-span-3">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 text-white">
                 <Edit3 className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">✨ Write Content</h3>
-                <p className="text-sm text-muted-foreground">Create new articles and entries with Hebrew OCR and advanced citations</p>
+                <h3 className="text-lg font-semibold text-foreground">✨ Write & Learn</h3>
+                <p className="text-sm text-muted-foreground">Create articles, explanations, and personal insights with AI assistance</p>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Rich text editor • Hebrew OCR • Citation management • AI assistance
+                Rich editor • Hebrew OCR • Smart citations • AI processing
               </div>
               <a
                 href="/editor/write"
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
               >
                 <Edit3 className="h-4 w-4" />
                 Start Writing
@@ -101,43 +101,43 @@ export default function EditorPage() {
             </div>
           </div>
 
-          {/* Topics Management */}
+          {/* Quick Research */}
           <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
-                <Edit3 className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-500">
+                <Search className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground">Edit Topics</h3>
+              <h3 className="text-lg font-semibold text-foreground">Research Topics</h3>
             </div>
             <p className="text-muted-foreground mb-4">
-              Manage topic definitions, boundaries, and descriptions without using Directus.
+              Explore and improve topic definitions, boundaries, and explanations.
             </p>
             <a
               href="/editor/topics"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
-              <Edit3 className="h-4 w-4" />
-              Manage Topics
+              <Search className="h-4 w-4" />
+              Browse Topics
             </a>
           </div>
 
-          {/* Import Content */}
+          {/* Import Books */}
           <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <Upload className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
+                <BookOpen className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground">Import Content</h3>
+              <h3 className="text-lg font-semibold text-foreground">Import Books</h3>
             </div>
             <p className="text-muted-foreground mb-4">
-              Import new texts from Sefaria, upload PDFs, or add text files to the system.
+              Add seforim from Sefaria, upload PDFs, or import text files to the library.
             </p>
             <a
               href="/editor/import"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
-              <Upload className="h-4 w-4" />
-              Start Importing
+              <BookOpen className="h-4 w-4" />
+              Import Content
             </a>
           </div>
 
