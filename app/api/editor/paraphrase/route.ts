@@ -10,6 +10,23 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
+    // Check if AI service is configured
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.warn('OPENROUTER_API_KEY not configured, returning fallback response');
+      return NextResponse.json({
+        success: false,
+        error: 'AI service is not configured. Please contact support.',
+        fallback: {
+          original_text: text,
+          improved_text: text.replace(/\s+/g, ' ').replace(/([.!?])\s*/g, '$1 ').trim(),
+          changes_made: 0,
+          improvements: [],
+          confidence: 0,
+          style_applied: 'basic_cleanup'
+        }
+      }, { status: 200 });
+    }
+
     console.log(`User ${context.userId} (${context.role}) requesting paraphrase for text: ${text.substring(0, 50)}...`);
 
     // Use OpenRouter to paraphrase and improve text

@@ -325,20 +325,34 @@ export default function WritePage() {
         const result = await response.json();
         console.log('Paraphrase result:', result);
 
-        // Insert improved text
-        let insertContent = '\n\n--- IMPROVED VERSION ---\n\n';
-        insertContent += result.result.improved_text;
-        insertContent += '\n\n--- IMPROVEMENTS MADE ---\n\n';
+        // Handle fallback response when AI service is not configured
+        if (result.success === false && result.fallback) {
+          console.warn('AI service not configured, using fallback');
 
-        if (result.result.improvements && result.result.improvements.length > 0) {
-          result.result.improvements.forEach((improvement: any, index: number) => {
-            insertContent += `${index + 1}. **${improvement.type.toUpperCase()}**: ${improvement.reason}\n`;
-            insertContent += `   "${improvement.original}" → "${improvement.improved}"\n\n`;
-          });
+          let insertContent = '\n\n--- BASIC TEXT IMPROVEMENT ---\n\n';
+          insertContent += '**Note:** AI paraphrase service is not configured. Here\'s your text with basic formatting cleanup:\n\n';
+          insertContent += result.fallback.improved_text;
+          insertContent += '\n\n**Status:** Basic cleanup applied (AI service needs configuration)';
+          insertContent += '\n\n*Contact support to enable AI-powered paraphrasing.*';
+
+          editor.commands.insertContent(insertContent);
+          setParaphraseStatus('success');
+        } else {
+          // Normal AI response
+          let insertContent = '\n\n--- IMPROVED VERSION ---\n\n';
+          insertContent += result.result.improved_text;
+          insertContent += '\n\n--- IMPROVEMENTS MADE ---\n\n';
+
+          if (result.result.improvements && result.result.improvements.length > 0) {
+            result.result.improvements.forEach((improvement: any, index: number) => {
+              insertContent += `${index + 1}. **${improvement.type.toUpperCase()}**: ${improvement.reason}\n`;
+              insertContent += `   "${improvement.original}" → "${improvement.improved}"\n\n`;
+            });
+          }
+
+          editor.commands.insertContent(insertContent);
+          setParaphraseStatus('success');
         }
-
-        editor.commands.insertContent(insertContent);
-        setParaphraseStatus('success');
       } else {
         // API call failed - provide better error handling
         console.error('Paraphrase API call failed:', response.status, response.statusText);
@@ -585,23 +599,65 @@ export default function WritePage() {
                   </div>
                 </button>
 
-                <button className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                    <Check className="h-3 w-3" />
+                <button
+                  onClick={handleGrammarCheck}
+                  className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs"
+                >
+                  <div className={`flex h-6 w-6 items-center justify-center rounded ${
+                    grammarStatus === 'processing' ? 'bg-blue-500/10 text-blue-500' :
+                    grammarStatus === 'success' ? 'bg-green-500/10 text-green-500' :
+                    grammarStatus === 'error' ? 'bg-red-500/10 text-red-500' :
+                    'bg-blue-500/10 text-blue-500'
+                  }`}>
+                    {grammarStatus === 'processing' ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border border-blue-500 border-t-transparent" />
+                    ) : grammarStatus === 'success' ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : grammarStatus === 'error' ? (
+                      <AlertCircle className="h-3 w-3" />
+                    ) : (
+                      <Check className="h-3 w-3" />
+                    )}
                   </div>
-                  <div>
-                    <div className="font-medium text-foreground">Grammar Check</div>
-                    <div className="text-xs text-muted-foreground">AI-powered spelling & grammar</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-foreground truncate">Grammar Check</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {grammarStatus === 'processing' ? 'Analyzing...' :
+                       grammarStatus === 'success' ? 'Complete!' :
+                       grammarStatus === 'error' ? 'Failed' :
+                       'AI-powered spelling & grammar'}
+                    </div>
                   </div>
                 </button>
 
-                <button className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
-                    <RefreshCw className="h-3 w-3" />
+                <button
+                  onClick={handleParaphrase}
+                  className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-accent rounded-md transition-colors text-xs"
+                >
+                  <div className={`flex h-6 w-6 items-center justify-center rounded ${
+                    paraphraseStatus === 'processing' ? 'bg-blue-500/10 text-blue-500' :
+                    paraphraseStatus === 'success' ? 'bg-green-500/10 text-green-500' :
+                    paraphraseStatus === 'error' ? 'bg-red-500/10 text-red-500' :
+                    'bg-orange-500/10 text-orange-500'
+                  }`}>
+                    {paraphraseStatus === 'processing' ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border border-blue-500 border-t-transparent" />
+                    ) : paraphraseStatus === 'success' ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : paraphraseStatus === 'error' ? (
+                      <AlertCircle className="h-3 w-3" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
                   </div>
-                  <div>
-                    <div className="font-medium text-foreground">Paraphrase</div>
-                    <div className="text-xs text-muted-foreground">Improve clarity and flow</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-foreground truncate">Paraphrase</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {paraphraseStatus === 'processing' ? 'Processing...' :
+                       paraphraseStatus === 'success' ? 'Complete!' :
+                       paraphraseStatus === 'error' ? 'Failed' :
+                       'Improve clarity and flow'}
+                    </div>
                   </div>
                 </button>
               </div>
@@ -721,18 +777,21 @@ export default function WritePage() {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Grammar Check:</span>
                       <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        !process.env?.OPENROUTER_API_KEY ? 'bg-yellow-100 text-yellow-600' :
                         grammarStatus === 'idle' ? 'bg-gray-100 text-gray-600' :
                         grammarStatus === 'processing' ? 'bg-blue-100 text-blue-600' :
                         grammarStatus === 'success' ? 'bg-green-100 text-green-600' :
                         'bg-red-100 text-red-600'
                       }`}>
                         <div className={`w-1.5 h-1.5 rounded-full ${
+                          !process.env?.OPENROUTER_API_KEY ? 'bg-yellow-400' :
                           grammarStatus === 'idle' ? 'bg-gray-400' :
                           grammarStatus === 'processing' ? 'bg-blue-500' :
                           grammarStatus === 'success' ? 'bg-green-500' :
                           'bg-red-500'
                         }`}></div>
-                        {grammarStatus === 'idle' ? 'Ready' :
+                        {!process.env?.OPENROUTER_API_KEY ? 'Not Configured' :
+                         grammarStatus === 'idle' ? 'Ready' :
                          grammarStatus === 'processing' ? 'Processing' :
                          grammarStatus === 'success' ? 'Complete' :
                          'Error'}
@@ -741,18 +800,21 @@ export default function WritePage() {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Paraphrase:</span>
                       <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        !process.env?.OPENROUTER_API_KEY ? 'bg-yellow-100 text-yellow-600' :
                         paraphraseStatus === 'idle' ? 'bg-gray-100 text-gray-600' :
                         paraphraseStatus === 'processing' ? 'bg-blue-100 text-blue-600' :
                         paraphraseStatus === 'success' ? 'bg-green-100 text-green-600' :
                         'bg-red-100 text-red-600'
                       }`}>
                         <div className={`w-1.5 h-1.5 rounded-full ${
+                          !process.env?.OPENROUTER_API_KEY ? 'bg-yellow-400' :
                           paraphraseStatus === 'idle' ? 'bg-gray-400' :
                           paraphraseStatus === 'processing' ? 'bg-blue-500' :
                           paraphraseStatus === 'success' ? 'bg-green-500' :
                           'bg-red-500'
                         }`}></div>
-                        {paraphraseStatus === 'idle' ? 'Ready' :
+                        {!process.env?.OPENROUTER_API_KEY ? 'Not Configured' :
+                         paraphraseStatus === 'idle' ? 'Ready' :
                          paraphraseStatus === 'processing' ? 'Processing' :
                          paraphraseStatus === 'success' ? 'Complete' :
                          'Error'}
