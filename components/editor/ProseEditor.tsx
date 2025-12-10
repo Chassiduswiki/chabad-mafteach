@@ -47,6 +47,7 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
     source_id: number | string | null;
     source_title: string | null;
     reference: string | null;
+    content?: string;
   } | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -225,6 +226,7 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
       <CitationViewerModal
         open={Boolean(activeCitation)}
         citation={activeCitation}
+        citationContent={activeCitation?.content}
         onClose={() => setActiveCitation(null)}
       />
     </div>
