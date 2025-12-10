@@ -14,12 +14,14 @@ interface TipTapEditorProps {
   docId: string | null;
   className?: string;
   onBreakStatements?: () => Promise<void>;
+  onEditorReady?: (editor: any) => void;
 }
 
 export const TipTapEditor: React.FC<TipTapEditorProps> = ({
   docId,
   className,
-  onBreakStatements
+  onBreakStatements,
+  onEditorReady
 }) => {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [activeCitation, setActiveCitation] = useState<{
@@ -35,14 +37,6 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const {
-    isOpen: showCitationPalette,
-    range: citationRange,
-    openWithRange,
-    closePalette,
-    handleOpenChange,
-  } = useCitationPalette();
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -106,10 +100,30 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
     },
   });
 
+  // Call onEditorReady when editor is available
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
+
   const handleInsertCitation = () => {
     // Open citation palette or dialog
     console.log('Insert citation clicked');
-    // TODO: Open citation selection dialog
+
+    // For now, open a simple citation dialog
+    const citationText = prompt('Enter citation (e.g., Tanya 1:1 or "Book Title" p. 45):');
+    if (citationText && editor) {
+      // Insert citation as a formatted node
+      editor.commands.insertContent({
+        type: 'citation',
+        attrs: {
+          sourceTitle: citationText,
+          reference: citationText,
+          sourceId: null,
+        },
+      });
+    }
   };
 
   const handleInsertImage = () => {
