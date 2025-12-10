@@ -265,9 +265,9 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
 
 ### Phase 9c: Visual & Mobile Polish
-- [ ] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
-- [ ] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
-- [ ] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+- [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
+- [x] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
+- [x] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
 
 ### Phase 9d: System Reliability
 - [ ] **Audit editor permissions** - Resolve 403 errors, ensure proper Directus role configuration for editor functionality

@@ -131,11 +131,11 @@ export function ArticleReader({
         if (statementText === 'complete rasha') {
           // Replace the HTML pattern: complete&nbsp;<em>rasha</em>
           const htmlPattern = /complete&nbsp;<em>rasha<\/em>/gi;
-          highlightedHtml = highlightedHtml.replace(htmlPattern, `<span class="statement-highlight cursor-pointer bg-yellow-200 hover:bg-yellow-300 px-1 rounded transition-colors duration-200" data-statement-id="${statement.id}" title="Click to view citation">complete&nbsp;<em>rasha</em></span>`);
+          highlightedHtml = highlightedHtml.replace(htmlPattern, `<span class="statement-highlight cursor-pointer bg-accent/50 hover:bg-accent text-accent-foreground px-1 rounded transition-colors duration-200" data-statement-id="${statement.id}" title="Click to view citation">complete&nbsp;<em>rasha</em></span>`);
         } else {
           // For other statements, try exact match
           const regex = new RegExp(`(${statementText})`, 'gi');
-          highlightedHtml = highlightedHtml.replace(regex, `<span class="statement-highlight cursor-pointer bg-yellow-200 hover:bg-yellow-300 px-1 rounded transition-colors duration-200" data-statement-id="${statement.id}" title="Click to view citation">$1</span>`);
+          highlightedHtml = highlightedHtml.replace(regex, `<span class="statement-highlight cursor-pointer bg-accent/50 hover:bg-accent text-accent-foreground px-1 rounded transition-colors duration-200" data-statement-id="${statement.id}" title="Click to view citation">$1</span>`);
         }
       });
 
@@ -218,7 +218,7 @@ export function ArticleReader({
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8 pb-24 sm:pb-8 sm:px-6 lg:py-12">
         {/* Article-like Text Container */}
-        <div className="bg-background/50 rounded-2xl border border-border p-8 sm:p-10 lg:p-14">
+        <div className="bg-card/80 dark:bg-card/40 border border-border p-8 sm:p-10 lg:p-14 backdrop-blur-sm">
           <div className="space-y-8">
             {paragraphs.length > 0 ? (
               paragraphs.map((paragraph) => (
