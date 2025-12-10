@@ -15,13 +15,17 @@ interface TipTapEditorProps {
   className?: string;
   onBreakStatements?: () => Promise<void>;
   onEditorReady?: (editor: any) => void;
+  onGrammarCheck?: () => Promise<void>;
+  onParaphrase?: () => Promise<void>;
 }
 
 export const TipTapEditor: React.FC<TipTapEditorProps> = ({
   docId,
   className,
   onBreakStatements,
-  onEditorReady
+  onEditorReady,
+  onGrammarCheck,
+  onParaphrase
 }) => {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [activeCitation, setActiveCitation] = useState<{
@@ -174,6 +178,8 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         onBreakStatements={onBreakStatements}
         onInsertCitation={handleInsertCitation}
         onInsertImage={handleInsertImage}
+        onGrammarCheck={onGrammarCheck}
+        onParaphrase={onParaphrase}
         isSaving={false}
       />
 
