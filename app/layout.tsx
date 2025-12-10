@@ -8,6 +8,9 @@ import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 
+import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
+import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
+
 import { MobileNav } from "@/components/mobile/MobileNav";
 
 const inter = Inter({
@@ -32,12 +35,15 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SearchProvider>
-              <PopupProvider>
-                {children}
-                <GlobalPopupRenderer />
-                <CommandMenu />
-                <MobileNav />
-              </PopupProvider>
+              <OnboardingProvider>
+                <PopupProvider>
+                  {children}
+                  <GlobalPopupRenderer />
+                  <CommandMenu />
+                  <MobileNav />
+                  <OnboardingManager />
+                </PopupProvider>
+              </OnboardingProvider>
             </SearchProvider>
           </QueryProvider>
         </ThemeProvider>

@@ -124,7 +124,7 @@ export default function Home() {
         </motion.p>
 
         {/* Onboarding Hints - Guide first-time users */}
-        <OnboardingHints />
+        {/* <OnboardingHints /> */}
 
         {/* Command Palette Trigger Area */}
         <motion.div
@@ -153,7 +153,7 @@ export default function Home() {
         </motion.div>
 
         {/* Content Discovery Section - Moved up for above-fold visibility */}
-        <div className="mt-16 w-full">
+        <div className="mt-16 w-full" data-onboarding="explore-section">
           <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
             Discover Content
           </h2>
