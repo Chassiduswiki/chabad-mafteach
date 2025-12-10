@@ -26,64 +26,69 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl rounded-2xl bg-background shadow-2xl border border-border overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="space-y-1">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Citation</p>
-            <p className="text-base font-semibold text-gray-900">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Citation</p>
+            <p className="text-lg font-semibold text-foreground">
               {citation.source_title ?? "Source"}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+            className="rounded-full px-3 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             Close
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-6">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Reference</p>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-2">Reference</p>
+            <p className="text-foreground">
               {citation.reference || "Not specified"}
             </p>
           </div>
 
           {citation.reference && (
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Sefaria Text</p>
+              <p className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Sefaria Text</p>
               {loading && (
-                <div className="text-sm text-gray-600">Loading text...</div>
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
+                  Loading text...
+                </div>
               )}
               {error && (
-                <div className="text-sm text-red-600">Error loading text: {error}</div>
+                <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                  Error loading text: {error}
+                </div>
               )}
               {sefariaData && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {sefariaData.text.map((paragraph, index) => (
-                    <div key={index} className="border-l-4 border-blue-200 pl-4 py-2">
-                      <p className="text-sm text-gray-800 leading-relaxed">{paragraph}</p>
+                    <div key={index} className="border-l-4 border-primary/20 pl-4 py-3 bg-muted/20 rounded-r-lg">
+                      <p className="text-foreground leading-relaxed">{paragraph}</p>
                       {sefariaData.he && sefariaData.he[index] && (
-                        <p className="text-sm text-blue-700 font-serif mt-1 leading-relaxed" dir="rtl">
+                        <p className="text-primary font-serif mt-2 leading-relaxed" dir="rtl">
                           {sefariaData.he[index]}
                         </p>
                       )}
                     </div>
                   ))}
-                  <div className="text-xs text-gray-500 mt-2">
-                    Source: {sefariaData.ref} ({sefariaData.book})
+                  <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+                    Source: <span className="font-medium">{sefariaData.ref}</span> ({sefariaData.book})
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Source ID</p>
-            <p className="text-sm text-gray-800">
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">Source ID</p>
+            <p className="text-foreground font-mono text-sm">
               {citation.source_id ?? "Unknown"}
             </p>
           </div>
