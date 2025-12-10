@@ -71,10 +71,10 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
 
 ### Phase 3a: Extract & Generalize (IMMEDIATE)
-- [x] ~~Rename `TanyaChapterReader` → `TorahReader`.~~ **BETTER**: Created `BookReader` component with premium UX.
-- [x] Extract Tanya-specific data into a clean `Chapter` / `Block` interface (matches `documents/paragraphs/statements` shape).
-- [x] ~~Keep reading from local `likkutei-amarim-1.ts` for now~~ **DONE**: Now fetches from Directus.
-- [x] Test: `/seforim/tanya-likkutei-amarim/1` still works, reader is reusable.
+- [x] Created advanced TorahReader in `/seforim/[seferId]/page.tsx` with virtual scrolling, citation handling, settings, and mobile optimization
+- [x] Generalized TorahReader component (`/components/TorahReader.tsx`) for flexible content structures
+- [x] Integrated Directus data fetching for all sefer content
+- [x] Tested `/seforim/[seferId]` routes work for any document type
 
 ### Phase 3b: Directus Modeling (After 3a)
 - [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
