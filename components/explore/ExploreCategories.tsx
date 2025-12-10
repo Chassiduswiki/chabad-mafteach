@@ -12,6 +12,7 @@ import {
     MapPin, // Places
     Calendar // Events
 } from 'lucide-react';
+import { memo } from 'react';
 
 const categories = [
     {
@@ -88,27 +89,33 @@ const categories = [
     }
 ];
 
-export function ExploreCategories() {
+export const ExploreCategories = memo(function ExploreCategories() {
     return (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {categories.map((category, index) => (
-                <Link
+                <motion.div
                     key={category.id}
-                    href={`/topics?category=${category.id}`}
-                    className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:shadow-lg hover:-translate-y-1"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                    <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${category.bg} ${category.color}`}>
-                        <category.icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="mb-1 font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {category.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                        {category.description}
-                    </p>
-                    <div className={`absolute inset-0 border-2 opacity-0 transition-opacity group-hover:opacity-100 ${category.border} rounded-xl pointer-events-none`} />
-                </Link>
+                    <Link
+                        href={`/topics?category=${category.id}`}
+                        className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:shadow-lg hover:-translate-y-1"
+                    >
+                        <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${category.bg} ${category.color}`}>
+                            <category.icon className="h-5 w-5" />
+                        </div>
+                        <h3 className="mb-1 font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {category.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                            {category.description}
+                        </p>
+                        <div className={`absolute inset-0 border-2 opacity-0 transition-opacity group-hover:opacity-100 ${category.border} rounded-xl pointer-events-none`} />
+                    </Link>
+                </motion.div>
             ))}
         </div>
     );
-}
+});

@@ -96,32 +96,31 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
             )}
 
             {/* Recent Sources */}
-            <div className="rounded-2xl border border-border bg-background/40 p-6">
-                <div className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <BookOpen className="h-4 w-4" />
-                    New Seforim
+            {(data.recentSources || []).length > 0 && (
+                <div className="rounded-2xl border border-border bg-background/40 p-6">
+                    <div className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <BookOpen className="h-4 w-4" />
+                        New Seforim
+                    </div>
+                    <ul className="space-y-3">
+                        {(data.recentSources || []).slice(0, itemLimit).map((source) => (
+                            <li key={source.id}>
+                                <Link
+                                    href={`/topics/${source.topic?.slug || ''}`}
+                                    className="group block"
+                                >
+                                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                        {source.location?.sefer?.title || 'Source'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {source.location?.order_key} → {source.topic?.name}
+                                    </p>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
-                <ul className="space-y-3">
-                    {(data.recentSources || []).slice(0, itemLimit).map((source) => (
-                        <li key={source.id}>
-                            <Link
-                                href={`/topics/${source.topic?.slug || ''}`}
-                                className="group block"
-                            >
-                                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
-                                    {source.location?.sefer?.title || 'Source'}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                    {source.location?.order_key} → {source.topic?.name}
-                                </p>
-                            </Link>
-                        </li>
-                    ))}
-                    {(!data.recentSources || data.recentSources.length === 0) && (
-                        <li className="text-sm text-muted-foreground">No recent sources</li>
-                    )}
-                </ul>
-            </div>
+            )}
 
             {/* Recently Updated */}
             <div className="rounded-2xl border border-border bg-background/40 p-6">
