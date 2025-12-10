@@ -19,6 +19,65 @@ export default function WritePage() {
   const [grammarStatus, setGrammarStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [isParaphrasing, setIsParaphrasing] = useState(false);
   const [paraphraseStatus, setParaphraseStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const getBreakStatusText = () => {
+    switch (breakStatus) {
+      case 'idle': return 'Ready';
+      case 'processing': return 'Processing';
+      case 'success': return 'Complete';
+      case 'error': return 'Error';
+      default: return 'Unknown';
+    }
+  };
+
+  const getGrammarStatusText = () => {
+    switch (grammarStatus) {
+      case 'idle': return 'Ready';
+      case 'processing': return 'Processing';
+      case 'success': return 'Complete';
+      case 'error': return 'Error';
+      default: return 'Unknown';
+    }
+  };
+
+  const getParaphraseStatusText = () => {
+    switch (paraphraseStatus) {
+      case 'idle': return 'Ready';
+      case 'processing': return 'Processing';
+      case 'success': return 'Complete';
+      case 'error': return 'Error';
+      default: return 'Unknown';
+    }
+  };
+
+  const getBreakStatusColor = () => {
+    switch (breakStatus) {
+      case 'idle': return 'bg-gray-400';
+      case 'processing': return 'bg-blue-500';
+      case 'success': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const getGrammarStatusColor = () => {
+    switch (grammarStatus) {
+      case 'idle': return 'bg-gray-400';
+      case 'processing': return 'bg-blue-500';
+      case 'success': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const getParaphraseStatusColor = () => {
+    switch (paraphraseStatus) {
+      case 'idle': return 'bg-gray-400';
+      case 'processing': return 'bg-blue-500';
+      case 'success': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-gray-400';
+    }
+  };
 
   useEffect(() => {
     // Check authentication
@@ -500,7 +559,7 @@ export default function WritePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-12 lg:grid-cols-6 gap-6">
           {/* Editor - Always visible, responsive sizing */}
           <div className="col-span-12 lg:col-span-3 xl:col-span-4">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -717,31 +776,16 @@ export default function WritePage() {
                   <div className="text-xs font-medium text-foreground mb-1">AI Services</div>
                   <div className="text-xs space-y-0.5">
                     <div className="flex items-center gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        breakStatus === 'idle' ? 'bg-gray-400' :
-                        breakStatus === 'processing' ? 'bg-blue-500' :
-                        breakStatus === 'success' ? 'bg-green-500' :
-                        'bg-red-500'
-                      }`}></div>
-                      <span>Statement Breaking: {breakStatus === 'idle' ? 'Ready' : breakStatus === 'processing' ? 'Processing' : breakStatus === 'success' ? 'Complete' : 'Error'}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${getBreakStatusColor()}`}></div>
+                      <span>Statement Breaking: {getBreakStatusText()}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        grammarStatus === 'idle' ? 'bg-gray-400' :
-                        grammarStatus === 'processing' ? 'bg-blue-500' :
-                        grammarStatus === 'success' ? 'bg-green-500' :
-                        'bg-red-500'
-                      }`}></div>
-                      <span>Grammar: {grammarStatus === 'idle' ? 'Ready' : grammarStatus === 'processing' ? 'Processing' : grammarStatus === 'success' ? 'Complete' : 'Error'}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${getGrammarStatusColor()}`}></div>
+                      <span>Grammar: {getGrammarStatusText()}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        paraphraseStatus === 'idle' ? 'bg-gray-400' :
-                        paraphraseStatus === 'processing' ? 'bg-blue-500' :
-                        paraphraseStatus === 'success' ? 'bg-green-500' :
-                        'bg-red-500'
-                      }`}></div>
-                      <span>Paraphrase: {paraphraseStatus === 'idle' ? 'Ready' : paraphraseStatus === 'processing' ? 'Processing' : paraphraseStatus === 'success' ? 'Complete' : 'Error'}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${getParaphraseStatusColor()}`}></div>
+                      <span>Paraphrase: {getParaphraseStatusText()}</span>
                     </div>
                   </div>
                 </div>
@@ -759,6 +803,8 @@ export default function WritePage() {
               </div>
             </div>
           </div>
+
+        </div>
       </main>
     </div>
   );
