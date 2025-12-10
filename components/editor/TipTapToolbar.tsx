@@ -15,13 +15,18 @@ import {
   Redo,
   Save,
   Loader2,
-  Split
+  Split,
+  Image,
+  Link,
+  BookOpen
 } from 'lucide-react';
 
 interface TipTapToolbarProps {
   editor: Editor;
   onSave?: () => void;
   onBreakStatements?: () => void;
+  onInsertCitation?: () => void;
+  onInsertImage?: () => void;
   isSaving?: boolean;
   className?: string;
 }
@@ -30,6 +35,8 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
   editor,
   onSave,
   onBreakStatements,
+  onInsertCitation,
+  onInsertImage,
   isSaving = false,
   className
 }) => {
@@ -114,7 +121,7 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
         </div>
 
         {/* Lists & Blocks */}
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
           <button
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
@@ -143,6 +150,28 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           >
             <Code2 className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Advanced Features */}
+        <div className="flex gap-0.5">
+          {onInsertImage && (
+            <button
+              onClick={onInsertImage}
+              className="p-2 rounded hover:bg-gray-200"
+              title="Insert Image (OCR supported)"
+            >
+              <Image className="w-4 h-4" />
+            </button>
+          )}
+          {onInsertCitation && (
+            <button
+              onClick={onInsertCitation}
+              className="p-2 rounded hover:bg-gray-200"
+              title="Insert Citation"
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

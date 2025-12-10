@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { useCitationPalette } from './hooks/useCitationPalette';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
-import { CitationCommandPalette } from './CitationCommandPalette';
+import { createTipTapExtensions } from './extensions';
 import { TipTapToolbar } from './TipTapToolbar';
-import { useCitationPalette } from './hooks/useCitationPalette';
+import { CitationViewerModal } from './CitationViewerModal';
 
 interface TipTapEditorProps {
   docId: string | null;
@@ -21,6 +22,12 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
   onBreakStatements
 }) => {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [activeCitation, setActiveCitation] = useState<{
+    source_id: number | string | null;
+    source_title: string | null;
+    reference: string | null;
+    content?: string;
+  } | null>(null);
 
   const {
     isOpen: showCitationPalette,
@@ -47,10 +54,33 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         limit: 10000,
       }),
       Placeholder.configure({
-        placeholder: 'Start writing your content here...',
+        placeholder: 'Start writing your content here... You can paste Hebrew text or images for OCR processing.',
+      }),
+      // Custom extensions for Hebrew and citations
+      ...createTipTapExtensions({
+        onCitationClick: (citation) => {
+          setActiveCitation({
+            source_id: citation.sourceId,
+            source_title: citation.sourceTitle,
+            reference: citation.reference,
+            content: `${citation.sourceTitle} - ${citation.reference}`,
+          });
+        },
+        onCitationEdit: (citation) => {
+          console.log('Edit citation:', citation);
+          // TODO: Open citation edit dialog
+        },
+        onOCRResult: (text) => {
+          console.log('OCR Result:', text);
+          setFeedback({ type: "success", message: "Hebrew text extracted from image!" });
+        },
+        onOCRError: (error) => {
+          console.error('OCR Error:', error);
+          setFeedback({ type: "error", message: `OCR failed: ${error}` });
+        },
       }),
     ],
-    content: '<p>Hello World! 🌍️</p>',
+    content: '<p>Hello World! 🌍️</p><p>You can now paste Hebrew text or images for automatic OCR processing.</p>',
     onUpdate: ({ editor }) => {
       // Handle content changes
       const html = editor.getHTML();
@@ -61,8 +91,34 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
       attributes: {
         class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-6',
       },
+      handlePaste: (view, event) => {
+        // Let the OCR extension handle image pastes
+        return false;
+      },
     },
   });
+
+  const handleInsertCitation = () => {
+    // Open citation palette or dialog
+    console.log('Insert citation clicked');
+    // TODO: Open citation selection dialog
+  };
+
+  const handleInsertImage = () => {
+    // Trigger file input for image upload
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // The OCR extension will handle this automatically when pasted
+        // For now, we'll just insert a placeholder
+        editor?.commands.insertContent(`<p>[Image: ${file.name}]</p>`);
+      }
+    };
+    input.click();
+  };
 
   const handleSave = async () => {
     if (!editor) return;
@@ -94,6 +150,8 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         editor={editor}
         onSave={handleSave}
         onBreakStatements={onBreakStatements}
+        onInsertCitation={handleInsertCitation}
+        onInsertImage={handleInsertImage}
         isSaving={false}
       />
 
@@ -116,20 +174,11 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         </div>
       ) : null}
 
-      <CitationCommandPalette
-        open={showCitationPalette}
-        onOpenChange={(open) => {
-          handleOpenChange(open);
-          if (!open) {
-            editor?.commands.focus();
-          }
-        }}
-        onComplete={(source, reference) => {
-          // TODO: Implement citation insertion
-          console.log('Insert citation:', source, reference);
-          closePalette();
-        }}
-        onFeedback={(payload) => setFeedback(payload)}
+      <CitationViewerModal
+        open={Boolean(activeCitation)}
+        citation={activeCitation}
+        citationContent={activeCitation?.content}
+        onClose={() => setActiveCitation(null)}
       />
     </div>
   );
