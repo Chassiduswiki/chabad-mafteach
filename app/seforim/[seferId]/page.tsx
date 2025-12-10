@@ -546,7 +546,8 @@ export default function SeferPage() {
                                     } ${paragraph.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
                                     style={{
                                         direction: isHebrew(paragraph.text || '') ? 'rtl' : 'ltr',
-                                        textAlign: isHebrew(paragraph.text || '') ? 'right' : 'left'
+                                        textAlign: 'justify',
+                                        textAlignLast: isHebrew(paragraph.text || '') ? 'right' : 'left'
                                     }}
                                     onMouseDown={() => handleParagraphMouseDown(paragraph)}
                                     onMouseUp={handleParagraphMouseUp}
