@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Fuse from "fuse.js";
-import directus from "@/lib/directus";
+import { createClient } from "@/lib/directus";
+const directus = createClient();
 import { readItems } from "@directus/sdk";
 import { Source } from "@/lib/types";
 

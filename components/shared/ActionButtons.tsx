@@ -3,20 +3,37 @@
 import { useState, useEffect } from 'react';
 import { Share2, Bookmark, Check } from 'lucide-react';
 
-interface ActionButtonsProps {
-    topicSlug: string;
-    topicName: string;
+interface Topic {
+    id: number | string;
+    slug: string;
+    name?: string;
+    canonical_title?: string;
+    description?: string;
 }
 
-export function ActionButtons({ topicSlug, topicName }: ActionButtonsProps) {
+interface ActionButtonsProps {
+    topic: Topic;
+}
+
+export function ActionButtons({ topic }: ActionButtonsProps) {
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [showCopied, setShowCopied] = useState(false);
 
     // Load bookmark state from localStorage
     useEffect(() => {
-        const bookmarks = JSON.parse(localStorage.getItem('bookmarkedTopics') || '[]');
-        setIsBookmarked(bookmarks.includes(topicSlug));
-    }, [topicSlug]);
+        const stored = localStorage.getItem('chabad-mafteach:bookmarks');
+        if (stored) {
+            try {
+                const bookmarks = JSON.parse(stored);
+                const isBookmarked = bookmarks.some((b: any) => b.id === topic.id);
+                setIsBookmarked(isBookmarked);
+            } catch (e) {
+                console.error('Failed to parse bookmarks', e);
+            }
+        }
+    }, [topic.id]);
+
+    const topicName = topic.canonical_title || topic.name || 'Topic';
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -41,21 +58,29 @@ export function ActionButtons({ topicSlug, topicName }: ActionButtonsProps) {
     };
 
     const handleBookmark = () => {
-        const bookmarks = JSON.parse(localStorage.getItem('bookmarkedTopics') || '[]');
+        const stored = localStorage.getItem('chabad-mafteach:bookmarks');
+        const bookmarks = stored ? JSON.parse(stored) : [];
 
         if (isBookmarked) {
             // Remove bookmark
-            const updated = bookmarks.filter((slug: string) => slug !== topicSlug);
-            localStorage.setItem('bookmarkedTopics', JSON.stringify(updated));
+            const updated = bookmarks.filter((b: any) => b.id !== topic.id);
+            localStorage.setItem('chabad-mafteach:bookmarks', JSON.stringify(updated));
             setIsBookmarked(false);
         } else {
-            // Add bookmark
-            const updated = [...bookmarks, topicSlug];
-            localStorage.setItem('bookmarkedTopics', JSON.stringify(updated));
+            // Add bookmark with full topic data
+            const bookmarkData = {
+                id: topic.id,
+                slug: topic.slug,
+                name: topic.name,
+                canonical_title: topic.canonical_title,
+                description: topic.description,
+                timestamp: Date.now()
+            };
+            const updated = [...bookmarks, bookmarkData];
+            localStorage.setItem('chabad-mafteach:bookmarks', JSON.stringify(updated));
             setIsBookmarked(true);
         }
     };
-
     return (
         <div className="flex items-center gap-1">
             {/* Share Button - 44px minimum touch target */}

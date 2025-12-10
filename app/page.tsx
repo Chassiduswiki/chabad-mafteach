@@ -9,6 +9,7 @@ import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
 import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
 import { FeaturedTopics } from '@/components/features/home/FeaturedTopics';
 import { MobileHome } from '@/components/mobile/MobileHome';
+import OnboardingHints from '@/components/features/onboarding/OnboardingHints';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
 
@@ -122,6 +123,9 @@ export default function Home() {
           Explore concepts, discover sources. A comprehensive index connecting Chassidic topics to their sources across all Chabad literature.
         </motion.p>
 
+        {/* Onboarding Hints - Guide first-time users */}
+        {/* <OnboardingHints /> */}
+
         {/* Command Palette Trigger Area */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -149,7 +153,7 @@ export default function Home() {
         </motion.div>
 
         {/* Content Discovery Section - Moved up for above-fold visibility */}
-        <div className="mt-16 w-full">
+        <div className="mt-16 w-full" data-onboarding="explore-section">
           <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
             Discover Content
           </h2>

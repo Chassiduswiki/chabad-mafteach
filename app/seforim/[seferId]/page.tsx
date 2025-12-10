@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -533,7 +534,7 @@ export default function SeferPage() {
                 </div>
 
                 {/* Content - Continuous Flow */}
-                <div className="bg-background rounded-2xl p-8 sm:p-10 lg:p-14">
+                <div className="bg-card/90 dark:bg-card/30 rounded-2xl p-8 sm:p-10 lg:p-14 border border-border/50">
                     <div className={`font-serif ${fontSizeClasses[fontSize]} leading-[2.2] text-foreground tracking-wide`}>
                         {document.paragraphs && document.paragraphs.length > 0 ? (
                             document.paragraphs.map((paragraph, paraIndex) => (
@@ -576,7 +577,7 @@ export default function SeferPage() {
                                                         {/* Citation with hover effect */}
                                                         {statement.appended_text && showCitations && (
                                                             <span
-                                                                className="inline-block mx-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded border border-primary/20 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                                                                className="inline-block mx-1 px-2 py-1 text-xs bg-accent/60 text-accent-foreground hover:bg-accent rounded border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
                                                                 dangerouslySetInnerHTML={{ __html: statement.appended_text }}
                                                                 onClick={() => handleCitationClick(statement.appended_text, statement)}
                                                             />

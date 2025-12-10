@@ -63,4 +63,4 @@ export const getAllTopics = async (): Promise<Topic[]> => {
     );
 };
 
-export default directus;
+export { createClient };

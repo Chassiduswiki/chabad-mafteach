@@ -12,79 +12,72 @@ interface Citation {
 interface CitationViewerModalProps {
   open: boolean;
   citation: Citation | null;
+  citationContent?: string; // HTML content of the citation
   onClose: () => void;
 }
 
-export function CitationViewerModal({ open, citation, onClose }: CitationViewerModalProps) {
-  const { data: sefariaData, loading, error } = useSefariaText(citation?.reference ?? null);
-
+export function CitationViewerModal({ open, citation, citationContent, onClose }: CitationViewerModalProps) {
   if (!open || !citation) return null;
 
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl rounded-2xl bg-background shadow-2xl border border-border overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="space-y-1">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Citation</p>
-            <p className="text-base font-semibold text-gray-900">
-              {citation.source_title ?? "Source"}
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Citation</p>
+            <p className="text-lg font-semibold text-foreground">
+              {citation.source_title ?? "Citation"}
             </p>
           </div>
           <button
-            onClick={onClose}
-            className="rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            className="rounded-full px-3 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             Close
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-6">
+          {citationContent && (
+            <div>
+              <p className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Citation Content</p>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <div
+                  className="text-foreground prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: citationContent }}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Reference</p>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-2">Reference</p>
+            <p className="text-foreground">
               {citation.reference || "Not specified"}
             </p>
           </div>
 
-          {citation.reference && (
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Sefaria Text</p>
-              {loading && (
-                <div className="text-sm text-gray-600">Loading text...</div>
-              )}
-              {error && (
-                <div className="text-sm text-red-600">Error loading text: {error}</div>
-              )}
-              {sefariaData && (
-                <div className="space-y-3">
-                  {sefariaData.text.map((paragraph, index) => (
-                    <div key={index} className="border-l-4 border-blue-200 pl-4 py-2">
-                      <p className="text-sm text-gray-800 leading-relaxed">{paragraph}</p>
-                      {sefariaData.he && sefariaData.he[index] && (
-                        <p className="text-sm text-blue-700 font-serif mt-1 leading-relaxed" dir="rtl">
-                          {sefariaData.he[index]}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                  <div className="text-xs text-gray-500 mt-2">
-                    Source: {sefariaData.ref} ({sefariaData.book})
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Source ID</p>
-            <p className="text-sm text-gray-800">
-              {citation.source_id ?? "Unknown"}
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">Citation Details</p>
+            <p className="text-foreground font-mono text-sm">
+              Source ID: {citation.source_id ?? "Unknown"}
+            </p>
+            <p className="text-foreground font-mono text-sm mt-1">
+              Reference: {citation.reference ?? "Not available"}
             </p>
           </div>
         </div>

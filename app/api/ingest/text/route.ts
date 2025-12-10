@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem } from '@directus/sdk';
+import { requireEditor } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -17,9 +19,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only .txt files are supported' }, { status: 400 });
     }
 
+    console.log(`User ${context.userId} (${context.role}) uploading text file: ${file.name}`);
+
     // Read file content
     const text = await file.text();
-    
+
     // Validate content (basic Hebrew check if language is he)
     if (language === 'he') {
       const hebrewRegex = /[\u0590-\u05FF]/;
@@ -36,7 +40,8 @@ export async function POST(request: NextRequest) {
         filename: file.name,
         file_size: file.size,
         language,
-        uploaded_at: new Date().toISOString()
+        uploaded_at: new Date().toISOString(),
+        uploaded_by: context.userId
       }
     }));
 
@@ -73,7 +78,8 @@ export async function POST(request: NextRequest) {
         text: paragraphText,
         metadata: {
           auto_generated: true,
-          source: 'text_upload'
+          source: 'text_upload',
+          uploaded_by: context.userId
         }
       }));
 
@@ -99,7 +105,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 export async function GET() {
   return NextResponse.json({

@@ -40,6 +40,12 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
     closePalette,
     handleOpenChange,
   } = useCitationPalette();
+  const handleCloseModal = () => {
+    setIsModalClosing(true);
+    setActiveCitation(null);
+    // Reset the closing flag after a short delay to allow DOM updates
+    setTimeout(() => setIsModalClosing(false), 100);
+  };
   const [feedback, setFeedback] = useState<
     { type: "success" | "error"; message: string } | null
   >(null);
@@ -47,7 +53,9 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
     source_id: number | string | null;
     source_title: string | null;
     reference: string | null;
+    content?: string;
   } | null>(null);
+  const [isModalClosing, setIsModalClosing] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -225,7 +233,8 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
       <CitationViewerModal
         open={Boolean(activeCitation)}
         citation={activeCitation}
-        onClose={() => setActiveCitation(null)}
+        citationContent={activeCitation?.content}
+        onClose={handleCloseModal}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem, readItems } from '@directus/sdk';
+import { requireEditor } from '@/lib/auth';
 
 interface SefariaText {
   he: string;
@@ -22,7 +24,7 @@ interface SefariaIndex {
   length: number;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
     const { bookTitle, language = 'he' } = await request.json();
 
@@ -30,27 +32,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Book title is required' }, { status: 400 });
     }
 
+    console.log(`User ${context.userId} (${context.role}) importing book: ${bookTitle}`);
+
     // First get the index to verify book exists and get structure
     const indexResponse = await fetch(`https://www.sefaria.org/api/index/${bookTitle}`);
     if (!indexResponse.ok) {
       return NextResponse.json({ error: 'Book not found in Sefaria' }, { status: 404 });
     }
-    
+
     const index: SefariaIndex = await indexResponse.json();
     console.log(`Found book: ${index.heTitle} (${index.title}) with ${index.length} sections`);
 
     // Fetch all text content
     const textUrl = `https://www.sefaria.org/api/texts/${bookTitle}?lang=${language}&commentary=0`;
     const textResponse = await fetch(textUrl);
-    
+
     if (!textResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch text content' }, { status: 500 });
     }
 
     const textData: SefariaText = await textResponse.json();
-    
-    // Initialize Directus client
-    // const directus = await createDirectusClient();
 
     // Create document entry
     const document = await directus.request(createItem('documents', {
@@ -61,7 +62,9 @@ export async function POST(request: NextRequest) {
         source_uri: `https://www.sefaria.org/${bookTitle}`,
         sefaria_index: index,
         categories: index.categories,
-        length: index.length
+        length: index.length,
+        imported_by: context.userId,
+        imported_at: new Date().toISOString()
       }
     }));
 
@@ -74,10 +77,10 @@ export async function POST(request: NextRequest) {
     // Hebrew text typically uses different paragraph structures
     // We'll split by double line breaks or section breaks
     const textSections = Array.isArray(textData.he) ? textData.he : [textData.he];
-    
+
     for (let sectionIndex = 0; sectionIndex < textSections.length; sectionIndex++) {
       const sectionText = textSections[sectionIndex];
-      
+
       // Split into paragraphs (Hebrew often uses different separators)
       const paragraphTexts = sectionText
         .split(/\n\s*\n|\r\n\s*\r\n/)  // Double line breaks
@@ -105,7 +108,8 @@ export async function POST(request: NextRequest) {
           text: paragraphText.trim(),
           metadata: {
             auto_generated: true,
-            source: 'sefaria_import'
+            source: 'sefaria_import',
+            imported_by: context.userId
           }
         }));
 
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItem } from '@directus/sdk';
 import { Document, Paragraph } from '@/lib/types';
 

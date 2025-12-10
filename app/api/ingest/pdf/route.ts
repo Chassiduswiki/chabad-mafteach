@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { createItem } from '@directus/sdk';
+import { requireEditor } from '@/lib/auth';
 // Dynamic import for pdf-parse to avoid DOMMatrix issues during build
 let pdfParse: any = null;
 // Dynamic import for OCR to avoid DOMMatrix issues during build
@@ -129,7 +131,7 @@ function getGibberishRatio(text: string): number {
   return gibberishCount / Math.max(words.length, 1);
 }
 
-export async function POST(request: NextRequest) {
+export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File too large. Maximum size is 50MB.' }, { status: 400 });
     }
 
-    console.log(`Creating async job for PDF: ${file.name}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`User ${context.userId} (${context.role}) creating PDF job: ${file.name}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -163,7 +165,8 @@ export async function POST(request: NextRequest) {
       fileSize: file.size,
       title,
       language,
-      fileBuffer: buffer
+      fileBuffer: buffer,
+      userId: context.userId
     });
 
     return NextResponse.json({
@@ -181,7 +184,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 export async function GET() {
   return NextResponse.json({

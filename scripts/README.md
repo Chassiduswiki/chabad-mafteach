@@ -13,6 +13,11 @@ Schema and configuration scripts:
 Data population and seeding:
 - `populate-data.js` - Populate database with initial data
 
+### `/scrapers`
+Data scraping utilities:
+- `chabadlibraryScraper.js` - Scrapes books from Chabad Library API
+- `index.js` - Central registry and documentation for all scrapers
+
 ### `/utils`
 Development utilities:
 - `check-schema.js` - Validate schema structure

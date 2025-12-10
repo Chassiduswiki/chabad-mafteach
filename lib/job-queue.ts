@@ -13,6 +13,7 @@ export interface Job {
     title?: string;
     language: string;
     fileBuffer: Buffer; // Stored temporarily
+    userId?: string; // Track which user uploaded the file
   };
   result?: {
     documentId?: string;
@@ -257,7 +258,8 @@ class JobQueue {
     });
 
     // Import Directus and create document
-    const directus = (await import('@/lib/directus')).default;
+    const { createClient } = await import('@/lib/directus');
+    const directus = createClient();
     const { createItem } = await import('@directus/sdk');
 
     // Create document entry
@@ -278,6 +280,7 @@ class JobQueue {
         ocr_processing_time: ocrResults ? OCRProcessor.analyzeOCRQuality(ocrResults).processingTime : null,
         language,
         uploaded_at: new Date().toISOString(),
+        uploaded_by: job.data.userId, // Track who uploaded
         job_id: job.id
       }
     }));

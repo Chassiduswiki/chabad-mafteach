@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import directus from '@/lib/directus';
+import { createClient } from '@/lib/directus';
+const directus = createClient();
 import { readItems } from '@directus/sdk';
 
 export async function GET(request: NextRequest) {

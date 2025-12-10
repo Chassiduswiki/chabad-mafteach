@@ -49,7 +49,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
               { label: topic.name || topic.canonical_title }
             ]}
           />
-          <ActionButtons topicSlug={topic.slug} topicName={topic.name || topic.canonical_title} />
+          <ActionButtons topic={topic} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

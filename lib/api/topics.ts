@@ -1,8 +1,23 @@
-import directus from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+import { createClient } from '@/lib/directus';
+import { readItems, updateItem } from '@directus/sdk';
 
+/**
+ * Get topic by slug with associated content
+ *
+ * DATA FLOW:
+ * 1. Fetch topic by slug
+ * 2. PRIMARY: Get documents linked via document.topic field
+ * 3. Get paragraphs from those documents
+ * 4. Get statements from those paragraphs
+ * 5. SECONDARY: Add statement_topics for additional sources
+ *
+ * @param slug Topic slug
+ * @returns Topic with paragraphs containing statements
+ */
 export async function getTopicBySlug(slug: string) {
     try {
+        const directus = createClient();
+
         // Fetch the topic by slug
         const topics = await directus.request(readItems('topics', {
             filter: {
@@ -18,13 +33,82 @@ export async function getTopicBySlug(slug: string) {
 
         const topic = topics[0];
 
-        // Fetch related statements from statement_topics junction table
-        let statementTopics: any[] = [];
+        // use document.topic field for entry content (primary approach for articles)
         let paragraphs: any[] = [];
-        let validStatementTopics: any[] = []; // Filtered to only include valid references
+        let validStatementTopics: any[] = []; // For sources/citations tab
         try {
-            statementTopics = await directus.request(readItems('statement_topics', {
-                filter: { topic_id: { _eq: topic.id } } as any,
+            // PRIMARY: Get documents directly linked to this topic
+            const topicDocuments = await directus.request(readItems('documents', {
+                filter: { topic: { _eq: topic.id } } as any,
+                fields: ['id', 'title', 'doc_type'],
+                limit: -1
+            })) as any[];
+
+            console.log(`Topic ${topic.id} (${topic.canonical_title}): Found ${topicDocuments.length} linked documents`);
+
+            if (topicDocuments.length > 0) {
+
+                // Get paragraphs from these documents
+                const docIds = topicDocuments.map(doc => doc.id);
+                const documentParagraphs = await directus.request(readItems('paragraphs', {
+                    filter: { doc_id: { _in: docIds } } as any,
+                    fields: ['id', 'text', 'order_key', 'doc_id'],
+                    sort: ['order_key'],
+                    limit: -1
+                })) as any[];
+
+                console.log(`Found ${documentParagraphs.length} paragraphs across ${docIds.length} documents`);
+
+                // Get statements for these paragraphs
+                const paraIds = documentParagraphs.map(p => p.id);
+                let documentStatements: any[] = [];
+
+                if (paraIds.length > 0) {
+                    documentStatements = await directus.request(readItems('statements', {
+                        filter: { paragraph_id: { _in: paraIds } } as any,
+                        fields: ['id', 'text', 'order_key', 'paragraph_id'],
+                        sort: ['order_key'],
+                        limit: -1
+                    })) as any[];
+                }
+
+                console.log(`Found ${documentStatements.length} statements across ${paraIds.length} paragraphs`);
+
+                // Group statements by paragraph
+                const paragraphMap: Record<number, any> = {};
+                for (const para of documentParagraphs) {
+                    paragraphMap[para.id] = {
+                        id: para.id,
+                        text: para.text,
+                        order_key: para.order_key,
+                        document_title: topicDocuments.find(doc => doc.id === para.doc_id)?.title || 'Unknown Document',
+                        statements: [] as any[]
+                    };
+                }
+
+                // Add statements to their paragraphs
+                for (const stmt of documentStatements) {
+                    if (stmt.paragraph_id && paragraphMap[stmt.paragraph_id]) {
+                        paragraphMap[stmt.paragraph_id].statements.push({
+                            id: stmt.id,
+                            text: stmt.text,
+                            order_key: stmt.order_key
+                        });
+                    }
+                }
+
+                paragraphs = Object.values(paragraphMap).sort((a, b) =>
+                    (a.order_key || '').localeCompare(b.order_key || '')
+                );
+            }
+
+            // SECONDARY: Get additional statement_topics for sources/citations
+            // Filter out orphaned records where statement doesn't exist
+            const statementTopics = await directus.request(readItems('statement_topics', {
+                filter: {
+                    topic_id: { _eq: topic.id },
+                    statement_id: { _nnull: true } // Only include records where statement_id exists
+                } as any,
                 fields: [
                     '*',
                     {
@@ -46,82 +130,28 @@ export async function getTopicBySlug(slug: string) {
                 sort: ['-relevance_score'] as any
             })) as any[];
 
-            // If Directus didn't expand the relations (IDs only), fetch the statements with paragraphs/docs
-            const missingExpanded = statementTopics.some(st => typeof st.statement_id === 'number');
-            let statementMap: Record<number, any> = {};
+            console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
-            if (missingExpanded) {
-                const statementIds = statementTopics
-                    .map(st => (typeof st.statement_id === 'number' ? st.statement_id : st.statement_id?.id))
-                    .filter((id): id is number => !!id);
+            // Process statement_topics for additional sources (skip if already in main content)
+            const existingStmtIds = new Set(paragraphs.flatMap(p => p.statements.map((s: any) => s.id)));
 
-                if (statementIds.length) {
-                    const statementRecords = await directus.request(readItems('statements', {
-                        filter: { id: { _in: statementIds } } as any,
-                        fields: [
-                            'id',
-                            'text',
-                            'order_key',
-                            {
-                                paragraph_id: [
-                                    'id',
-                                    'text',
-                                    'order_key',
-                                    { doc_id: ['title'] }
-                                ]
-                            }
-                        ] as any,
-                        limit: -1
-                    })) as any[];
-
-                    statementMap = statementRecords.reduce((acc, stmt) => {
-                        acc[stmt.id] = stmt;
-                        return acc;
-                    }, {} as Record<number, any>);
-                }
-            }
-
-            // Map statements to their paragraphs (document > paragraphs > statements)
-            const paragraphMap: Record<number, any> = {};
             for (const stmtTopic of statementTopics) {
-                const stmt = typeof stmtTopic.statement_id === 'number'
-                    ? statementMap[stmtTopic.statement_id]
-                    : stmtTopic.statement_id;
+                const stmt = stmtTopic.statement_id;
+                if (!stmt?.id || existingStmtIds.has(stmt.id)) continue; // Skip if already included
 
-                // Skip orphaned records (statements that don't exist)
-                if (!stmt?.id) {
-                    console.warn(`Skipping orphaned statement_topics record ${stmtTopic.id} - statement ${stmtTopic.statement_id} not found`);
-                    continue;
-                }
+                const para = stmt.paragraph_id;
+                if (!para?.id || !para.doc_id?.title) continue; // Skip if paragraph or document missing
 
-                const para = stmt?.paragraph_id;
-                if (!para?.id) continue;
+                // Additional validation: ensure statement has valid text
+                if (!stmt.text || stmt.text.trim() === '') continue;
 
-                // Add to valid statement topics list
+                // Add as additional source
                 validStatementTopics.push(stmtTopic);
-
-                if (!paragraphMap[para.id]) {
-                    paragraphMap[para.id] = {
-                        id: para.id,
-                        text: para.text,
-                        order_key: para.order_key,
-                        document_title: para.doc_id?.title || 'Unknown Document',
-                        statements: [] as any[]
-                    };
-                }
-
-                paragraphMap[para.id].statements.push({
-                    id: stmt.id,
-                    text: stmt.text,
-                    order_key: stmt.order_key
-                });
             }
 
-            paragraphs = Object.values(paragraphMap).sort((a, b) =>
-                (a.order_key || '').localeCompare(b.order_key || '')
-            );
+            console.log(`After filtering, ${validStatementTopics.length} valid statement_topics remain`);
         } catch (error) {
-            console.warn('Failed to fetch statement_topics:', error);
+            console.warn('Failed to fetch topic content:', error);
         }
 
         // Fetch related topics from topic_relationships table
@@ -177,6 +207,66 @@ export async function getTopicBySlug(slug: string) {
         };
     } catch (error) {
         console.error('Topic fetch error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update topic by slug
+ *
+ * @param slug Topic slug
+ * @param updates Partial topic data to update
+ * @returns Updated topic or null if not found
+ */
+export async function updateTopic(slug: string, updates: any) {
+    try {
+        const directus = createClient();
+
+        // First get the topic by slug to get its ID
+        const topics = await directus.request(readItems('topics', {
+            filter: {
+                slug: { _eq: slug }
+            },
+            fields: ['id'],
+            limit: 1
+        }));
+
+        if (!topics || topics.length === 0) {
+            return null;
+        }
+
+        const topicId = topics[0].id;
+
+        // Update the topic
+        const updatedTopic = await directus.request(updateItem('topics', topicId, updates));
+
+        return updatedTopic;
+    } catch (error) {
+        console.error('Topic update error:', error);
+        throw error;
+    }
+}
+
+export async function getTopicMetadata(slug: string) {
+    try {
+        const directus = createClient();
+
+        // Fetch just the topic by slug
+        const topics = await directus.request(readItems('topics', {
+            filter: {
+                slug: { _eq: slug }
+            },
+            fields: ['*'],
+            limit: 1
+        }));
+
+        if (!topics || topics.length === 0) {
+            return null;
+        }
+
+        return topics[0];
+    } catch (error) {
+        console.error('Topic metadata fetch error:', error);
         throw error;
     }
 }
