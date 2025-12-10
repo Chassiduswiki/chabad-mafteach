@@ -1043,4 +1043,77 @@ Automatically tags documents with relevant Jewish philosophical topics.
 }
 ```
 
-**Cost:** Free tier allows 50 requests/day, perfect for testing and development.
+### 13.5 Grammar Check API
+
+**Endpoint:** `POST /api/editor/grammar`
+
+Corrects spelling and grammar errors in Hebrew text using AI analysis.
+
+**Request:**
+```json
+{
+  "text": "text with potential Hebrew grammar or spelling errors",
+  "statement_id": 123
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "analysis": {
+    "issues_found": 2,
+    "corrections": [
+      {
+        "type": "grammar",
+        "original": "אני הולך לבית",
+        "corrected": "אני הולך לבית",
+        "explanation": "Proper preposition usage"
+      }
+    ],
+    "suggestions": [
+      "Consider using more formal Hebrew",
+      "Check for consistent verb conjugation"
+    ]
+  }
+}
+```
+
+### 13.6 Paraphrase API
+
+**Endpoint:** `POST /api/editor/paraphrase`
+
+Improves text clarity, flow, and academic writing quality using AI.
+
+**Request:**
+```json
+{
+  "text": "text to improve and paraphrase",
+  "style": "academic",
+  "statement_id": 123
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "original_text": "original text",
+    "improved_text": "enhanced version with better clarity",
+    "changes_made": 3,
+    "improvements": [
+      {
+        "type": "clarity",
+        "original": "unclear phrase",
+        "improved": "clearer version",
+        "reason": "improves readability"
+      }
+    ],
+    "confidence": 0.85,
+    "style_applied": "academic writing style"
+  }
+}
+```
+
+**Cost:** Free tier DeepSeek R1 model, perfect for development and testing.
