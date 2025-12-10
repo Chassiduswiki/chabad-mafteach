@@ -1,0 +1,177 @@
+import React from 'react';
+import { Editor } from '@tiptap/react';
+import {
+  Bold,
+  Italic,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Code2,
+  Undo,
+  Redo,
+  Save,
+  Loader2,
+  Split
+} from 'lucide-react';
+
+interface TipTapToolbarProps {
+  editor: Editor;
+  onSave?: () => void;
+  onBreakStatements?: () => void;
+  isSaving?: boolean;
+  className?: string;
+}
+
+export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
+  editor,
+  onSave,
+  onBreakStatements,
+  isSaving = false,
+  className
+}) => {
+  return (
+    <div className={`flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50 ${className || ''}`}>
+      <div className="flex items-center gap-1">
+        {/* History Controls */}
+        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+          <button
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Undo"
+          >
+            <Undo className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Redo"
+          >
+            <Redo className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Headings */}
+        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+          <button
+            onClick={() => editor.chain().focus().setParagraph().run()}
+            className={`p-2 px-3 rounded hover:bg-gray-200 ${editor.isActive('paragraph') ? 'bg-gray-200' : ''}`}
+            title="Normal Text"
+          >
+            <span className="text-sm font-medium">P</span>
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''}`}
+            title="Heading 1"
+          >
+            <Heading1 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''}`}
+            title="Heading 2"
+          >
+            <Heading2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''}`}
+            title="Heading 3"
+          >
+            <Heading3 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Text Formatting */}
+        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+          <button
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-200' : ''}`}
+            title="Bold"
+          >
+            <Bold className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-200' : ''}`}
+            title="Italic"
+          >
+            <Italic className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('code') ? 'bg-gray-200' : ''}`}
+            title="Code"
+          >
+            <Code className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Lists & Blocks */}
+        <div className="flex gap-0.5">
+          <button
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+            title="Bullet List"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+            title="Numbered List"
+          >
+            <ListOrdered className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('blockquote') ? 'bg-gray-200' : ''}`}
+            title="Blockquote"
+          >
+            <Quote className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('codeBlock') ? 'bg-gray-200' : ''}`}
+            title="Code Block"
+          >
+            <Code2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex items-center gap-2">
+        {onBreakStatements && (
+          <button
+            onClick={onBreakStatements}
+            className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            title="Automatically split paragraphs into individual statements"
+          >
+            <Split className="w-4 h-4" />
+          </button>
+        )}
+        {onSave && (
+          <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
