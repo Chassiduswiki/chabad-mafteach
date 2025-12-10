@@ -15,15 +15,21 @@ export async function GET(request: NextRequest) {
         let docs: any[] = [];
         let topicsRaw: any[] = [];
 
-        // Fetch documents, but gracefully handle permission errors (403)
+        // Fetch documents with better search (title, author, content snippets)
         try {
             docs = await directus.request(
                 readItems('documents', {
                     filter: {
-                        title: { _contains: query },
+                        _or: [
+                            { title: { _icontains: query } },
+                            { author: { _icontains: query } },
+                            { category: { _icontains: query } },
+                            { doc_type: { _icontains: query } }
+                        ]
                     },
-                    fields: ['id', 'title', 'doc_type'],
-                    limit: 5,
+                    fields: ['id', 'title', 'doc_type', 'author', 'category'],
+                    limit: 20, // Increase limit for better results
+                    sort: ['title']
                 })
             ) as any[];
         } catch (error) {
@@ -31,13 +37,30 @@ export async function GET(request: NextRequest) {
             docs = [];
         }
 
-        // Fetch topics (fetch broader set and let client-side Fuse.js handle filtering)
-        topicsRaw = await directus.request(
-            readItems('topics', {
-                fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                limit: 100, // Fetch more topics for better client-side filtering
-            })
-        ) as any[];
+        // Fetch topics with server-side filtering instead of client-side only
+        try {
+            const topicFilter: any = {};
+            if (query.length > 0) {
+                topicFilter._or = [
+                    { canonical_title: { _icontains: query } },
+                    { description: { _icontains: query } },
+                    { topic_type: { _icontains: query } },
+                    { slug: { _icontains: query } }
+                ];
+            }
+
+            topicsRaw = await directus.request(
+                readItems('topics', {
+                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+                    filter: topicFilter,
+                    limit: query.length > 0 ? 50 : 10, // More results for searches, fewer for empty queries
+                    sort: query.length > 0 ? [] : ['canonical_title'], // Sort by relevance when searching
+                })
+            ) as any[];
+        } catch (error) {
+            console.warn('Search topics query failed:', error);
+            topicsRaw = [];
+        }
 
         const documents = (docs || []).map((d) => ({
             id: d.id,
