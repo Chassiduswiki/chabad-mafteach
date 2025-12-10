@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { Topic } from '@/lib/types';
 import { Loader2, BookOpen } from 'lucide-react';
+import { CitationViewerModal } from '@/components/editor/CitationViewerModal';
 
 /**
  * ArticleReader Component
@@ -55,6 +56,11 @@ export function ArticleReader({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
   const [viewedParagraphs, setViewedParagraphs] = useState<Set<number>>(new Set());
+  const [activeCitation, setActiveCitation] = useState<{
+    source_id: number | string | null;
+    source_title: string | null;
+    reference: string | null;
+  } | null>(null);
 
   // Find selected statement across all paragraphs (if any)
   const selected = selectedId != null ? 
@@ -159,11 +165,27 @@ export function ArticleReader({
         }}
         onClick={(e) => {
           const target = e.target as HTMLElement;
+
+          // Handle statement highlights (existing functionality)
           if (target.classList.contains('statement-highlight')) {
             const statementId = parseInt(target.getAttribute('data-statement-id') || '0');
             if (statementId) {
               handleStatementClick(statementId);
             }
+          }
+
+          // Handle editor citations (new functionality)
+          const citationEl = target.closest("[data-type='citation']") as HTMLElement | null;
+          if (citationEl) {
+            const sourceId = citationEl.getAttribute("data-source-id");
+            const sourceTitle = citationEl.getAttribute("data-source-title");
+            const reference = citationEl.getAttribute("data-reference");
+
+            setActiveCitation({
+              source_id: sourceId ? Number(sourceId) || sourceId : null,
+              source_title: sourceTitle,
+              reference,
+            });
           }
         }}
       >
@@ -384,6 +406,13 @@ export function ArticleReader({
           </div>
         </div>
       )}
+
+      {/* Citation Viewer Modal */}
+      <CitationViewerModal
+        open={Boolean(activeCitation)}
+        citation={activeCitation}
+        onClose={() => setActiveCitation(null)}
+      />
     </div>
   );
 }
