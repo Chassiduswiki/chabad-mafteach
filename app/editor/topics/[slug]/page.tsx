@@ -33,7 +33,7 @@ export default function TopicEditorPage() {
   const loadTopic = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/topics/${slug}`);
+      const response = await fetch(`/api/topics/${slug}/metadata`);
       if (response.ok) {
         const topicData = await response.json();
         setTopic(topicData);
@@ -45,10 +45,14 @@ export default function TopicEditorPage() {
           definition_negative: topicData.definition_negative || ''
         });
       } else {
-        console.error('Failed to load topic');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to load topic:', response.status, errorData);
+        // Show more specific error message
+        console.error(`HTTP ${response.status}: ${errorData.error || 'Failed to load topic'}`);
       }
     } catch (error) {
-      console.error('Error loading topic:', error);
+      console.error('Network error loading topic:', error);
+      console.error('Error details:', error);
     } finally {
       setIsLoading(false);
     }
