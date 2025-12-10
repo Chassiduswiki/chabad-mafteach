@@ -431,7 +431,7 @@ export default function WritePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-5 gap-8">
+        <div className="grid lg:grid-cols-6 gap-8">
           {/* Editor - Takes more space now */}
           <div className="lg:col-span-3">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -572,92 +572,258 @@ export default function WritePage() {
           </div>
 
           {/* Technical Data Preview - Developer Debug Panel */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-card border border-border rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-5 w-5 items-center justify-center rounded bg-blue-500 text-white text-xs">⚙️</div>
-                <h3 className="text-sm font-semibold text-foreground">Data Preview</h3>
-                <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-1.5 py-0.5 rounded">Debug</span>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-6 w-6 items-center justify-center rounded bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">⚙️</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">AI Processing Preview</h3>
+                  <p className="text-sm text-muted-foreground">Real-time view of how AI processes your Hebrew text into structured data</p>
+                </div>
+                <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded ml-auto">Desktop Magic</span>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid lg:grid-cols-3 gap-4">
                 {/* Current Document Info */}
-                <div className="bg-muted/30 rounded-lg p-2">
-                  <div className="text-xs font-medium text-foreground mb-1">Document</div>
-                  <div className="text-xs space-y-0.5 font-mono">
-                    <div><span className="text-muted-foreground">Title:</span> {title || 'Untitled'}</div>
-                    <div><span className="text-muted-foreground">Type:</span> entry</div>
-                    <div><span className="text-muted-foreground">Lang:</span> he</div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Document Info
+                  </div>
+                  <div className="space-y-2 font-mono text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="font-medium">{title || 'Untitled'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="font-medium text-blue-600">entry</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Lang:</span>
+                      <span className="font-medium text-green-600">he</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="font-medium text-yellow-600">draft</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Content Statistics */}
-                <div className="bg-muted/30 rounded-lg p-2">
-                  <div className="text-xs font-medium text-foreground mb-1">Content Stats</div>
-                  <div className="text-xs space-y-0.5 font-mono">
-                    <div><span className="text-muted-foreground">Chars:</span> {editorRef.current ? editorRef.current.getText().length : 0}</div>
-                    <div><span className="text-muted-foreground">Words:</span> {editorRef.current ? editorRef.current.getText().split(/\s+/).filter((word: string) => word.length > 0).length : 0}</div>
-                    <div><span className="text-muted-foreground">Paras:</span> {editorRef.current ? editorRef.current.getText().split('\n\n').filter((p: string) => p.trim().length > 0).length : 0}</div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Content Stats
+                  </div>
+                  <div className="space-y-2 font-mono text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Characters:</span>
+                      <span className="font-medium text-blue-600">{editorRef.current ? editorRef.current.getText().length : 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Words:</span>
+                      <span className="font-medium text-green-600">{editorRef.current ? editorRef.current.getText().split(/\s+/).filter((word: string) => word.length > 0).length : 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Paragraphs:</span>
+                      <span className="font-medium text-purple-600">{editorRef.current ? editorRef.current.getText().split('\n\n').filter((p: string) => p.trim().length > 0).length : 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sentences:</span>
+                      <span className="font-medium text-orange-600">{editorRef.current ? editorRef.current.getText().split(/[.!?]+/).filter((s: string) => s.trim().length > 0).length : 0}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Processing Preview */}
-                <div className="bg-muted/30 rounded-lg p-2">
-                  <div className="text-xs font-medium text-foreground mb-2">AI Processing Preview</div>
-                  <div className="text-xs space-y-1.5">
-                    <div className="text-muted-foreground mb-1">When "Break Statements" runs:</div>
-                    <div className="text-green-600 dark:text-green-400 font-medium mb-1">🤖 Real AI Processing (DeepSeek R1)</div>
-
-                    {/* Simulated Paragraph Structure */}
-                    <div className="bg-white dark:bg-gray-800 rounded p-1.5 border text-xs">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="font-medium text-blue-600 dark:text-blue-400">📄 P1</span>
-                        <span className="text-muted-foreground font-mono">id: p_001</span>
+                {/* AI Services Status */}
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    AI Services
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Statement Breaking:</span>
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        breakStatus === 'idle' ? 'bg-gray-100 text-gray-600' :
+                        breakStatus === 'processing' ? 'bg-blue-100 text-blue-600' :
+                        breakStatus === 'success' ? 'bg-green-100 text-green-600' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          breakStatus === 'idle' ? 'bg-gray-400' :
+                          breakStatus === 'processing' ? 'bg-blue-500' :
+                          breakStatus === 'success' ? 'bg-green-500' :
+                          'bg-red-500'
+                        }`}></div>
+                        {breakStatus === 'idle' ? 'Ready' :
+                         breakStatus === 'processing' ? 'Processing' :
+                         breakStatus === 'success' ? 'Complete' :
+                         'Error'}
                       </div>
-                      <div className="text-muted-foreground mb-1 pl-3 border-l-2 border-blue-200 dark:border-blue-700 truncate">
-                        {editorRef.current ? editorRef.current.getText().split('\n\n')[0]?.substring(0, 30) + '...' : 'Your content...'}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Grammar Check:</span>
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        grammarStatus === 'idle' ? 'bg-gray-100 text-gray-600' :
+                        grammarStatus === 'processing' ? 'bg-blue-100 text-blue-600' :
+                        grammarStatus === 'success' ? 'bg-green-100 text-green-600' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          grammarStatus === 'idle' ? 'bg-gray-400' :
+                          grammarStatus === 'processing' ? 'bg-blue-500' :
+                          grammarStatus === 'success' ? 'bg-green-500' :
+                          'bg-red-500'
+                        }`}></div>
+                        {grammarStatus === 'idle' ? 'Ready' :
+                         grammarStatus === 'processing' ? 'Processing' :
+                         grammarStatus === 'success' ? 'Complete' :
+                         'Error'}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Paraphrase:</span>
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                        paraphraseStatus === 'idle' ? 'bg-gray-100 text-gray-600' :
+                        paraphraseStatus === 'processing' ? 'bg-blue-100 text-blue-600' :
+                        paraphraseStatus === 'success' ? 'bg-green-100 text-green-600' :
+                        'bg-red-100 text-red-600'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          paraphraseStatus === 'idle' ? 'bg-gray-400' :
+                          paraphraseStatus === 'processing' ? 'bg-blue-500' :
+                          paraphraseStatus === 'success' ? 'bg-green-500' :
+                          'bg-red-500'
+                        }`}></div>
+                        {paraphraseStatus === 'idle' ? 'Ready' :
+                         paraphraseStatus === 'processing' ? 'Processing' :
+                         paraphraseStatus === 'success' ? 'Complete' :
+                         'Error'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Full-Width Processing Preview */}
+              <div className="bg-muted/30 rounded-lg p-6">
+                <div className="text-sm font-medium text-foreground mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                  Real-Time AI Processing Preview
+                  <span className="text-xs bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-purple-300 px-2 py-1 rounded ml-2">Desktop Magic</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground mb-4">
+                    When you click "Break into Statements", this is how your Hebrew text gets processed by AI:
+                  </div>
+
+                  {/* Enhanced Processing Visualization */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-start gap-4">
+                      {/* Input Text */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">📝 Your Input Text</span>
+                          <span className="text-xs text-muted-foreground">(Hebrew/English content)</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded border-l-4 border-blue-400">
+                          {editorRef.current ? editorRef.current.getText().split('\n\n')[0]?.substring(0, 120) + '...' : 'Your Hebrew text content will appear here...'}
+                        </div>
                       </div>
 
-                      {/* Simulated Statements */}
-                      <div className="pl-3 space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-green-600 dark:text-green-400">📝 S1.1</span>
-                          <span className="text-muted-foreground font-mono">id: s_001</span>
+                      {/* AI Processing Arrow */}
+                      <div className="flex flex-col items-center gap-2 pt-8">
+                        <div className="text-2xl">🤖</div>
+                        <div className="text-xs text-center text-purple-600 dark:text-purple-300 font-medium">
+                          DeepSeek R1<br/>Processing
                         </div>
-                        <div className="text-muted-foreground pl-3 border-l-2 border-green-200 dark:border-green-700 text-xs truncate">
-                          {editorRef.current ? editorRef.current.getText().split('.')[0] + '.' : 'Statement...'}
+                        <div className="text-lg">↓</div>
+                      </div>
+
+                      {/* Output Structure */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">📄 Structured Output</span>
+                          <span className="text-xs text-muted-foreground">(Database-ready format)</span>
                         </div>
 
-                        {/* Citations Preview */}
-                        <div className="pl-3 mt-1">
-                          <div className="text-orange-600 dark:text-orange-400 text-xs mb-0.5">📎 Citations:</div>
-                          <div className="bg-orange-50 dark:bg-orange-950/20 rounded p-1 text-xs">
-                            Tanya 1:1 → appended_text
+                        <div className="space-y-3">
+                          {/* Paragraph Structure */}
+                          <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded border-l-4 border-green-400">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-green-700 dark:text-green-300">Paragraph 1</span>
+                              <span className="text-xs text-muted-foreground font-mono">id: p_001</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {editorRef.current ? editorRef.current.getText().split('\n\n')[0]?.substring(0, 80) + '...' : 'Processed paragraph text...'}
+                            </div>
+                          </div>
+
+                          {/* Statements */}
+                          <div className="ml-4 space-y-2">
+                            <div className="bg-purple-50 dark:bg-purple-950/20 p-2 rounded border-l-4 border-purple-400">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Statement 1.1</span>
+                                <span className="text-xs text-muted-foreground font-mono">id: s_001</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {editorRef.current ? editorRef.current.getText().split('.')[0] + '.' : 'Individual statement...'}
+                              </div>
+
+                              {/* Citations */}
+                              <div className="mt-2 pt-2 border-t border-purple-200 dark:border-purple-700">
+                                <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">📎 Citations Detected:</div>
+                                <div className="bg-orange-50 dark:bg-orange-950/20 px-2 py-1 rounded text-xs">
+                                  <code className="text-orange-800 dark:text-orange-200">"Tanya 1:1" → appended_text</code>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-muted-foreground text-xs mt-2">
-                      💡 AI analyzes Hebrew text structure, preserves meaning, and creates logical statement boundaries
+                    <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded border border-blue-200 dark:border-purple-700">
+                      <div className="text-sm text-blue-800 dark:text-purple-200">
+                        <strong>💡 AI Magic:</strong> Hebrew text gets analyzed for linguistic patterns, citations are extracted and linked,
+                        content is broken into logical statements while preserving meaning and context. This creates structured,
+                        searchable, and citable content ready for the database.
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Data Model Reference */}
-                <div className="bg-muted/30 rounded-lg p-2">
-                  <div className="text-xs font-medium text-foreground mb-1">Data Model</div>
-                  <div className="text-xs space-y-0.5 font-mono">
-                    <div><span className="text-blue-600">documents</span> → containers</div>
-                    <div><span className="text-green-600">paragraphs</span> → sections</div>
-                    <div><span className="text-purple-600">statements</span> → claims</div>
-                    <div><span className="text-orange-600">appended_text</span> → citations</div>
+              {/* Data Model Reference - Full Width */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  Data Model Reference
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-700">
+                    <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">documents</div>
+                    <div className="text-xs text-muted-foreground">Main containers for content</div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-700">
+                    <div className="font-medium text-green-700 dark:text-green-300 mb-1">paragraphs</div>
+                    <div className="text-xs text-muted-foreground">Logical text sections</div>
+                  </div>
+                  <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-700">
+                    <div className="font-medium text-purple-700 dark:text-purple-300 mb-1">statements</div>
+                    <div className="text-xs text-muted-foreground">Individual claims</div>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-700">
+                    <div className="font-medium text-orange-700 dark:text-orange-300 mb-1">appended_text</div>
+                    <div className="text-xs text-muted-foreground">Citations & footnotes</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </main>
     </div>
