@@ -239,11 +239,39 @@ export default function WritePage() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Clean and Focused */}
           <div className="space-y-6">
-            {/* Quick Actions */}
+            {/* Getting Started Guide */}
             <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">How to Write</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
+                  <div>
+                    <strong className="text-foreground">Write Your Content</strong>
+                    <p className="text-muted-foreground">Use the editor to write your article, explanation, or insights. Add citations as you write.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
+                  <div>
+                    <strong className="text-foreground">Add Citations</strong>
+                    <p className="text-muted-foreground">Click the book icon in the toolbar to add references like "Tanya 1:1" or "Mishneh Torah 1:2".</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold mt-0.5">3</div>
+                  <div>
+                    <strong className="text-foreground">Process & Save</strong>
+                    <p className="text-muted-foreground">Your citations become "appended text" that gets attached to statements for reference tracking.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions - Simplified */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Tools</h3>
               <div className="space-y-3">
                 <button
                   onClick={handleBreakStatements}
@@ -272,7 +300,7 @@ export default function WritePage() {
                       {breakStatus === 'processing' ? 'Processing content...' :
                        breakStatus === 'success' ? 'Statements inserted!' :
                        breakStatus === 'error' ? 'Processing failed' :
-                       'Use AI to split content'}
+                       'Split content for better organization'}
                     </div>
                   </div>
                 </button>
@@ -282,8 +310,8 @@ export default function WritePage() {
                     <BookOpen className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="font-medium text-foreground">Add Citations</div>
-                    <div className="text-xs text-muted-foreground">Insert source references</div>
+                    <div className="font-medium text-foreground">Add Citation</div>
+                    <div className="text-xs text-muted-foreground">Reference sources in your writing</div>
                   </div>
                 </button>
 
@@ -292,35 +320,16 @@ export default function WritePage() {
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="font-medium text-foreground">Hebrew OCR</div>
-                    <div className="text-xs text-muted-foreground">Paste Hebrew text images</div>
+                    <div className="font-medium text-foreground">Paste Hebrew Text</div>
+                    <div className="text-xs text-muted-foreground">OCR automatically processes images</div>
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* Writing Tips */}
+            {/* Save & Publish */}
             <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Writing Tips</h3>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <div>
-                  <strong className="text-foreground">Hebrew OCR:</strong> Paste images of Hebrew text to instantly convert them to editable text.
-                </div>
-                <div>
-                  <strong className="text-foreground">Citations:</strong> Use [Tanya 1:1] format or click the citation button for advanced references.
-                </div>
-                <div>
-                  <strong className="text-foreground">AI Assistance:</strong> The editor can help break content into statements and detect citations automatically.
-                </div>
-                <div>
-                  <strong className="text-foreground">Rich Formatting:</strong> Use headings, lists, and formatting to structure your content.
-                </div>
-              </div>
-            </div>
-
-            {/* Save Options */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Save Options</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Ready to Publish?</h3>
               <div className="space-y-3">
                 <button
                   onClick={handleSave}
@@ -328,21 +337,23 @@ export default function WritePage() {
                   className="w-full flex items-center gap-3 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Save className="h-4 w-4" />
-                  Save as Draft
+                  <div className="text-left">
+                    <div className="font-medium">Save Draft</div>
+                    <div className="text-xs opacity-90">Save for later editing</div>
+                  </div>
                 </button>
 
                 <button className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-md hover:bg-accent transition-colors">
                   <Eye className="h-4 w-4" />
-                  Preview Public View
-                </button>
-
-                <button className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-md hover:bg-accent transition-colors">
-                  <FileText className="h-4 w-4" />
-                  Export as PDF
+                  <div className="text-left">
+                    <div className="font-medium">Preview</div>
+                    <div className="text-xs text-muted-foreground">See how it will look</div>
+                  </div>
                 </button>
               </div>
             </div>
           </div>
+
         </div>
       </main>
     </div>
