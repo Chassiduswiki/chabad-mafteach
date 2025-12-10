@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen } from 'lucide-react';
 import { Topic } from '@/lib/types';
 
 export default function TopicEditorPage() {
@@ -15,7 +15,6 @@ export default function TopicEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     canonical_title: '',
     description: '',
@@ -96,18 +95,6 @@ export default function TopicEditorPage() {
 
   const handlePreview = () => {
     router.push(`/topics/${slug}`);
-  };
-
-  const toggleDocumentExpansion = (docId: string) => {
-    setExpandedDocs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(docId)) {
-        newSet.delete(docId);
-      } else {
-        newSet.add(docId);
-      }
-      return newSet;
-    });
   };
 
   if (isLoading) {
@@ -313,81 +300,186 @@ export default function TopicEditorPage() {
           {/* Associated Content */}
           {topic?.paragraphs && topic.paragraphs.length > 0 && (
             <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Associated Content</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-6">Content Processing Pipeline</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                See how raw document content gets processed into paragraphs, statements, and enriched with appended text (footnotes, sources, etc.)
+              </p>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {topic.paragraphs.map((paragraph: any) => (
-                  <div key={paragraph.id} className="border border-border rounded-lg p-4">
-                    {/* Document Header */}
-                    <div
-                      className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg"
-                      onClick={() => toggleDocumentExpansion(paragraph.document_title || paragraph.id)}
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                        <BookOpen className="h-4 w-4" />
+                  <div key={paragraph.id} className="border border-border rounded-lg overflow-hidden">
+                    {/* Document Header - Shows processing source */}
+                    <div className="bg-muted/50 px-4 py-3 border-b border-border">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                          <BookOpen className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-foreground">{paragraph.document_title || 'Document'}</h3>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>📄 {paragraph.statements?.length || 0} statements</span>
+                            <span>📝 Paragraph {paragraph.order_key}</span>
+                            <span>🔤 {paragraph.original_lang?.toUpperCase()}</span>
+                            {paragraph.metadata?.folio_notation && (
+                              <span>📖 Folio {paragraph.metadata.folio_notation}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground">{paragraph.document_title || 'Untitled Document'}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {paragraph.statements?.length || 0} statements • Paragraph {paragraph.order_key}
-                        </p>
-                      </div>
-                      {expandedDocs.has(paragraph.document_title || paragraph.id) ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
                     </div>
 
-                    {/* Expanded Content */}
-                    {expandedDocs.has(paragraph.document_title || paragraph.id) && (
-                      <div className="mt-4 ml-11 space-y-3">
-                        {/* Paragraph Text */}
-                        <div className="bg-muted/30 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium text-muted-foreground">Paragraph</span>
+                    {/* Processing Pipeline */}
+                    <div className="p-4 space-y-4">
+                      {/* Step 1: Raw Paragraph Text */}
+                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">
+                            1
                           </div>
-                          <div
-                            className="text-sm text-foreground prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{
-                              __html: paragraph.text?.length > 300
-                                ? paragraph.text.substring(0, 300) + '...'
-                                : paragraph.text
-                            }}
-                          />
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Raw Paragraph Content</span>
+                          <span className="text-xs text-blue-700 dark:text-blue-300">(from document processing)</span>
                         </div>
+                        <div
+                          className="text-sm text-blue-800 dark:text-blue-200 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: paragraph.text?.length > 500
+                              ? paragraph.text.substring(0, 500) + '...'
+                              : paragraph.text || 'No paragraph text available'
+                          }}
+                        />
+                        {paragraph.metadata?.section_title && (
+                          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                            Section: {paragraph.metadata.section_title}
+                          </div>
+                        )}
+                      </div>
 
-                        {/* Statements */}
-                        {paragraph.statements && paragraph.statements.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                              <span className="w-1 h-1 bg-primary rounded-full"></span>
-                              Statements ({paragraph.statements.length})
-                            </h4>
-                            {paragraph.statements.map((statement: any) => (
-                              <div key={statement.id} className="bg-muted/20 rounded-lg p-3 ml-4 border-l-2 border-primary/30">
-                                <p className="text-sm text-foreground">{statement.text}</p>
-                                <div className="flex items-center gap-2 mt-2">
+                      {/* Step 2: Statement Breakdown */}
+                      {paragraph.statements && paragraph.statements.length > 0 && (
+                        <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">
+                              2
+                            </div>
+                            <span className="text-sm font-medium text-green-900 dark:text-green-100">Statement Breakdown</span>
+                            <span className="text-xs text-green-700 dark:text-green-300">
+                              ({paragraph.statements.length} statements extracted via AI processing)
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            {paragraph.statements.map((statement: any, index: number) => (
+                              <div key={statement.id} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-300 dark:border-green-700">
+                                {/* Statement Header */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">
+                                    Statement {index + 1}
+                                  </span>
                                   <span className="text-xs text-muted-foreground">
                                     ID: {statement.id} • Order: {statement.order_key}
                                   </span>
+                                  {statement.metadata?.auto_generated && (
+                                    <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
+                                      🤖 AI Generated
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Statement Text */}
+                                <div className="text-sm text-foreground mb-3 leading-relaxed">
+                                  {statement.text}
+                                </div>
+
+                                {/* Appended Text (Footnotes, Sources, etc.) */}
+                                {statement.appended_text && (
+                                  <div className="border-t border-green-300 dark:border-green-700 pt-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900 px-2 py-1 rounded">
+                                        📎 Appended Content
+                                      </span>
+                                      <span className="text-xs text-orange-600 dark:text-orange-400">
+                                        Footnotes, sources, and additional references
+                                      </span>
+                                    </div>
+                                    <div
+                                      className="text-sm text-orange-800 dark:text-orange-200 prose prose-sm max-w-none"
+                                      dangerouslySetInnerHTML={{
+                                        __html: statement.appended_text.length > 300
+                                          ? statement.appended_text.substring(0, 300) + '...'
+                                          : statement.appended_text
+                                      }}
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Statement Metadata */}
+                                <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                    {statement.metadata?.source && (
+                                      <span>Source: {statement.metadata.source}</span>
+                                    )}
+                                    {statement.metadata?.page_number && (
+                                      <span>Page: {statement.metadata.page_number}</span>
+                                    )}
+                                    {statement.metadata?.confidence && (
+                                      <span>Confidence: {(statement.metadata.confidence * 100).toFixed(0)}%</span>
+                                    )}
+                                    {statement.metadata?.auto_generated && (
+                                      <span>Processing: AI Statement Breaking</span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
                           </div>
-                        )}
+                        </div>
+                      )}
+
+                      {/* Processing Summary */}
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Processing Summary</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {paragraph.text?.length || 0}
+                            </div>
+                            <div className="text-gray-600 dark:text-gray-400">Characters</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {paragraph.statements?.length || 0}
+                            </div>
+                            <div className="text-gray-600 dark:text-gray-400">Statements</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {paragraph.statements?.filter((s: any) => s.appended_text)?.length || 0}
+                            </div>
+                            <div className="text-gray-600 dark:text-gray-400">With Footnotes</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                              {paragraph.metadata?.source || 'N/A'}
+                            </div>
+                            <div className="text-gray-600 dark:text-gray-400">Source</div>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
 
               {topic.paragraphs.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No documents or paragraphs associated with this topic yet.</p>
-                  <p className="text-xs">Content will appear here when documents are linked to this topic.</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No Processed Content Yet</p>
+                  <p className="text-sm max-w-md mx-auto">
+                    This topic doesn't have any associated documents that have been processed into paragraphs and statements.
+                    Content will appear here after document ingestion and processing.
+                  </p>
                 </div>
               )}
             </div>
