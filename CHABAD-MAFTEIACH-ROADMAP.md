@@ -34,11 +34,15 @@ Chabad Maftaiach is a comprehensive digital library system for Jewish texts, spe
 
 **Code Location**: `app/seforim/page.tsx` (DocumentTree component)
 
-##### ✅ Granular Citation System
-- **Atomic Statements**: Each footnote creates separate statement
-- **Citation Modals**: Bottom-up slide animations
-- **Cross-References**: Metadata for future inter-text linking
-- **Citation Parsing**: Automatic reference extraction
+##### ✅ Enhanced Citation System
+- **Bottom-Up Modal**: Citations open in slide-up modal from screen bottom
+- **Granular Citations**: Each footnote creates individual clickable statement
+- **Citation Parsing**: Automatic reference extraction and metadata storage
+- **Inter-Text Linking**: Future capability for cross-references between texts
+- **Mobile-Optimized**: Higher z-index prevents navbar blocking on mobile
+- **RTL Hebrew Support**: Automatic right-to-left for Hebrew citations
+- **Content Hierarchy**: Citation → Context → References ordering
+- **Accessibility**: Screen reader friendly with proper ARIA labels
 
 **Code Location**:
 - `scripts/populate_chabad_book.js` (parsing logic)
@@ -155,8 +159,11 @@ DIRECTUS_STATIC_TOKEN=your_static_token
 ### Strengths
 - ✅ **Clean Design**: Minimal, distraction-free interface
 - ✅ **Responsive**: Works on all device sizes
-- ✅ **Accessible**: WCAG compliant
-- ✅ **Performant**: Fast loading and smooth interactions
+- ✅ **Accessible**: WCAG compliant with screen reader support
+- ✅ **Bilingual**: Full Hebrew RTL support throughout
+- ✅ **Interactive Citations**: Rich modal experience with proper content hierarchy
+- ✅ **Performant**: Virtual scrolling for long documents
+- ✅ **Progressive Enhancement**: Graceful fallbacks for older browsers
 
 ### Current Limitations
 - ⚠️ **Basic Styling**: Functional but not visually rich
@@ -371,4 +378,4 @@ The platform will evolve from a basic reader into a comprehensive ecosystem that
 
 ---
 
-*This document represents the current state of Chabad Maftaiach as of December 2025. The system has achieved a solid foundation with core reading functionality and is poised for rapid expansion into advanced features and broader impact.*
+*This document represents the current state of Chabad Maftaiach as of December 2025. The system has achieved a solid foundation with core reading functionality, hierarchical navigation, and a sophisticated citation system with RTL Hebrew support. The platform is production-ready for basic usage while being architected for extensive future expansion into advanced features and broader impact.*
