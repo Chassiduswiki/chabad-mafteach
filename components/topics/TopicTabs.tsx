@@ -15,11 +15,11 @@ interface TopicTabsProps {
     relatedTopics?: any[];
 }
 
-const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string }[] = [
+const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string; comingSoon?: boolean }[] = [
     { id: 'overview', label: 'Article', icon: FileText, description: 'Full document content and paragraphs' },
-    { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not' },
-    { id: 'sources', label: 'Seforim', icon: BookOpen, description: 'References and citations' },
-    { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts' },
+    { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not', comingSoon: true },
+    { id: 'sources', label: 'Seforim', icon: BookOpen, description: 'References and citations', comingSoon: true },
+    { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts', comingSoon: true },
 ];
 
 export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
@@ -31,6 +31,21 @@ export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
     const hasRelated = relatedTopics && relatedTopics.length > 0;
 
     const renderTabContent = () => {
+        // Check if current tab is coming soon
+        const currentTabData = tabs.find(tab => tab.id === activeTab);
+        if (currentTabData?.comingSoon) {
+            const Icon = currentTabData.icon;
+            return (
+                <div className="text-center py-12 text-muted-foreground">
+                    <Icon className="mx-auto h-16 w-16 mb-4 opacity-20" />
+                    <h3 className="text-lg font-medium mb-2">{currentTabData.label} Coming Soon</h3>
+                    <p className="text-sm max-w-md mx-auto">
+                        {currentTabData.description} will be available once this topic's content is fully developed.
+                    </p>
+                </div>
+            );
+        }
+
         switch (activeTab) {
             case 'overview':
                 return <ArticleTab topic={topic} />;
@@ -81,6 +96,7 @@ export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
+                        const isComingSoon = tab.comingSoon;
                         const hasContent = tab.id === 'overview' ||
                             (tab.id === 'boundaries' && hasBoundaries) ||
                             (tab.id === 'sources' && hasSources) ||
@@ -89,17 +105,26 @@ export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${isActive
+                                onClick={() => !isComingSoon && setActiveTab(tab.id)}
+                                disabled={isComingSoon}
+                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${
+                                    isActive
                                         ? 'border-primary text-primary'
+                                        : isComingSoon
+                                        ? 'border-transparent text-muted-foreground/50 cursor-not-allowed'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                     }`}
                             >
-                                <Icon className="h-4 w-4" />
-                                <span className="font-medium">{tab.label}</span>
-                                {!hasContent && (
-                                    <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                                <Icon className={`h-4 w-4 ${isComingSoon ? 'opacity-50' : ''}`} />
+                                <span className={`font-medium ${isComingSoon ? 'opacity-50' : ''}`}>{tab.label}</span>
+                                {isComingSoon && (
+                                    <span className="text-xs bg-muted/50 text-muted-foreground px-1.5 py-0.5 rounded">
                                         Soon
+                                    </span>
+                                )}
+                                {!hasContent && !isComingSoon && (
+                                    <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                                        Empty
                                     </span>
                                 )}
                             </button>
