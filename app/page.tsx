@@ -9,6 +9,7 @@ import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
 import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
 import { FeaturedTopics } from '@/components/features/home/FeaturedTopics';
 import { MobileHome } from '@/components/mobile/MobileHome';
+import OnboardingHints from '@/components/features/onboarding/OnboardingHints';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
 
@@ -121,6 +122,9 @@ export default function Home() {
         >
           Explore concepts, discover sources. A comprehensive index connecting Chassidic topics to their sources across all Chabad literature.
         </motion.p>
+
+        {/* Onboarding Hints - Guide first-time users */}
+        <OnboardingHints />
 
         {/* Command Palette Trigger Area */}
         <motion.div
