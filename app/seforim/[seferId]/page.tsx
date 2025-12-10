@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import directus from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, Type, Minus, Plus, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 interface Statement {
@@ -51,14 +51,13 @@ export default function SeferPage() {
     const [showCitations, setShowCitations] = useState(true);
     const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
     const [visibleParagraphs, setVisibleParagraphs] = useState<Set<number>>(new Set());
-    const observerRef = useRef<IntersectionObserver | null>(null);
-    const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const [citationModal, setCitationModal] = useState<CitationModal>({
         isOpen: false,
         citation: '',
         context: '',
         references: []
     });
+    const [showSettingsPopup, setShowSettingsPopup] = useState(false);
 
     // Hebrew detection helper
     const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
@@ -208,15 +207,6 @@ export default function SeferPage() {
         fetchData();
     }, [seferId]);
 
-    // Font size controls
-    const cycleFontSize = () => {
-        setFontSize(current => {
-            if (current === 'small') return 'medium';
-            if (current === 'medium') return 'large';
-            return 'small';
-        });
-    };
-
     // Handle citation clicks
     const handleCitationClick = (citation: string, statement: Statement) => {
         // Extract plain text from HTML citation
@@ -362,7 +352,7 @@ export default function SeferPage() {
         <div className="min-h-screen bg-background">
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="sticky top-0 z-40 bg-background/95 backdrop-blur flex items-center justify-between mb-8 border-b border-border/50 pb-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <BookOpen className="h-5 w-5" />
@@ -372,36 +362,97 @@ export default function SeferPage() {
                             <p className="text-sm text-muted-foreground capitalize">{document.doc_type}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        {/* Font Size Control */}
-                        <button
-                            onClick={cycleFontSize}
-                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
-                            title={`Font size: ${fontSize}`}
-                        >
-                            <Type className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                                {fontSize === 'small' && 'Small'}
-                                {fontSize === 'medium' && 'Medium'}
-                                {fontSize === 'large' && 'Large'}
-                            </span>
-                        </button>
+                    <div className="flex items-center gap-4 relative">
+                        {/* Settings Popup */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowSettingsPopup(!showSettingsPopup)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
+                            >
+                                <Settings className="h-4 w-4" />
+                                <span className="hidden sm:inline">Settings</span>
+                                <ChevronDown className="h-3 w-3" />
+                            </button>
 
-                        {/* Citation Toggle */}
-                        <button
-                            onClick={() => setShowCitations(!showCitations)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border hover:bg-accent transition-colors"
-                        >
-                            {showCitations ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            <span className="hidden sm:inline">
-                                {showCitations ? 'Hide Citations' : 'Show Citations'}
-                            </span>
-                        </button>
+                            {/* Settings Dropdown */}
+                            {showSettingsPopup && (
+                                <>
+                                    {/* Backdrop */}
+                                    <div
+                                        className="fixed inset-0 z-30"
+                                        onClick={() => setShowSettingsPopup(false)}
+                                    />
+
+                                    {/* Dropdown */}
+                                    <div className="absolute right-0 top-full mt-2 w-64 bg-background border border-border rounded-lg shadow-lg p-4 z-40">
+                                        <div className="space-y-4">
+                                            {/* Font Size Control */}
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                                    Font Size
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setFontSize('small')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'small'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Small
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setFontSize('medium')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'medium'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Medium
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setFontSize('large')}
+                                                        className={`px-3 py-1 text-xs rounded border transition-colors ${
+                                                            fontSize === 'large'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'border-border hover:bg-accent'
+                                                        }`}
+                                                    >
+                                                        Large
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Citation Toggle */}
+                                            <div>
+                                                <label className="text-sm font-medium text-foreground mb-2 block">
+                                                    Citations
+                                                </label>
+                                                <button
+                                                    onClick={() => setShowCitations(!showCitations)}
+                                                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded border transition-colors w-full ${
+                                                        showCitations
+                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                            : 'border-border hover:bg-accent'
+                                                    }`}
+                                                >
+                                                    {showCitations ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    {showCitations ? 'Hide Citations' : 'Show Citations'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         <Link
                             href="/seforim"
                             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
-                            ← Back to Seforim
+                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </div>
                 </div>

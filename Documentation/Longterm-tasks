@@ -253,8 +253,21 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
 - [ ] **Personalized Learning**: Recommendation engine based on user reading history.
 
-### Phase 8c: Engagement & Access
-- [ ] **Gamification**: Leaderboards for contributors (verifying links, tagging).
-- [ ] **Offline Mode**: PWA support for downloading topics/books for offline reading.
-- [ ] **Multilingual Sync**: Synced scrolling associated Hebrew/English paragraphs.
+---
+
+## 🚨 ARCHITECTURAL CONCERNS (REQUIRES DISCUSSION)
+
+### Data Integrity & Statement Synchronization
+**Issue**: What happens if text in paragraph changes, will it throw the statement system out of sync?
+- **Impact**: Could break citations, references, and user bookmarks
+- **Solution Needed**: Version control system for paragraphs/statements
+- **Discussion Required**: How to handle text updates without breaking existing references
+
+### Statement-to-Topic Linking Architecture
+**Issue**: New version of statements to pull concepts into topics as sources. How to quote multi-page concepts?
+- **Impact**: Current statement_topics table only links single statements to topics
+- **Solution Needed**: Support for statement ranges, page ranges, or concept spans
+- **Discussion Required**: Schema changes for multi-statement topic associations
+
+---
 
