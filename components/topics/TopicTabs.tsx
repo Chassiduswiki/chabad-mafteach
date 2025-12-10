@@ -31,16 +31,22 @@ export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
     const hasRelated = relatedTopics && relatedTopics.length > 0;
 
     const renderTabContent = () => {
-        // Check if current tab is coming soon
+        // Check if current tab is coming soon AND has no content
         const currentTabData = tabs.find(tab => tab.id === activeTab);
-        if (currentTabData?.comingSoon) {
-            const Icon = currentTabData.icon;
+        const hasContent = activeTab === 'overview' ||
+            (activeTab === 'boundaries' && hasBoundaries) ||
+            (activeTab === 'sources' && hasSources) ||
+            (activeTab === 'related' && hasRelated);
+        const isComingSoon = currentTabData?.comingSoon && !hasContent;
+
+        if (isComingSoon) {
+            const Icon = currentTabData!.icon;
             return (
                 <div className="text-center py-12 text-muted-foreground">
                     <Icon className="mx-auto h-16 w-16 mb-4 opacity-20" />
-                    <h3 className="text-lg font-medium mb-2">{currentTabData.label} Coming Soon</h3>
+                    <h3 className="text-lg font-medium mb-2">{currentTabData!.label} Coming Soon</h3>
                     <p className="text-sm max-w-md mx-auto">
-                        {currentTabData.description} will be available once this topic's content is fully developed.
+                        {currentTabData!.description} will be available once this topic's content is fully developed.
                     </p>
                 </div>
             );
@@ -96,16 +102,16 @@ export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
-                        const isComingSoon = tab.comingSoon;
                         const hasContent = tab.id === 'overview' ||
                             (tab.id === 'boundaries' && hasBoundaries) ||
                             (tab.id === 'sources' && hasSources) ||
                             (tab.id === 'related' && hasRelated);
+                        const isComingSoon = tab.comingSoon && !hasContent; // Only show as coming soon if no content
 
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => !isComingSoon && setActiveTab(tab.id)}
+                                onClick={() => setActiveTab(tab.id)}
                                 disabled={isComingSoon}
                                 className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${
                                     isActive
