@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { Topic } from '@/lib/types';
 
 export default function TopicEditorPage() {
@@ -15,6 +15,7 @@ export default function TopicEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     canonical_title: '',
     description: '',
@@ -33,9 +34,12 @@ export default function TopicEditorPage() {
   const loadTopic = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/topics/${slug}/metadata`);
+      // Load full topic data including documents and paragraphs
+      const response = await fetch(`/api/topics/${slug}`);
       if (response.ok) {
-        const topicData = await response.json();
+        const data = await response.json();
+        // The API returns { topic: {...}, citations: [...], relatedTopics: [...] }
+        const topicData = data.topic || data;
         setTopic(topicData);
         setFormData({
           canonical_title: topicData.canonical_title || '',
@@ -92,6 +96,18 @@ export default function TopicEditorPage() {
 
   const handlePreview = () => {
     router.push(`/topics/${slug}`);
+  };
+
+  const toggleDocumentExpansion = (docId: string) => {
+    setExpandedDocs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
   };
 
   if (isLoading) {
@@ -293,6 +309,89 @@ export default function TopicEditorPage() {
               </div>
             </div>
           </div>
+
+          {/* Associated Content */}
+          {topic?.paragraphs && topic.paragraphs.length > 0 && (
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-6">Associated Content</h2>
+
+              <div className="space-y-4">
+                {topic.paragraphs.map((paragraph: any) => (
+                  <div key={paragraph.id} className="border border-border rounded-lg p-4">
+                    {/* Document Header */}
+                    <div
+                      className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 -m-4 p-4 rounded-lg"
+                      onClick={() => toggleDocumentExpansion(paragraph.document_title || paragraph.id)}
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-foreground">{paragraph.document_title || 'Untitled Document'}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {paragraph.statements?.length || 0} statements • Paragraph {paragraph.order_key}
+                        </p>
+                      </div>
+                      {expandedDocs.has(paragraph.document_title || paragraph.id) ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+
+                    {/* Expanded Content */}
+                    {expandedDocs.has(paragraph.document_title || paragraph.id) && (
+                      <div className="mt-4 ml-11 space-y-3">
+                        {/* Paragraph Text */}
+                        <div className="bg-muted/30 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium text-muted-foreground">Paragraph</span>
+                          </div>
+                          <div
+                            className="text-sm text-foreground prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: paragraph.text?.length > 300
+                                ? paragraph.text.substring(0, 300) + '...'
+                                : paragraph.text
+                            }}
+                          />
+                        </div>
+
+                        {/* Statements */}
+                        {paragraph.statements && paragraph.statements.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                              <span className="w-1 h-1 bg-primary rounded-full"></span>
+                              Statements ({paragraph.statements.length})
+                            </h4>
+                            {paragraph.statements.map((statement: any) => (
+                              <div key={statement.id} className="bg-muted/20 rounded-lg p-3 ml-4 border-l-2 border-primary/30">
+                                <p className="text-sm text-foreground">{statement.text}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    ID: {statement.id} • Order: {statement.order_key}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {topic.paragraphs.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No documents or paragraphs associated with this topic yet.</p>
+                  <p className="text-xs">Content will appear here when documents are linked to this topic.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Save Actions */}
           <div className="flex items-center justify-between pt-6 border-t border-border">
