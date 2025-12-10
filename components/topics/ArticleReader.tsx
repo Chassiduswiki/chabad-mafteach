@@ -60,6 +60,7 @@ export function ArticleReader({
     source_id: number | string | null;
     source_title: string | null;
     reference: string | null;
+    content?: string; // HTML content of the citation
   } | null>(null);
 
   // Find selected statement across all paragraphs (if any)
@@ -73,13 +74,41 @@ export function ArticleReader({
 
   const handleClose = () => setSelectedId(null);
 
-  // Calculate reading progress based on viewed paragraphs
-  useEffect(() => {
-    if (paragraphs.length > 0) {
-      const progress = (viewedParagraphs.size / paragraphs.length) * 100;
-      setReadingProgress(progress);
+  // Extract citation reference from text
+  const extractCitationReference = (text: string): string | null => {
+    // Look for common citation patterns
+    const patterns = [
+      /(ראה|see)\s+([^.!?]+)[.!?]?/i, // "ראה ליקוטי תורה" or "see Likkutei Torah"
+      /(לקוטי\s+תורה|תורה\s+אור|תניא|לקוטי\s+אמרים)/i, // Common Chabad texts
+      /([א-ת]+\s*,\s*[א-ת])/ // Hebrew folio references like "א, א"
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        return match[1] || match[0];
+      }
     }
-  }, [viewedParagraphs, paragraphs.length]);
+
+    return null;
+  };
+
+  // Handle citation clicks from appended_text
+  const handleCitationClick = (appendedText: string, statement: StatementWithTopics) => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = appendedText;
+    const text = tempDiv.textContent || '';
+
+    // Try to extract reference from common patterns
+    const reference = extractCitationReference(text);
+
+    setActiveCitation({
+      source_id: null,
+      source_title: 'Citation',
+      reference: reference || text.substring(0, 100),
+      content: appendedText // Pass the full HTML content
+    });
+  };
 
   // Intersection Observer to track paragraph visibility
   useEffect(() => {
@@ -411,6 +440,7 @@ export function ArticleReader({
       <CitationViewerModal
         open={Boolean(activeCitation)}
         citation={activeCitation}
+        citationContent={activeCitation?.content}
         onClose={() => setActiveCitation(null)}
       />
     </div>

@@ -12,12 +12,11 @@ interface Citation {
 interface CitationViewerModalProps {
   open: boolean;
   citation: Citation | null;
+  citationContent?: string; // HTML content of the citation
   onClose: () => void;
 }
 
-export function CitationViewerModal({ open, citation, onClose }: CitationViewerModalProps) {
-  const { data: sefariaData, loading, error } = useSefariaText(citation?.reference ?? null);
-
+export function CitationViewerModal({ open, citation, citationContent, onClose }: CitationViewerModalProps) {
   if (!open || !citation) return null;
 
   return (
@@ -33,7 +32,7 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Citation</p>
             <p className="text-lg font-semibold text-foreground">
-              {citation.source_title ?? "Source"}
+              {citation.source_title ?? "Citation"}
             </p>
           </div>
           <button
@@ -45,6 +44,18 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
         </div>
 
         <div className="p-6 space-y-6">
+          {citationContent && (
+            <div>
+              <p className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Citation Content</p>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <div
+                  className="text-foreground prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: citationContent }}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <p className="text-sm uppercase tracking-wide text-muted-foreground mb-2">Reference</p>
             <p className="text-foreground">
@@ -52,44 +63,13 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
             </p>
           </div>
 
-          {citation.reference && (
-            <div>
-              <p className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Sefaria Text</p>
-              {loading && (
-                <div className="flex items-center justify-center py-8 text-muted-foreground">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
-                  Loading text...
-                </div>
-              )}
-              {error && (
-                <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                  Error loading text: {error}
-                </div>
-              )}
-              {sefariaData && (
-                <div className="space-y-4">
-                  {sefariaData.text.map((paragraph, index) => (
-                    <div key={index} className="border-l-4 border-primary/20 pl-4 py-3 bg-muted/20 rounded-r-lg">
-                      <p className="text-foreground leading-relaxed">{paragraph}</p>
-                      {sefariaData.he && sefariaData.he[index] && (
-                        <p className="text-primary font-serif mt-2 leading-relaxed" dir="rtl">
-                          {sefariaData.he[index]}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                  <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-                    Source: <span className="font-medium">{sefariaData.ref}</span> ({sefariaData.book})
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">Source ID</p>
+            <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">Citation Details</p>
             <p className="text-foreground font-mono text-sm">
-              {citation.source_id ?? "Unknown"}
+              Source ID: {citation.source_id ?? "Unknown"}
+            </p>
+            <p className="text-foreground font-mono text-sm mt-1">
+              Reference: {citation.reference ?? "Not available"}
             </p>
           </div>
         </div>
