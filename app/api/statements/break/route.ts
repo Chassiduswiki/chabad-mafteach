@@ -7,29 +7,29 @@ import { requireEditor } from '@/lib/auth';
 
 export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
-    const { paragraph_id, document_id } = await request.json();
+    const { block_id, document_id } = await request.json();
 
-    if (!paragraph_id) {
-      return NextResponse.json({ error: 'paragraph_id is required' }, { status: 400 });
+    if (!block_id) {
+      return NextResponse.json({ error: 'block_id is required' }, { status: 400 });
     }
 
-    console.log(`User ${context.userId} (${context.role}) breaking paragraph: ${paragraph_id}`);
+    console.log(`User ${context.userId} (${context.role}) breaking content block: ${block_id}`);
 
-    // Get paragraph content from Directus
-    const paragraph = await directus.request(
-      readItems('paragraphs', {
-        filter: { id: { _eq: paragraph_id } },
-        fields: ['id', 'text', 'doc_id']
+    // Get content block content from Directus
+    const contentBlock = await directus.request(
+      readItems('content_blocks', {
+        filter: { id: { _eq: block_id } },
+        fields: ['id', 'content', 'document_id']
       })
     );
 
-    if (!paragraph || paragraph.length === 0) {
-      return NextResponse.json({ error: 'Paragraph not found' }, { status: 404 });
+    if (!contentBlock || contentBlock.length === 0) {
+      return NextResponse.json({ error: 'Content block not found' }, { status: 404 });
     }
 
-    const paragraphText = paragraph[0].text;
-    if (!paragraphText) {
-      return NextResponse.json({ error: 'Paragraph has no text content' }, { status: 400 });
+    const blockContent = contentBlock[0].content;
+    if (!blockContent) {
+      return NextResponse.json({ error: 'Content block has no content' }, { status: 400 });
     }
 
     // Use OpenRouter to break into statements
@@ -37,7 +37,7 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
 
     const prompt = `Analyze this Hebrew/English text and break it into logical statements. Each statement should be a complete thought or teaching.
 
-Text: "${paragraphText}"
+Text: "${blockContent}"
 
 Return a JSON object with:
 {
@@ -84,13 +84,13 @@ Guidelines:
     for (const stmt of result.statements) {
       const statement = await directus.request(
         createItem('statements', {
-          paragraph_id: paragraph_id,
+          block_id: block_id,
           text: stmt.text,
           order_key: stmt.order.toString(),
           metadata: {
             created_by_ai: true,
             ai_model: 'deepseek/deepseek-r1',
-            document_id: document_id || paragraph[0].doc_id,
+            document_id: document_id || contentBlock[0].document_id,
             created_by: context.userId
           }
         })

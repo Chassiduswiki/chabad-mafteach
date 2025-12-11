@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Upload, BookOpen, FileText, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Upload, BookOpen, FileText, CheckCircle, AlertCircle, Clock, Book } from 'lucide-react';
 import { IngestionModal } from "@/components/editor/IngestionModal";
+import { EntryImportModal } from "@/components/editor/EntryImportModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -184,6 +185,37 @@ export default function ImportPage() {
               </CardContent>
             </Card>
 
+            {/* Entry Documents Import */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
+                    <Book className="h-5 w-5" />
+                  </div>
+                  Import Entry Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Upload structured markdown files (.md) with frontmatter for Chassidic concepts, teachings, and entries. Files are automatically processed into documents, paragraphs, and statements.
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Format: Markdown with YAML frontmatter • Auto-parsing
+                  </div>
+                  <EntryImportModal
+                    onDocumentCreated={handleDocumentCreated}
+                    trigger={
+                      <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+                        <Book className="h-4 w-4" />
+                        Import Entry
+                      </button>
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             {/* PDF Upload */}
             <Card>
               <CardHeader>
@@ -304,13 +336,18 @@ export default function ImportPage() {
                 </div>
 
                 <div className="text-sm">
+                  <strong className="text-foreground">Entry Documents:</strong>
+                  <p className="text-muted-foreground">For structured Chassidic teachings. Requires YAML frontmatter with metadata.</p>
+                </div>
+
+                <div className="text-sm">
                   <strong className="text-foreground">PDF Files:</strong>
                   <p className="text-muted-foreground">Async processing. Text-based PDFs are faster than scanned documents.</p>
                 </div>
 
                 <div className="text-sm">
                   <strong className="text-foreground">Processing Time:</strong>
-                  <p className="text-muted-foreground">Sefaria: Instant • Text: Seconds • PDF: Minutes (depending on size)</p>
+                  <p className="text-muted-foreground">Sefaria: Instant • Text: Seconds • Entries: Seconds • PDF: Minutes (depending on size)</p>
                 </div>
               </CardContent>
             </Card>

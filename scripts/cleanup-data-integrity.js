@@ -1,4 +1,4 @@
-const { createDirectus, rest, staticToken, readItems, deleteItems } = require('@directus/sdk');
+const { createDirectus, rest, authentication, readItems, deleteItems } = require('@directus/sdk');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -14,8 +14,11 @@ if (!directusUrl || !directusToken) {
 }
 
 const directus = createDirectus(directusUrl)
-    .with(staticToken(directusToken))
+    .with(authentication())
     .with(rest());
+
+// Set the user token
+directus.setToken(directusToken);
 
 /**
  * Data Integrity Cleanup Script

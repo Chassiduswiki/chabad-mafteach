@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { createItem, updateItem, deleteItem, readItems } from '@directus/sdk';
-import { Paragraph, Statement } from '@/lib/types';
+import { ContentBlock, Statement } from '@/lib/types';
 
 // Define the ProseMirror Node structure more accurately
 interface EditorContent {
@@ -59,7 +59,7 @@ const serializeContent = (content: EditorContent[]) => {
 
 export const syncEditorContent = async (
     docId: string | number,
-    originalParagraphs: Paragraph[],
+    originalParagraphs: ContentBlock[], // **[CHANGED]** from Paragraph[]
     editorState: ProseMirrorDoc
 ) => {
     const currentNodes = editorState.content || [];

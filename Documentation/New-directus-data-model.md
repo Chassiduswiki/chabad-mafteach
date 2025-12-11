@@ -1,7 +1,7 @@
 # Complete Directus Setup Guide
-## Jewish Encyclopedia & Seforim Database
+## Jewish Encyclopedia & Seforim Database with Layered Commentary System
 
-This guide walks you through implementing the complete schema in Directus, step by step.
+This guide walks you through implementing the complete schema in Directus, step by step. This version includes the new layered commentary system (Al HaTorah-style) with content_blocks replacing paragraphs and block_commentaries for multiple commentaries per content block.
 
 ---
 
@@ -42,6 +42,16 @@ docker run -d \
 - **Relationships** = Foreign keys
 - Directus auto-creates UUIDs for `id` fields
 - Directus tracks `date_created` and `user_created` automatically
+
+## Step-by-Step Collection Creation
+
+### **Important Directus Concepts:**
+- **Collections** = Database tables
+- **Fields** = Table columns
+- **Relationships** = Foreign keys
+- Directus auto-creates UUIDs for `id` fields
+- Directus tracks `date_created` and `user_created` automatically
+- **NEW:** Layered commentary system allows multiple commentaries per content block
 
 ---
 
@@ -130,36 +140,69 @@ Add custom fields:
 
 ---
 
-### **4. Paragraphs Collection**
+### **4. Content Blocks Collection** **[NEW - replaces paragraphs]**
 
-**Create Collection:** `paragraphs`
+**Create Collection:** `content_blocks`
 
 **Add Fields:**
 
 | Field Name | Type | Interface | Options |
 |------------|------|-----------|---------|
+| `document_id` | Integer | Many-to-One | Related: `documents`, Display: `{{title}}` |
+| `block_type` | Dropdown | Dropdown | Options: `heading`, `subheading`, `paragraph`, `section_break` |
 | `order_key` | String | Input | Required, Max: 50 |
-| `original_lang` | Dropdown | Dropdown | ISO codes |
-| `text` | Text | Textarea (WYSIWYG) | Required |
+| `content` | Text | Textarea (WYSIWYG) | Required |
 | `status` | Dropdown | Dropdown | `draft`, `reviewed`, `published` |
-| `page_number` | Integer | Input | Optional |
-| `column_number` | Integer | Input | Optional |
 | `metadata` | JSON | JSON | Optional |
 
 **Relationships:**
-1. Field: `doc_id`
+1. Field: `document_id`
    - Type: **Many to One (M2O)**
    - Related Collection: `documents`
    - Display: `{{title}}`
    - On Delete: **CASCADE**
 
-**Display Template:** `Paragraph {{order_key}} in {{doc_id.title}}`
+**Display Template:** `{{block_type}}: {{content}} ({{order_key}})`
 
 ---
 
-### **5. Statements Collection**
+### **5. Block Commentaries Collection** **[NEW - layered commentary system]**
 
-**Create Collection:** `statements`
+**Create Collection:** `block_commentaries`
+
+**Add Fields:**
+
+| Field Name | Type | Interface | Options |
+|------------|------|-----------|---------|
+| `block_id` | Integer | Many-to-One | Related: `content_blocks`, Display: `{{content}}` |
+| `commentary_text` | Text | Textarea (WYSIWYG) | Required |
+| `author` | String/Integer | Input/Many-to-One | Can be text or foreign key to `authors` |
+| `source` | String | Input | Max: 500 |
+| `commentary_type` | Dropdown | Dropdown | Options: `commentary`, `translation`, `cross_reference`, `explanation` |
+| `language` | Dropdown | Dropdown | ISO codes |
+| `order_position` | Integer | Input | Optional, for display ordering |
+| `is_official` | Boolean | Toggle | Default: `false` |
+| `quality_score` | Decimal | Slider | Min: 0, Max: 1, Step: 0.01 |
+| `moderation_status` | Dropdown | Dropdown | `pending`, `approved`, `rejected`, `flagged` |
+| `reviewed_at` | DateTime | Datetime | Optional |
+| `rejection_reason` | Text | Textarea | Optional |
+
+**Relationships:**
+1. Field: `block_id`
+   - Type: **Many to One (M2O)**
+   - Related Collection: `content_blocks`
+   - On Delete: **CASCADE**
+
+2. Field: `reviewed_by`
+   - Type: **Many to One (M2O)**
+   - Related Collection: `directus_users`
+   - On Delete: **SET NULL**
+
+**Display Template:** `{{commentary_type}}: {{commentary_text}}`
+
+---
+
+### **6. Statements Collection** **[UPDATED]**
 
 **Add Fields:**
 
@@ -177,9 +220,9 @@ Add custom fields:
 | `deleted_at` | DateTime | Datetime | Optional |
 
 **Relationships:**
-1. Field: `paragraph_id`
+1. Field: `block_id` **[CHANGED from paragraph_id]**
    - Type: **M2O**
-   - Related: `paragraphs`
+   - Related: `content_blocks` **[CHANGED from paragraphs]**
    - On Delete: **CASCADE**
 
 2. Field: `deleted_by`
@@ -269,13 +312,21 @@ Add custom fields:
 | Field Name | Type | Interface | Options |
 |------------|------|-----------|---------|
 | `canonical_title` | String | Input | Required, Max: 500 |
+| `canonical_title_en` | String | Input | Optional, Max: 500 - English translation of Hebrew term |
+| `canonical_title_transliteration` | String | Input | Optional, Max: 500 - Phonetic transliteration (e.g., "Tzadik") |
 | `original_lang` | Dropdown | Dropdown | ISO codes |
 | `slug` | String | Input (Slug) | Required, Unique, Max: 500 |
 | `topic_type` | Dropdown | Dropdown | `person`, `concept`, `place`, `event`, `mitzvah`, `sefirah` |
-| `description` | Text | Textarea (WYSIWYG) | Optional |
+| `description` | Text | Textarea (WYSIWYG) | Optional - Hebrew description |
+| `description_en` | Text | Textarea (WYSIWYG) | Optional - English translation of description |
 | `metadata` | JSON | JSON | Optional |
 
-**Display Template:** `{{canonical_title}}`
+**Display Logic Priority:**
+1. `canonical_title_en` (English translation) - Most accessible
+2. `canonical_title_transliteration` (Transliteration) - Preserves Hebrew authenticity  
+3. `canonical_title` (Hebrew original) - Always available fallback
+
+**Display Template:** `{{canonical_title_en || canonical_title_transliteration || canonical_title}}`
 
 ---
 
@@ -476,19 +527,28 @@ Same structure, but:
 
 Directus automatically creates reverse relationships (O2M - One to Many). Configure display:
 
-### Example: Documents → Paragraphs
+### Example: Documents → Content Blocks **[UPDATED]**
 
 1. Go to **Documents collection**
 2. Click **Create Field in Advanced**
 3. Type: **One to Many (O2M)**
-4. Related Collection: `paragraphs`
-5. Foreign Key Field: `doc_id`
-6. Display: `{{order_key}}: {{text}}`
+4. Related Collection: `content_blocks`
+5. Foreign Key Field: `document_id`
+6. Display: `{{block_type}}: {{order_key}}`
+7. Interface: **List (with inline editing)**
+
+### Example: Content Blocks → Block Commentaries **[NEW]**
+
+1. Go to **Content Blocks collection**
+2. Click **Create Field in Advanced**
+3. Type: **One to Many (O2M)**
+4. Related Collection: `block_commentaries`
+5. Foreign Key Field: `block_id`
+6. Display: `{{commentary_type}}: {{author}}`
 7. Interface: **List (with inline editing)**
 
 Repeat for:
-- `documents` → `paragraphs` (O2M)
-- `paragraphs` → `statements` (O2M)
+- `content_blocks` → `statements` (O2M) **[UPDATED from paragraphs]**
 - `statements` → `source_links` (O2M)
 - `statements` → `statement_topics` (O2M)
 - `topics` → `statement_topics` (O2M)
@@ -510,30 +570,35 @@ Repeat for:
 - Can approve versions
 - Can manage users
 
-#### **2. Editor Role**
-- Full CRUD on: `documents`, `paragraphs`, `statements`, `topics`
+### **4. Editor Role**
+- Full CRUD on: `documents`, `content_blocks`, `statements`, `topics` **[UPDATED - replaced paragraphs]**
+- Create: `block_commentaries` (pending moderation) **[NEW]**
 - Read-only: `authors`, `sources`
 - Create: `comments`, `translations`, `source_links`
-- Cannot: Approve versions, manage users
+- Cannot: Approve commentaries, manage users **[UPDATED]**
 
-#### **3. Scholar Role**
+### **5. Scholar Role**
 - Create/Read/Update: `statements`, `comments`, `source_links`, `translations`
+- Read: `content_blocks`, `block_commentaries` (approved only) **[UPDATED]**
 - Read-only: Everything else
 - Cannot: Delete anything, change status to `published`
 
-#### **4. Viewer Role**
-- Read-only on all collections where `status = published` and `is_deleted = false`
+### **6. Commentator Role** **[NEW]**
+- Create: `block_commentaries` (community contributions)
+- Read: All content and approved commentaries
+- Cannot: Edit existing content, moderate commentaries
 
 **Per Collection Permissions:**
 
-Example for `statements` collection:
+Example for `block_commentaries` collection: **[NEW]**
 
 | Role | Create | Read | Update | Delete | Fields Access |
 |------|--------|------|--------|--------|---------------|
 | Admin | ✅ | ✅ All | ✅ All | ✅ | All fields |
-| Editor | ✅ | ✅ All | ✅ Where `created_by = $CURRENT_USER` OR status != 'published' | ✅ Own items | All fields |
-| Scholar | ✅ | ✅ Published + own | ✅ Own + status != 'published' | ❌ | Cannot edit `status` to `published` |
-| Viewer | ❌ | ✅ Where `status = published` AND `is_deleted = false` | ❌ | ❌ | All fields read-only |
+| Editor | ✅ | ✅ All | ✅ Where `created_by = $CURRENT_USER` | ✅ Own items | All fields |
+| Scholar | ✅ | ✅ Approved only | ❌ | ❌ | Read-only |
+| Commentator | ✅ | ✅ Approved only | ✅ Own items | ✅ Own items | Limited fields |
+| Viewer | ❌ | ✅ Approved only | ❌ | ❌ | All fields read-only |
 
 ---
 
@@ -548,7 +613,8 @@ For each collection, set the display template for better UX:
 Examples:
 ```
 documents: {{title}} ({{doc_type}})
-paragraphs: Para {{order_key}} in {{doc_id.title}}
+content_blocks: {{block_type}}: {{order_key}} in {{document_id.title}}
+block_commentaries: {{commentary_type}} by {{author}}
 statements: {{text}} [{{status}}]
 topics: {{canonical_title}} ({{topic_type}})
 authors: {{canonical_name}} ({{era}})
@@ -560,21 +626,29 @@ authors: {{canonical_name}} ({{era}})
 
 1. Go to each field's settings
 2. **Validation tab:**
+   - `content_blocks.document_id`: Must exist in documents table
+   - `content_blocks.block_type`: Must be one of ['heading', 'subheading', 'paragraph', 'section_break']
+   - `block_commentaries.block_id`: Must exist in content_blocks table
+   - `block_commentaries.quality_score`: Min: 0, Max: 1 **[NEW]**
+   - `statements.block_id`: Must exist in content_blocks table **[UPDATED from paragraph_id]**
    - `canonical_name` in authors: Required, Regex: `^[^0-9]+$` (no numbers)
    - `slug` in topics: Required, Unique, Regex: `^[a-z0-9-]+$` (URL-safe)
    - `email` in users: Email format
    - `ocr_confidence`: Min: 0, Max: 1
+   - `importance_score`: Min: 0, Max: 1
    - `relevance_score`: Min: 0, Max: 1
 
 ### **3. Configure Interfaces**
 
 Optimize data entry with better interfaces:
 
-- **`text` fields in statements/paragraphs:** Use **WYSIWYG (Rich Text Editor)** with Hebrew support
+- **`content` fields in content_blocks:** Use **WYSIWYG (Rich Text Editor)** with Hebrew support **[UPDATED]**
+- **`commentary_text` fields in block_commentaries:** Use **WYSIWYG (Rich Text Editor)** with Hebrew support **[NEW]**
 - **`metadata` fields:** Use **JSON editor** with syntax highlighting
 - **`order_key` fields:** Use **Input** with placeholder: `0|hzzzzz:`
 - **`status` fields:** Use **Dropdown** with color-coding
-- **`relevance_score`:** Use **Slider** (0-1, step 0.01)
+- **`quality_score`:** Use **Slider** (0-1, step 0.01) **[NEW]**
+- **`block_type`:** Use **Dropdown** with icons for different content types **[NEW]**
 
 ### **4. Set Up Presets (Default Values)**
 

@@ -103,7 +103,7 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
 
         // Create initial statement (can be manually refined later)
         const statement = await directus.request(createItem('statements', {
-          paragraph_id: paragraph.id,
+          block_id: paragraph.id, // **[CHANGED]** from paragraph_id
           order_key: '0',
           text: paragraphText.trim(),
           metadata: {

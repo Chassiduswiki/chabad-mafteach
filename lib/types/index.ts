@@ -32,8 +32,8 @@ export interface Document {
     parent_id?: number | Document;
     
     // Relations
-    paragraphs?: Paragraph[];
-    
+    contentBlocks?: ContentBlock[]; // **[CHANGED]** from paragraphs?: Paragraph[];
+
     // Topic association
     topic?: string | Topic;
     
@@ -61,6 +61,20 @@ export interface Paragraph {
     full_path?: string;
 }
 
+export interface ContentBlock {
+    id: number;
+    document_id?: number | Document;
+    block_type?: 'heading' | 'subheading' | 'paragraph' | 'section_break';
+    order_key: string;
+    content: string;
+    status?: 'draft' | 'reviewed' | 'published';
+    metadata?: Record<string, unknown>;
+    
+    // Relations
+    statements?: Statement[];
+    block_commentaries?: BlockCommentary[];
+}
+
 export interface Statement {
     id: number;
     order_key: string;
@@ -72,8 +86,25 @@ export interface Statement {
     importance_score?: number;
     metadata?: Record<string, unknown>;
     deleted_at?: string;
-    paragraph_id?: number | Paragraph;
+    block_id?: number; // Changed from paragraph_id
     deleted_by?: string;
+}
+
+export interface BlockCommentary {
+    id: number;
+    block_id?: number | ContentBlock;
+    commentary_text: string;
+    author?: string | Author;
+    source?: string;
+    commentary_type?: 'commentary' | 'translation' | 'cross_reference' | 'explanation';
+    language?: string;
+    order_position?: number;
+    is_official?: boolean;
+    quality_score?: number;
+    moderation_status?: 'pending' | 'approved' | 'rejected' | 'flagged';
+    reviewed_by?: number | Author;
+    reviewed_at?: string;
+    rejection_reason?: string;
 }
 
 export interface Source {
@@ -90,6 +121,7 @@ export interface Source {
     citation_text?: string;
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
+    document_id?: number | Document; // Direct link to associated document
 }
 
 export interface SourceLink {

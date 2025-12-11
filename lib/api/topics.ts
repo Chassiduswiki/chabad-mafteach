@@ -7,12 +7,12 @@ import { readItems, updateItem } from '@directus/sdk';
  * DATA FLOW:
  * 1. Fetch topic by slug
  * 2. PRIMARY: Get documents linked via document.topic field
- * 3. Get paragraphs from those documents
- * 4. Get statements from those paragraphs
+ * 3. Get content_blocks from those documents **[UPDATED]**
+ * 4. Get statements from those content_blocks **[UPDATED]**
  * 5. SECONDARY: Add statement_topics for additional sources
  *
  * @param slug Topic slug
- * @returns Topic with paragraphs containing statements
+ * @returns Topic with content_blocks containing statements **[UPDATED]**
  */
 export async function getTopicBySlug(slug: string) {
     try {
@@ -34,7 +34,7 @@ export async function getTopicBySlug(slug: string) {
         const topic = topics[0];
 
         // use document.topic field for entry content (primary approach for articles)
-        let paragraphs: any[] = [];
+        let contentBlocks: any[] = []; // **[RENAMED]** from paragraphs
         let validStatementTopics: any[] = []; // For sources/citations tab
         try {
             // PRIMARY: Get documents directly linked to this topic
@@ -48,48 +48,49 @@ export async function getTopicBySlug(slug: string) {
 
             if (topicDocuments.length > 0) {
 
-                // Get paragraphs from these documents
+                // Get content_blocks from these documents **[UPDATED]**
                 const docIds = topicDocuments.map(doc => doc.id);
-                const documentParagraphs = await directus.request(readItems('paragraphs', {
-                    filter: { doc_id: { _in: docIds } } as any,
-                    fields: ['id', 'text', 'order_key', 'doc_id'],
+                const documentContentBlocks = await directus.request(readItems('content_blocks' as any, { // **[CHANGED]** from 'paragraphs'
+                    filter: { document_id: { _in: docIds } } as any, // **[CHANGED]** from doc_id
+                    fields: ['id', 'content', 'order_key', 'document_id', 'block_type'], // **[CHANGED]** from text, doc_id
                     sort: ['order_key'],
                     limit: -1
                 })) as any[];
 
-                console.log(`Found ${documentParagraphs.length} paragraphs across ${docIds.length} documents`);
+                console.log(`Found ${documentContentBlocks.length} content_blocks across ${docIds.length} documents`); // **[UPDATED]**
 
-                // Get statements for these paragraphs
-                const paraIds = documentParagraphs.map(p => p.id);
+                // Get statements for these content_blocks **[UPDATED]**
+                const blockIds = documentContentBlocks.map(cb => cb.id);
                 let documentStatements: any[] = [];
 
-                if (paraIds.length > 0) {
+                if (blockIds.length > 0) {
                     documentStatements = await directus.request(readItems('statements', {
-                        filter: { paragraph_id: { _in: paraIds } } as any,
-                        fields: ['id', 'text', 'order_key', 'paragraph_id'],
+                        filter: { block_id: { _in: blockIds } } as any, // **[CHANGED]** from paragraph_id
+                        fields: ['id', 'text', 'order_key', 'block_id'], // **[CHANGED]** from paragraph_id
                         sort: ['order_key'],
                         limit: -1
                     })) as any[];
                 }
 
-                console.log(`Found ${documentStatements.length} statements across ${paraIds.length} paragraphs`);
+                console.log(`Found ${documentStatements.length} statements across ${blockIds.length} content_blocks`); // **[UPDATED]**
 
-                // Group statements by paragraph
-                const paragraphMap: Record<number, any> = {};
-                for (const para of documentParagraphs) {
-                    paragraphMap[para.id] = {
-                        id: para.id,
-                        text: para.text,
-                        order_key: para.order_key,
-                        document_title: topicDocuments.find(doc => doc.id === para.doc_id)?.title || 'Unknown Document',
+                // Group statements by content_block **[UPDATED]**
+                const contentBlockMap: Record<number, any> = {}; // **[RENAMED]** from paragraphMap
+                for (const block of documentContentBlocks) { // **[RENAMED]** from para
+                    contentBlockMap[block.id] = {
+                        id: block.id,
+                        content: block.content, // **[CHANGED]** from text
+                        order_key: block.order_key,
+                        block_type: block.block_type, // **[NEW]**
+                        document_title: topicDocuments.find(doc => doc.id === block.document_id)?.title || 'Unknown Document', // **[CHANGED]** from doc_id
                         statements: [] as any[]
                     };
                 }
 
-                // Add statements to their paragraphs
+                // Add statements to their content_blocks **[UPDATED]**
                 for (const stmt of documentStatements) {
-                    if (stmt.paragraph_id && paragraphMap[stmt.paragraph_id]) {
-                        paragraphMap[stmt.paragraph_id].statements.push({
+                    if (stmt.block_id && contentBlockMap[stmt.block_id]) { // **[CHANGED]** from paragraph_id
+                        contentBlockMap[stmt.block_id].statements.push({
                             id: stmt.id,
                             text: stmt.text,
                             order_key: stmt.order_key
@@ -97,7 +98,7 @@ export async function getTopicBySlug(slug: string) {
                     }
                 }
 
-                paragraphs = Object.values(paragraphMap).sort((a, b) =>
+                contentBlocks = Object.values(contentBlockMap).sort((a, b) => // **[RENAMED]** from paragraphs
                     (a.order_key || '').localeCompare(b.order_key || '')
                 );
             }
@@ -118,11 +119,11 @@ export async function getTopicBySlug(slug: string) {
                                 'text',
                                 'order_key',
                                 {
-                                    paragraph_id: [
+                                    block_id: [ // **[CHANGED]** from paragraph_id
                                         'id',
-                                        'text',
+                                        'content', // **[CHANGED]** from text
                                         'order_key',
-                                        { doc_id: ['title'] }
+                                        { document_id: ['title'] } // **[CHANGED]** from doc_id
                                     ]
                                 }
                             ]
@@ -134,14 +135,14 @@ export async function getTopicBySlug(slug: string) {
                 console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
                 // Process statement_topics for additional sources (skip if already in main content)
-                const existingStmtIds = new Set(paragraphs.flatMap(p => p.statements.map((s: any) => s.id)));
+                const existingStmtIds = new Set(contentBlocks.flatMap(cb => cb.statements.map((s: any) => s.id))); // **[CHANGED]** from paragraphs
 
                 for (const stmtTopic of statementTopics) {
                     const stmt = stmtTopic.statement_id;
                     if (!stmt?.id || existingStmtIds.has(stmt.id)) continue; // Skip if already included
 
-                    const para = stmt.paragraph_id;
-                    if (!para?.id || !para.doc_id?.title) continue; // Skip if paragraph or document missing
+                    const block = stmt.block_id; // **[CHANGED]** from para (paragraph_id)
+                    if (!block?.id || !block.document_id?.title) continue; // **[CHANGED]** from para?.id || !para.doc_id?.title - Skip if content_block or document missing
 
                     // Additional validation: ensure statement has valid text
                     if (!stmt.text || stmt.text.trim() === '') continue;
@@ -203,13 +204,57 @@ export async function getTopicBySlug(slug: string) {
             // Continue without related topics - this is not critical
         }
 
+        // Get sources for the statements
+        let sources: any[] = [];
+        try {
+            // Get all statement IDs
+            const allStatementIds = contentBlocks.flatMap(cb => cb.statements.map((s: any) => s.id)); // **[CHANGED]** from paragraphs
+            const validStatementIds = new Set(allStatementIds);
+            if (allStatementIds.length > 0) {
+                // Get source_links for these statements
+                const sourceLinks = await directus.request(readItems('source_links', {
+                    filter: { statement_id: { _in: allStatementIds } } as any,
+                    fields: ['id', 'statement_id', 'source_id', 'relationship_type', 'page_number', 'verse_reference']
+                })) as any[];
+
+                if (sourceLinks.length > 0) {
+                    // Get unique source IDs
+                    const sourceIds = Array.from(new Set(sourceLinks.map(sl => sl.source_id)));
+                    
+                    // Fetch sources
+                    const sourcesData = await directus.request(readItems('sources', {
+                        filter: { id: { _in: sourceIds } } as any,
+                        fields: ['id', 'title', 'external_url']
+                    })) as any[];
+
+                    // Attach relationship info to sources
+                    sources = sourcesData.map((source: any) => {
+                        const links = sourceLinks.filter(sl => sl.source_id === source.id);
+                        return {
+                            ...source,
+                            relationships: links.map(link => ({
+                                statement_id: link.statement_id,
+                                relationship_type: link.relationship_type,
+                                page_number: link.page_number,
+                                verse_reference: link.verse_reference
+                            }))
+                        };
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching sources:', error);
+            // Continue without sources
+        }
+
         return {
             topic: {
                 ...topic,
-                paragraphs
+                contentBlocks // **[CHANGED]** from paragraphs
             },
             citations: validStatementTopics,
-            relatedTopics
+            relatedTopics,
+            sources
         };
     } catch (error) {
         console.error('Topic fetch error:', error);

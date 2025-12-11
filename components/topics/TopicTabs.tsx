@@ -13,6 +13,7 @@ type TabType = 'overview' | 'boundaries' | 'sources' | 'related';
 interface TopicTabsProps {
     topic: Topic;
     relatedTopics?: any[];
+    sources?: any[];
 }
 
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string; comingSoon?: boolean }[] = [
@@ -22,12 +23,12 @@ const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; descri
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts', comingSoon: true },
 ];
 
-export default function TopicTabs({ topic, relatedTopics }: TopicTabsProps) {
+export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsProps) {
     const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     // Check which tabs have content
     const hasBoundaries = topic.definition_positive || topic.definition_negative;
-    const hasSources = false; // TODO: Implement when topic_citations table exists
+    const hasSources = sources && sources.length > 0;
     const hasRelated = relatedTopics && relatedTopics.length > 0;
 
     const renderTabContent = () => {
