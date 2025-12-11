@@ -68,6 +68,15 @@ export interface ContentBlock {
     order_key: string;
     content: string;
     status?: 'draft' | 'reviewed' | 'published';
+    
+    // Citation fields
+    page_number?: string;
+    chapter_number?: number;
+    halacha_number?: number;
+    daf_number?: string;
+    section_number?: number;
+    citation_refs?: any[];
+    
     metadata?: Record<string, unknown>;
     
     // Relations
@@ -105,6 +114,14 @@ export interface BlockCommentary {
     reviewed_by?: number | Author;
     reviewed_at?: string;
     rejection_reason?: string;
+    
+    // Citation support for rabbit hole following
+    citation_source?: number | Source; // Link to source document
+    citation_page?: string; // Page reference in source
+    citation_reference?: string; // Full citation string
+    
+    // Relations
+    source_links?: SourceLink[]; // Citations within this commentary
 }
 
 export interface Source {
@@ -236,7 +253,9 @@ export interface Schema {
     authors: Author[];
     documents: Document[];
     paragraphs: Paragraph[];
+    content_blocks: ContentBlock[];
     statements: Statement[];
+    block_commentaries: BlockCommentary[];
     sources: Source[];
     source_links: SourceLink[];
     topics: Topic[];

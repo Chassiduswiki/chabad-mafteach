@@ -186,55 +186,30 @@ The frontend TypeScript types now match the new Directus schema:
 
 4. **[MEDIUM] Review and split large components** - Consider breaking down:
    - `BookReader` (346 lines) - consider lazy loading
-   - `CommandMenu` (302 lines) - extract business logic
-   - `SourcesTab` (231 lines) - if re-used
-   - `OverviewTab` (208 lines) - if re-used
-
-5. **[MEDIUM] Add component documentation** - Document complex features and interfaces
-
-6. **[LOW] Extract business logic from UI components** - Separate concerns where appropriate
-
-7. **[LOW] Implement lazy loading for large components** - Optimize bundle size and loading performance
-
----
-
-## Remaining Roadmap Items from Editor Audit:
-- Implement full Phase 2 refactor, including consolidating all editor state management into hooks and extracting plugins.
-- Add contextual editing for citations, such as making citation chips clickable for quick edits.
-- Develop collaboration features using Operational Transformation (OT) or CRDTs for real-time editing.
-- Enhance author disambiguation UI for better user prompts and error handling.
-
----
-
-## Execution Order (Recommended)
-
-1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
-2. **Then Component Cleanup Task #1** (Remove unused components): immediate code quality improvement, ~0.5 day.
-3. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
-4. **Then Component Cleanup Task #2** (Complete TopicTabs): unblock topic functionality, ~0.5 day.
-5. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
-6. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
-7. **Parallel**: Remaining component cleanup tasks (#3-6) and TRACK 4 (infrastructure) as needed.
-
----
-
-## Notes for the Team
-
-- **Each phase is a complete, shippable unit.** Don't move to the next phase until the current one is tested and working.
-- **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
-- **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
-- **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
-
----
-
-## TRACK 7: Security & Reliability (Added from Security Audit)
 
 **Goal**: Secure the application against unauthorized access and ensure stability under load.
 
-### Phase 7a: Authentication & Authorization (High Priority)
+### Phase 7a: Authentication & Authorization (High Priority - CRITICAL ISSUES FOUND)
 - [x] **Implement Auth Layer**: Integrate NextAuth.js or Directus Auth for API routes.
 - [x] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
 - [x] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
+- [ ] **🔴 CRITICAL: Remove Hardcoded Demo Users** - `auth/login/route.ts` contains hardcoded bcrypt users - PRODUCTION SECURITY RISK
+- [ ] **🔴 CRITICAL: Implement Refresh Tokens** - 24-hour token expiration without refresh mechanism
+- [ ] **🔴 CRITICAL: Fix JWT_SECRET Fallback** - `lib/auth.ts` has default JWT_SECRET 'your-secret-key-change-in-production'
+- [ ] **🔴 CRITICAL: Add Rate Limiting** - No rate limiting on auth endpoints, vulnerable to brute force
+- [ ] **API Structure Issues**: Found in audit, including missing error handling and inconsistent API route naming
+
+---
+
+## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
+
+- [x] Decide final Directus public-access model: which collections/fields readable by static token. **DONE** (JWT auth implemented)
+- [ ] Implement + test permission changes in staging before production.
+- [x] Add integration tests for topics, search, and TorahReader to catch regressions. **FOUNDATION COMPLETE** (Jest setup ready, complex tests deferred)
+- [x] Document the new topics data model and frontend mapping in repo docs. **DONE** (See `lib/types/index.ts` and `Documentation/New-directus-data-model.md`)
+- [ ] Re-enable term-linking pipeline (`linkTerms`) once topics schema is stable (Phase 1c).
+- [x] Align TypeScript types with new Directus schema. **DONE** (Dec 8, 2025)
+- [x] Set up Jest testing framework with performance monitoring. **DONE** (Bundle: 1.12 MB JS, 1.45 MB total)
 
 ---
 
@@ -250,6 +225,37 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Interactive Graph**: Visualize topic connections using react-force-graph-2d.
 - [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
 - [ ] **Personalized Learning**: Recommendation engine based on user reading history.
+
+---
+
+## TRACK 9: UX Audit & Fixes (Immediate Priority)
+
+**Goal**: Fix critical user experience issues identified in comprehensive audit.
+
+### Phase 9a: Critical Flow Blockers
+- [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
+- [ ] **🔴 CRITICAL: Fix Orphaned Records** - statement_topics table contains 7 records referencing non-existent statement IDs (62, 65, 66, 67, 69) - causing empty article content
+- [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
+
+### Phase 9b: Navigation & Discovery Issues
+- [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
+- [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
+- [ ] **🔴 CRITICAL: Add Rate Limiting** - No rate limiting on search endpoints, vulnerable to abuse
+
+### Phase 9c: Visual & Mobile Polish
+- [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
+- [x] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
+- [x] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+
+### Phase 9d: System Reliability
+- [ ] **Audit editor permissions** - Resolve 403 errors, ensure proper Directus role configuration for editor functionality
+
+### Phase 9e: Quick Wins (< 2 hours each)
+- [x] **Improve Article empty state** - Replace "Coming Soon" dead end with topic description and helpful next steps
+- [x] **Basic Collections functionality** - Implement localStorage bookmarking for topics with simple UI
+- [x] **Home page onboarding hints** - Add subtle guidance for first-time users
+- [ ] **Navigation link testing** - Verify all header links work, fix any 404s
+- [ ] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets
 
 ---
 
@@ -300,17 +306,6 @@ The frontend TypeScript types now match the new Directus schema:
 
 ### Phase 11a: Bundle Analysis & Optimization
 - [ ] **Audit bundle size** - Analyze current 1.12 MB JS bundle and identify optimization opportunities
-- [ ] **Implement lazy loading** - Add React.lazy for large components (BookReader, CommandMenu, etc.)
-- [ ] **Code splitting** - Split routes and heavy features into separate chunks
-- [ ] **Remove unused dependencies** - Audit package.json for unused libraries
-
-### Phase 11b: Runtime Performance
-- [ ] **Image optimization** - Implement Next.js Image component for all images
-- [ ] **Database query optimization** - Add indexes and optimize Directus queries
-- [ ] **Caching strategy** - Implement Redis/memory caching for frequently accessed data
-- [ ] **CDN optimization** - Ensure static assets are properly cached and distributed
-
----
 
 ## TRACK 9: UX Audit & Fixes (Immediate Priority)
 
@@ -318,13 +313,13 @@ The frontend TypeScript types now match the new Directus schema:
 
 ### Phase 9a: Critical Flow Blockers
 - [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
-- [x] **Fix data integrity issues** - Resolve statement_topics table orphans causing empty article tabs (BLOCKING articles)
+- [ ] **🔴 CRITICAL: Fix Orphaned Records** - statement_topics table contains 7 records referencing non-existent statement IDs (62, 65, 66, 67, 69) - causing empty article content
 - [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
 
 ### Phase 9b: Navigation & Discovery Issues
 - [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
 - [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
-- [x] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
+- [ ] **🔴 CRITICAL: Add Rate Limiting** - No rate limiting on search endpoints, vulnerable to abuse
 
 ### Phase 9c: Visual & Mobile Polish
 - [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
@@ -641,6 +636,126 @@ Otzar HaChochma's sophisticated interface design shows incredible attention to d
 
 ---
 
+## TRACK 13: Hierarchical Commentary System (December 2025 Design)
+
+**Goal**: Enable proper handling of seforim that are commentaries on other seforim (Rashi on Talmud, incidental commentaries, multi-level commentary chains).
+
+### Commentary Relationship Types
+- **Primary Commentary**: Sefer whose main purpose is commenting on another (e.g., Rashi on Talmud)
+- **Incidental Commentary**: Commentary appearing within another work ("by-the-way" references)
+- **Multi-level Commentary**: Commentary on commentary (e.g., Tosafot on Rashi)
+
+### Proposed Schema Architecture
+
+#### Enhanced Documents Table
+```sql
+ALTER TABLE documents ADD COLUMN commentary_type VARCHAR(50); -- 'primary_commentary', 'incidental_commentary', 'multi_level'
+ALTER TABLE documents ADD COLUMN commentary_level INTEGER DEFAULT 1; -- 1 = base text, 2 = commentary, 3 = commentary on commentary
+ALTER TABLE documents ADD COLUMN root_text_id INTEGER REFERENCES documents(id); -- Points to original sefer
+```
+
+#### Document Commentary Relationships Table
+```sql
+CREATE TABLE document_commentary_relationships (
+    id SERIAL PRIMARY KEY,
+    commentator_document_id INTEGER REFERENCES documents(id), -- Commentary sefer
+    target_document_id INTEGER REFERENCES documents(id), -- Sefer being commented on
+    relationship_type VARCHAR(50), -- 'primary_commentary', 'incidental_commentary', 'section_commentary'
+    target_section VARCHAR(255), -- Which section/part of target document
+    commentary_scope VARCHAR(50), -- 'entire_work', 'specific_section', 'verse_by_verse'
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Implementation Phases
+
+#### Phase 13a: Schema & Types (Month 1)
+- [ ] Add commentary fields to documents table via Directus admin
+- [ ] Create document_commentary_relationships table
+- [ ] Update TypeScript interfaces in `lib/types/index.ts`
+- [ ] Add relationship management to Directus admin UI
+
+#### Phase 13b: Data Model & API (Months 2-3)
+- [ ] Create API endpoints for commentary relationships:
+  - `GET /api/documents/[id]/commentary-chain` - Get full commentary hierarchy
+  - `GET /api/documents/[id]/commentaries` - Get all commentaries on this document
+  - `POST /api/documents/commentary-relationship` - Create relationship
+- [ ] Update existing APIs to include commentary metadata
+- [ ] Add validation for commentary relationship integrity
+
+#### Phase 13c: UI Components (Months 4-5)
+- [ ] Create `CommentaryChain` component for breadcrumb navigation
+- [ ] Implement `MultiLevelDisplay` for side-by-side commentary layout
+- [ ] Add commentary relationship management in admin interface
+- [ ] Update search to show commentary relationships
+
+#### Phase 13d: Content Integration (Months 6-7)
+- [ ] Update scraper to detect and populate commentary relationships
+- [ ] Tag existing commentary seforim in database
+- [ ] Create migration scripts for existing commentary content
+- [ ] Add commentary relationship import/export functionality
+
+### Frontend Display Patterns
+
+#### Commentary Chain Navigation
+```typescript
+const CommentaryChain = ({ documentId }) => {
+  const chain = getCommentaryChain(documentId); // [Base Text] → [Rashi] → [Tosafot]
+  return (
+    <div className="commentary-breadcrumb">
+      {chain.map((doc, level) => (
+        <span key={doc.id}>
+          {level > 0 && " → "}
+          <Link href={`/seforim/${doc.id}`}>
+            {doc.title} {getCommentaryBadge(doc.commentary_level)}
+          </Link>
+        </span>
+      ))}
+    </div>
+  );
+};
+```
+
+#### Multi-Level Commentary Layout
+```typescript
+const MultiLevelDisplay = ({ baseText, commentaries }) => {
+  const levels = groupCommentariesByLevel(commentaries);
+
+  return (
+    <div className="commentary-grid grid-cols-[2fr,1fr,1fr]">
+      {/* Base text column */}
+      <div className="base-text">{baseText}</div>
+
+      {/* Commentary columns by level */}
+      {levels.map(level => (
+        <div key={level.number} className="commentary-column">
+          <h4>{level.commentatorName}</h4>
+          {level.blocks.map(block => (
+            <CommentaryBlock key={block.id} block={block} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+
+### Success Criteria
+- **Hierarchical Navigation**: Users can follow commentary chains seamlessly
+- **Context Awareness**: Clear indication of commentary level and relationships
+- **Citation Integrity**: Proper attribution and linking of commentary sources
+- **Scalability**: Support for unlimited commentary levels and relationships
+
+### Integration Points
+- **Existing `block_commentaries`**: Continue using for granular commentary on content blocks
+- **New `document_commentary_relationships`**: Handle document-level commentary relationships
+- **Citation System**: Enhanced to support commentary attribution and chaining
+
+This architecture provides a robust foundation for handling the complex relationships between commentary seforim and their base texts, enabling proper scholarly navigation and citation in Jewish textual studies.
+
+---
+
 ## 🚨 ARCHITECTURAL CONCERNS (REQUIRES DISCUSSION)
 
 ### Data Integrity & Statement Synchronization
@@ -657,3 +772,34 @@ Otzar HaChochma's sophisticated interface design shows incredible attention to d
 
 ---
 
+## TRACK 9: UX Audit & Fixes (Immediate Priority)
+
+**Goal**: Fix critical user experience issues identified in comprehensive audit.
+
+### Phase 9a: Critical Flow Blockers
+- [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
+- [ ] **🔴 CRITICAL: Fix Orphaned Records** - statement_topics table contains 7 records referencing non-existent statement IDs (62, 65, 66, 67, 69) - causing empty article content
+- [ ] **🔴 CRITICAL: Fix Schema Migration Issues** - content_blocks replaced paragraphs but statements.block_id may reference old paragraph_id values
+- [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
+
+### Phase 9b: Navigation & Discovery Issues
+- [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
+- [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
+- [ ] **🔴 CRITICAL: Add Rate Limiting** - No rate limiting on search endpoints, vulnerable to abuse
+
+### Phase 9c: Visual & Mobile Polish
+- [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
+- [x] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
+- [x] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+
+### Phase 9d: System Reliability
+- [ ] **Audit editor permissions** - Resolve 403 errors, ensure proper Directus role configuration for editor functionality
+
+### Phase 9e: Quick Wins (< 2 hours each)
+- [x] **Improve Article empty state** - Replace "Coming Soon" dead end with topic description and helpful next steps
+- [x] **Basic Collections functionality** - Implement localStorage bookmarking for topics with simple UI
+- [x] **Home page onboarding hints** - Add subtle guidance for first-time users
+- [ ] **Navigation link testing** - Verify all header links work, fix any 404s
+- [ ] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets
+
+---

@@ -12,7 +12,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 type SearchResult = {
     id: string;
     title: string;
-    type: 'document' | 'location' | 'topic';
+    type: 'document' | 'location' | 'topic' | 'statement';
     subtitle?: string;
     category?: string;
     slug?: string;
@@ -63,12 +63,21 @@ export function CommandMenu() {
 
                 const locationResults: SearchResult[] = (data.locations || []).map((l: any) => ({
                     id: `loc-${l.id}`,
-                    title: l.display_name,
+                    title: l.display_name || l.title,
                     type: 'location' as const,
-                    url: `/documents/${l.sefer}`
+                    subtitle: l.content_preview ? `${l.content_preview}${l.page_number ? ` • Page ${l.page_number}` : ''}` : (l.page_number ? `Page ${l.page_number}` : undefined),
+                    url: `/seforim/${l.sefer || l.document_id}`
                 }));
 
-                const allResults = [...topicResults, ...documentsResults, ...locationResults];
+                const statementResults: SearchResult[] = (data.statements || []).map((s: any) => ({
+                    id: `stmt-${s.id}`,
+                    title: s.title,
+                    type: 'statement' as const,
+                    subtitle: s.content_preview,
+                    url: `/content/${s.block_id}` // Navigate to content block containing the statement
+                }));
+
+                const allResults = [...topicResults, ...documentsResults, ...locationResults, ...statementResults];
 
                 // Apply fuzzy search for better matching
                 const fuse = new Fuse(allResults, {
@@ -132,36 +141,24 @@ export function CommandMenu() {
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-2 sm:pt-[15vh] sm:px-4 sm:flex sm:items-start sm:justify-center">
-                    {/* Mobile Bottom Sheet */}
-                    <div className="flex sm:hidden items-end justify-center w-full h-full">
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 px-2 sm:pt-[15vh] sm:px-4">
+                    {/* Mobile Centered Modal (improved UX) */}
+                    <div className="flex sm:hidden items-center justify-center w-full h-full">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setOpen(false)}
-                            className="absolute inset-0 bg-background/60 backdrop-blur-md"
+                            className="absolute inset-0 bg-background/80 backdrop-blur-md"
                         />
 
                         <motion.div
-                            initial={{ opacity: 0, y: '100%' }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: '100%' }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl border-t border-border bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[90vh] flex flex-col"
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={0.1}
-                            onDragEnd={(event, info) => {
-                                if (info.offset.y > 100) {
-                                    setOpen(false);
-                                }
-                            }}
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="relative w-full max-w-md mx-4 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-primary/20 backdrop-blur-xl ring-1 ring-white/10 max-h-[85vh] flex flex-col"
                         >
-                            {/* Mobile Handle Bar */}
-                            <div className="flex justify-center py-3">
-                                <div className="h-1.5 w-12 bg-muted-foreground/30 rounded-full" />
-                            </div>
 
                             <Command className="w-full">
                                 <div className="flex items-center border-b border-border px-4">
@@ -300,7 +297,7 @@ export function CommandMenu() {
 
                                             {/* Locations Group */}
                                             {results.filter(r => r.type === 'location').length > 0 && (
-                                                <Command.Group heading={`Locations (${results.filter(r => r.type === 'location').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
+                                                <Command.Group heading={`Text Content (${results.filter(r => r.type === 'location').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
                                                     {results.filter(r => r.type === 'location').map((item) => (
                                                         <Command.Item
                                                             key={item.id}
@@ -321,7 +318,43 @@ export function CommandMenu() {
                                                                 <div className="flex flex-1 flex-col gap-1">
                                                                     <div className="flex items-center justify-between">
                                                                         <span className="font-semibold text-foreground">{item.title}</span>
-                                                                        <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">{item.type}</span>
+                                                                        <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">content</span>
+                                                                    </div>
+                                                                    {item.subtitle && (
+                                                                        <span className="text-sm text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
+                                                                    )}
+                                                                </div>
+                                                                <ArrowRight className="ml-4 h-5 w-5 opacity-0 transition-all -translate-x-2 group-aria-selected:opacity-100 group-aria-selected:translate-x-0 text-primary" />
+                                                            </div>
+                                                        </Command.Item>
+                                                    ))}
+                                                </Command.Group>
+                                            )}
+
+                                            {/* Statements Group */}
+                                            {results.filter(r => r.type === 'statement').length > 0 && (
+                                                <Command.Group heading={`Statements (${results.filter(r => r.type === 'statement').length})`} className="text-sm font-medium text-muted-foreground px-2 py-1.5">
+                                                    {results.filter(r => r.type === 'statement').map((item) => (
+                                                        <Command.Item
+                                                            key={item.id}
+                                                            value={item.title}
+                                                            onSelect={() => handleSelect(item.url)}
+                                                            className="group relative flex cursor-pointer select-none items-center rounded-xl px-3 py-4 text-base outline-none transition-colors aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                                                        >
+                                                            <div
+                                                                className="flex w-full items-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelect(item.url);
+                                                                }}
+                                                            >
+                                                                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background shadow-sm transition-colors group-aria-selected:border-primary/20 group-aria-selected:bg-primary/10">
+                                                                    <span className="text-lg">💬</span>
+                                                                </div>
+                                                                <div className="flex flex-1 flex-col gap-1">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="font-semibold text-foreground">{item.title}</span>
+                                                                        <span className="text-sm text-muted-foreground capitalize group-aria-selected:text-primary">statement</span>
                                                                     </div>
                                                                     {item.subtitle && (
                                                                         <span className="text-sm text-muted-foreground line-clamp-1 group-aria-selected:text-muted-foreground/80">{item.subtitle}</span>
@@ -338,7 +371,7 @@ export function CommandMenu() {
                                 </Command.List>
                                 <div className="flex items-center justify-center border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
                                     <div className="text-center">
-                                        <div className="mb-1">Swipe down or tap outside to close</div>
+                                        <div className="mb-1">Tap outside or press ESC to close</div>
                                         <div className="text-[10px] text-muted-foreground/70">Chabad Maftaiach v2.0</div>
                                     </div>
                                 </div>

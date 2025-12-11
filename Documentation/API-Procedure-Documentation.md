@@ -323,6 +323,12 @@ curl -X PATCH $HEADERS "$BASE_URL/items/documents/{id}" \
 - `block_type` (string) - 'heading', 'subheading', 'paragraph', 'section_break'
 - `order_key` (string) - Sorting key (e.g., "1:001", "1:002:001")
 - `content` (text) - The actual content text
+- `page_number` (string) - Physical page reference (e.g., "17a", "23b") **[NEW]**
+- `chapter_number` (integer) - Chapter number **[NEW]**
+- `halacha_number` (integer) - Halacha/Siman number **[NEW]**
+- `daf_number` (string) - Talmud folio (e.g., "3b:6") **[NEW]**
+- `section_number` (integer) - Section within larger work **[NEW]**
+- `citation_refs` (json) - Alternative citation formats **[NEW]**
 - `metadata` (json) - Additional data (heading level, etc.)
 
 ```bash
@@ -339,12 +345,34 @@ curl -X POST $HEADERS "$BASE_URL/items/content_blocks" \
     "metadata": {"migrated": true}
   }'
 
-# Get content blocks for document with commentaries
-curl $HEADERS "$BASE_URL/items/content_blocks?filter[document_id][_eq]=1&fields=*,block_commentaries.*"
+# Create content block with citations
+curl -X POST $HEADERS "$BASE_URL/items/content_blocks" \
+  -d '{
+    "document_id": 1,
+    "block_type": "paragraph",
+    "order_key": "001",
+    "content": "Content text here",
+    "page_number": "17a",
+    "chapter_number": 2,
+    "halacha_number": 5,
+    "citation_refs": {
+      "sefaria": "Shabbat.17a",
+      "traditional": "סימן ה"
+    }
+  }'
 
-# Update content block
-curl -X PATCH $HEADERS "$BASE_URL/items/content_blocks/{id}" \
-  -d '{"content": "Updated content"}'
+# Create commentary with citation source
+curl -X POST $HEADERS "$BASE_URL/items/block_commentaries" \
+  -d '{
+    "block_id": 1,
+    "commentary_text": "This commentary explains...",
+    "author": "Alter Rebbe",
+    "commentary_type": "commentary",
+    "language": "en",
+    "citation_source": 123,
+    "citation_page": "45b",
+    "citation_reference": "Likkutei Sichos Vol 2, p. 123"
+  }'
 ```
 
 #### Block Commentaries Collection **[NEW]**
@@ -364,6 +392,9 @@ curl -X PATCH $HEADERS "$BASE_URL/items/content_blocks/{id}" \
 - `is_official` (boolean) - Official vs community contribution
 - `quality_score` (decimal) - 0-1 quality rating
 - `moderation_status` (string) - 'pending', 'approved', 'rejected', 'flagged'
+- `citation_source` (integer) - Link to source document **[NEW]**
+- `citation_page` (string) - Page reference in source **[NEW]**
+- `citation_reference` (string) - Full citation string **[NEW]**
 
 ```bash
 # List commentaries for a content block
@@ -811,41 +842,43 @@ curl $HEADERS "$BASE_URL/items/content_blocks?fields=*,block_commentaries.*&filt
 - Implement client-side validation
 - Handle API errors gracefully
 
-### 12. Tanya Perek 1 Import Templates
+### 12. Tanya Perek 1 Import Templates **[UPDATED]**
 
-#### 12.1 Paragraphs (Hebrew + English)
+#### 12.1 Content Blocks (Hebrew + English) **[UPDATED]**
 
-Collection: `paragraphs`
+Collection: `content_blocks`
 
-**CSV headers (tanya_perek1_paragraphs.csv)**
+**CSV headers (tanya_perek1_content_blocks.csv)**
 
 ```text
-order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
+order_key,block_type,content,document_id,page_number,chapter_number,section_number,citation_refs,metadata
 ```
 
 **Notes**
 - `order_key` (required): shared key for Heb/Eng pairs, e.g. `tanya_1_001`, `tanya_1_002`, …
-- `original_lang`: `he` for Hebrew, `en` for English
-- `text`: full paragraph text (Directus rich-text HTML is allowed, but plain text is fine)
-- `status`: e.g. `draft` or `reviewed`
-- `page_number` / `column_number`: optional (page/column in Tanya)
-- `metadata`: JSON string (optional), e.g. `{"perek":1}`
-- `doc_id`: UUID of `Tanya – Likutei Amarim` in `documents`
+- `block_type`: `paragraph` for regular content, `heading` for section titles
+- `content`: full content text (Directus rich-text HTML is allowed, but plain text is fine)
+- `document_id`: Integer ID of `Tanya – Likutei Amarim` in `documents`
+- `page_number`: Physical page reference (e.g., "1a", "2b")
+- `chapter_number`: Chapter number within the work
+- `section_number`: Section number (e.g., 1 for Likutei Amarim)
+- `citation_refs`: JSON array of alternative citation formats
+- `metadata`: JSON string (optional), e.g. `{"perek":1, "original_lang":"he"}`
 
 **Example rows (conceptual)**
 
 ```text
-order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
-"tanya_1_001","he","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
-"tanya_1_001","en","<p>It is written in the end of chapter...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
+order_key,block_type,content,document_id,page_number,chapter_number,section_number,citation_refs,metadata
+"tanya_1_001","paragraph","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>",123,"1a",1,1,"[{""system"":""sefaria"",""reference"":""Tanya.1a""}]","{""perek"":1,""original_lang"":""he""}"
+"tanya_1_001","paragraph","<p>It is written in the end of chapter...</p>",123,"1a",1,1,"[{""system"":""sefaria"",""reference"":""Tanya.1a""}]","{""perek"":1,""original_lang"":""en""}"
 ```
 
 **Bulk import**
 
 ```bash
-curl -X POST "$BASE_URL/import/paragraphs" \
+curl -X POST "$BASE_URL/import/content_blocks" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@tanya_perek1_paragraphs.csv"
+  -F "file=@tanya_perek1_content_blocks.csv"
 ```
 
 #### 12.2 Statements (extracted claims / footnotes)
@@ -860,24 +893,25 @@ Key available fields:
 - `is_deleted` (boolean, default `false`)
 - `is_disputed` (boolean)
 - `importance_score` (float 0–1)
+- `appended_text` (text, for footnotes)
 - `metadata` (json)
-- `paragraph_id` (UUID FK → `paragraphs.id`)
+- `block_id` (integer FK → `content_blocks.id`) **[UPDATED from paragraph_id]**
 
 **CSV headers (tanya_perek1_statements.csv)**
 
 ```text
-order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,metadata,paragraph_id
+order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,appended_text,metadata,block_id
 ```
 
 **Example rows (conceptual)**
 
 ```text
-order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,metadata,paragraph_id
-"tanya_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"{\"note\":\"core definition\"}","uuid-hebrew-paragraph"
-"tanya_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"{\"note\":\"EN paraphrase\"}","uuid-english-paragraph"
+order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,appended_text,metadata,block_id
+"stmt_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"<div class=""footnote"">1.1 Footnote content...</div>","{""note"":""core definition""}",123
+"stmt_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"<div class=""footnote"">1.1 Footnote content...</div>","{""note"":""EN paraphrase""}",124
 ```
 
-Replace `uuid-hebrew-paragraph` / `uuid-english-paragraph` with real UUIDs from `paragraphs` after importing paragraphs.
+Replace `123`/`124` with real integer IDs from `content_blocks` after importing content blocks.
 
 **Bulk import**
 

@@ -2,9 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/directus';
-const directus = createClient();
-import { readItems } from '@directus/sdk';
 import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';
 
@@ -23,7 +20,32 @@ interface ContentBlock {
     title?: string;
     order_key: string;
     content?: string;
+    block_type?: string;
+    page_number?: string;
+    chapter_number?: number;
+    halacha_number?: number;
+    daf_number?: string;
+    section_number?: number;
+    citation_refs?: any[];
+    metadata?: any;
     statements: Statement[];
+    commentaries: BlockCommentary[];
+}
+
+interface BlockCommentary {
+    id: number;
+    block_id: number;
+    commentary_text: string;
+    author?: string;
+    source?: string;
+    commentary_type: string;
+    language: string;
+    order_position: number;
+    is_official: boolean;
+    quality_score: number;
+    citation_source?: number;
+    citation_page?: string;
+    citation_reference?: string;
 }
 
 interface Document {
@@ -74,8 +96,60 @@ export default function SeferPage() {
         isBookmarked: false
     });
 
+    // Citation Info Component
+    const CitationInfo = ({ contentBlock }: { contentBlock: ContentBlock }) => {
+        const citationParts = [];
+        if (contentBlock.page_number) citationParts.push(`Page ${contentBlock.page_number}`);
+        if (contentBlock.chapter_number) citationParts.push(`Chapter ${contentBlock.chapter_number}`);
+        if (contentBlock.halacha_number) citationParts.push(`Halacha ${contentBlock.halacha_number}`);
+        if (contentBlock.daf_number) citationParts.push(`Daf ${contentBlock.daf_number}`);
+        if (contentBlock.section_number) citationParts.push(`Section ${contentBlock.section_number}`);
+
+        if (citationParts.length === 0) return null;
+
+        return (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border/50 pb-2 mb-4">
+                <span className="font-medium text-primary">📖</span>
+                <span>{citationParts.join(' • ')}</span>
+                {contentBlock.citation_refs && contentBlock.citation_refs.length > 0 && (
+                    <span className="text-xs bg-muted px-2 py-1 rounded">
+                        {contentBlock.citation_refs.length} citation format{contentBlock.citation_refs.length > 1 ? 's' : ''}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
     // Hebrew detection helper
     const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
+    const CommentaryPanel = ({ commentary }: { commentary: BlockCommentary }) => {
+        const getTypeIcon = (type: string) => {
+            switch (type) {
+                case 'commentary': return '💬';
+                case 'translation': return '🌍';
+                case 'cross_reference': return '🔗';
+                case 'explanation': return '💡';
+                default: return '📝';
+            }
+        };
+
+        return (
+            <div className="bg-muted/30 rounded-lg p-3 border border-border/50 mb-2">
+                <div className="flex items-center gap-2 mb-2 text-xs">
+                    <span>{getTypeIcon(commentary.commentary_type)}</span>
+                    <span className="font-medium">{commentary.author || 'Anonymous'}</span>
+                    {commentary.source && <span className="text-muted-foreground">• {commentary.source}</span>}
+                    {commentary.is_official && <span className="bg-primary/10 text-primary px-1 rounded text-xs">Official</span>}
+                </div>
+                <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: commentary.commentary_text }} />
+                {commentary.citation_reference && (
+                    <div className="mt-2 text-xs text-muted-foreground italic">
+                        Source: {commentary.citation_reference}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Font size classes
     const fontSizeClasses = {
@@ -124,96 +198,32 @@ export default function SeferPage() {
             if (!seferId) return;
 
             try {
-                // First check if this document has children (hierarchical navigation)
-                const childrenResult = await directus.request(readItems('documents', {
-                    filter: { parent_id: { _eq: seferId } },
-                    fields: ['id', 'title', 'doc_type', 'author', 'category'],
-                    sort: ['title']
-                })) as any;
+                console.log('Fetching sefer data from API for seferId:', seferId);
+                const response = await fetch(`/api/seforim/${seferId}`);
+                console.log('API response status:', response.status);
+                console.log('API response ok:', response.ok);
 
-                const childrenArray = Array.isArray(childrenResult) ? childrenResult : [childrenResult];
-
-                if (childrenArray.length > 0) {
-                    // This document has children - show hierarchical navigation
-                    const childrenWithContent = await Promise.all(
-                        childrenArray.map(async (child: any) => {
-                            try {
-                                const contentBlocks = await directus.request(readItems('content_blocks', {
-                                    filter: { document_id: { _eq: child.id } },
-                                    limit: 1
-                                })) as any;
-                                const blockArray = Array.isArray(contentBlocks) ? contentBlocks : contentBlocks ? [contentBlocks] : [];
-                                return { ...child, hasContent: blockArray.length > 0 };
-                            } catch {
-                                return { ...child, hasContent: false };
-                            }
-                        })
-                    );
-
-                    // Get parent document info
-                    const parentDoc = await directus.request(readItems('documents', {
-                        filter: { id: { _eq: seferId } },
-                        fields: ['id', 'title', 'doc_type'],
-                        limit: 1
-                    })) as any;
-
-                    const parentArray = Array.isArray(parentDoc) ? parentDoc : [parentDoc];
-                    setDocument(parentArray[0] || null);
-                    setChildDocuments(childrenWithContent);
-                } else {
-                    // This document has no children - show content
-                    // Fetch the document first
-                    const docResult = await directus.request(readItems('documents', {
-                        filter: { id: { _eq: seferId } },
-                        fields: ['id', 'title', 'doc_type'],
-                        limit: 1
-                    })) as any;
-
-                    const docsArray = Array.isArray(docResult) ? docResult : docResult ? [docResult] : [];
-                    const doc = docsArray[0] || null;
-
-                    if (doc) {
-                        // Fetch content blocks separately
-                        const blockResult = await directus.request(readItems('content_blocks', {
-                            filter: { document_id: { _eq: seferId } },
-                            fields: ['id', 'order_key', 'content'],
-                            sort: ['order_key']
-                        })) as any;
-
-                        const contentBlocksArray = Array.isArray(blockResult) ? blockResult : [blockResult];
-                        doc.contentBlocks = contentBlocksArray;
-
-                        // Fetch statements for all content blocks
-                        const contentBlockIds = contentBlocksArray.map((b: any) => b.id);
-                        if (contentBlockIds.length > 0) {
-                            const statementsResult = await (directus.request(readItems('statements', {
-                                filter: { block_id: { _in: contentBlockIds } },
-                                fields: ['id', 'text', 'appended_text', 'order_key', 'metadata', 'block_id'] as any,
-                                sort: ['order_key']
-                            })) as Promise<any>);
-
-                            const statementsArray = Array.isArray(statementsResult) ? statementsResult : [statementsResult];
-
-                            // Group statements by block_id
-                            const statementsByBlock = statementsArray.reduce((acc: any, stmt: any) => {
-                                if (!acc[stmt.block_id]) acc[stmt.block_id] = [];
-                                acc[stmt.block_id].push(stmt);
-                                return acc;
-                            }, {});
-
-                            // Attach statements to content blocks
-                            doc.contentBlocks = doc.contentBlocks.map((b: any) => ({
-                                ...b,
-                                statements: statementsByBlock[b.id] || []
-                            }));
-                        }
-
-                        setDocument(doc);
-                        setChildDocuments([]);
-                    }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.log('API error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
                 }
+
+                const data = await response.json();
+                console.log('API response data:', data);
+
+                setDocument(data.document);
+                setChildDocuments(data.childDocuments || []);
+                console.log('Document and child documents set successfully');
             } catch (error) {
                 console.error('Error fetching sefer data:', error);
+                console.error('Error type:', typeof error);
+                console.error('Error details:', {
+                    message: (error as any)?.message,
+                    code: (error as any)?.code,
+                    stack: (error as any)?.stack
+                });
+                // Don't re-throw, just log - the component will handle null document state
             } finally {
                 setLoading(false);
             }
@@ -349,8 +359,8 @@ export default function SeferPage() {
                                 <BookOpen className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-semibold text-foreground">{document.title}</h1>
-                                <p className="text-sm text-muted-foreground capitalize">{document.doc_type}</p>
+                                <h1 className="text-xl font-semibold text-foreground">{document?.title || 'Untitled'}</h1>
+                                <p className="text-sm text-muted-foreground capitalize">{document?.doc_type || ''}</p>
                             </div>
                         </div>
                         <Link
@@ -533,9 +543,9 @@ export default function SeferPage() {
                     </div>
                 </div>
 
-                {/* Content - Continuous Flow */}
+                {/* Content - Al HaTorah Style Layered Display */}
                 <div className="bg-card/90 dark:bg-card/30 rounded-2xl p-8 sm:p-10 lg:p-14 border border-border/50">
-                    <div className={`font-serif ${fontSizeClasses[fontSize]} leading-[2.2] text-foreground tracking-wide`}>
+                    <div className={`leading-[2.2] text-foreground tracking-wide`}>
                         {document.contentBlocks && document.contentBlocks.length > 0 ? (
                             document.contentBlocks.map((contentBlock, blockIndex) => (
                                 <div
@@ -545,59 +555,91 @@ export default function SeferPage() {
                                     className={`mb-12 transition-opacity duration-700 ${
                                         visibleParagraphs.has(contentBlock.id) ? 'opacity-100' : 'opacity-0'
                                     } ${contentBlock.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
-                                    style={{
-                                        direction: isHebrew(contentBlock.content || '') ? 'rtl' : 'ltr',
-                                        textAlign: 'justify',
-                                        textAlignLast: isHebrew(contentBlock.content || '') ? 'right' : 'left'
-                                    }}
-                                    onMouseDown={() => handleContentBlockMouseDown(contentBlock)}
-                                    onMouseUp={handleContentBlockMouseUp}
-                                    onMouseLeave={handleContentBlockMouseLeave}
-                                    onTouchStart={() => handleContentBlockTouchStart(contentBlock)}
-                                    onTouchEnd={handleContentBlockTouchEnd}
                                 >
-                                    {contentBlock.title && (
-                                        <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
-                                            {contentBlock.title}
-                                        </h3>
-                                    )}
+                                    {/* Citation Info Header */}
+                                    <CitationInfo contentBlock={contentBlock} />
 
-                                    <div className="space-y-6">
-                                        {contentBlock.statements && contentBlock.statements.length > 0 ? (
-                                            contentBlock.statements
-                                                .sort((a, b) => a.order_key.localeCompare(b.order_key))
-                                                .map((statement, stmtIndex) => (
-                                                    <span key={statement.id} className="inline">
-                                                        {/* Main text */}
-                                                        <span
-                                                            className="text-foreground"
-                                                            dangerouslySetInnerHTML={{ __html: statement.text }}
-                                                        />
+                                    {/* Al HaTorah Style Layout: Base Text + Commentaries */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {/* Main Text Column */}
+                                        <div className="lg:col-span-2">
+                                            <div
+                                                className={`${fontSizeClasses[fontSize]} font-serif`}
+                                                style={{
+                                                    direction: isHebrew(contentBlock.content || '') ? 'rtl' : 'ltr',
+                                                    textAlign: 'justify',
+                                                    textAlignLast: isHebrew(contentBlock.content || '') ? 'right' : 'left'
+                                                }}
+                                                onMouseDown={() => handleContentBlockMouseDown(contentBlock)}
+                                                onMouseUp={handleContentBlockMouseUp}
+                                                onMouseLeave={handleContentBlockMouseLeave}
+                                                onTouchStart={() => handleContentBlockTouchStart(contentBlock)}
+                                                onTouchEnd={handleContentBlockTouchEnd}
+                                            >
+                                                {contentBlock.title && (
+                                                    <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
+                                                        {contentBlock.title}
+                                                    </h3>
+                                                )}
 
-                                                        {/* Citation with hover effect */}
-                                                        {statement.appended_text && showCitations && (
-                                                            <span
-                                                                className="inline-block mx-1 px-2 py-1 text-xs bg-accent/60 text-accent-foreground hover:bg-accent rounded border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
-                                                                dangerouslySetInnerHTML={{ __html: statement.appended_text }}
-                                                                onClick={() => handleCitationClick(statement.appended_text, statement)}
-                                                            />
-                                                        )}
+                                                <div className="space-y-6">
+                                                    {contentBlock.statements && contentBlock.statements.length > 0 ? (
+                                                        contentBlock.statements
+                                                            .sort((a, b) => a.order_key.localeCompare(b.order_key))
+                                                            .map((statement, stmtIndex) => (
+                                                                <span key={statement.id} className="inline">
+                                                                    {/* Main text */}
+                                                                    <span
+                                                                        className="text-foreground"
+                                                                        dangerouslySetInnerHTML={{ __html: statement.text }}
+                                                                    />
 
-                                                        {/* Citation references indicator */}
-                                                        {statement.metadata?.citation_references && statement.metadata.citation_references.length > 0 && (
-                                                            <span className="mx-1 text-xs text-muted-foreground">
-                                                                ({statement.metadata.citation_references.length} refs)
-                                                            </span>
-                                                        )}
+                                                                    {/* Citation with hover effect */}
+                                                                    {statement.appended_text && showCitations && (
+                                                                        <span
+                                                                            className="inline-block mx-1 px-2 py-1 text-xs bg-accent/60 text-accent-foreground hover:bg-accent rounded border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
+                                                                            dangerouslySetInnerHTML={{ __html: statement.appended_text }}
+                                                                            onClick={() => handleCitationClick(statement.appended_text, statement)}
+                                                                        />
+                                                                    )}
 
-                                                        {/* Add space between statements unless it's the last one */}
-                                                        {stmtIndex < contentBlock.statements.length - 1 && ' '}
-                                                    </span>
-                                                ))
-                                        ) : (
-                                            <p className="text-muted-foreground italic">
-                                                {contentBlock.content || 'No content available for this block.'}
-                                            </p>
+                                                                    {/* Citation references indicator */}
+                                                                    {statement.metadata?.citation_references && statement.metadata.citation_references.length > 0 && (
+                                                                        <span className="mx-1 text-xs text-muted-foreground">
+                                                                            ({statement.metadata.citation_references.length} refs)
+                                                                        </span>
+                                                                    )}
+
+                                                                    {/* Add space between statements unless it's the last one */}
+                                                                    {stmtIndex < contentBlock.statements.length - 1 && ' '}
+                                                                </span>
+                                                            ))
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">
+                                                            {contentBlock.content || 'No content available for this block.'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Commentaries Column - Al HaTorah Style */}
+                                        {contentBlock.commentaries && contentBlock.commentaries.length > 0 && (
+                                            <div className="lg:col-span-1">
+                                                <div className="sticky top-8">
+                                                    <h4 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
+                                                        <span>📚</span>
+                                                        Commentaries ({contentBlock.commentaries.length})
+                                                    </h4>
+                                                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                                                        {contentBlock.commentaries
+                                                            .sort((a, b) => (a.order_position || 0) - (b.order_position || 0))
+                                                            .map((commentary) => (
+                                                                <CommentaryPanel key={commentary.id} commentary={commentary} />
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -614,7 +656,7 @@ export default function SeferPage() {
 
                 {/* Statistics */}
                 <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
                         <div>
                             <div className="text-2xl font-bold text-primary">
                                 {document.contentBlocks?.length || 0}
@@ -638,11 +680,18 @@ export default function SeferPage() {
                         <div>
                             <div className="text-2xl font-bold text-primary">
                                 {document.contentBlocks?.reduce((total, b) =>
-                                    total + (b.statements?.reduce((stmtTotal, s) =>
-                                        stmtTotal + (s.metadata?.citation_references?.length || 0), 0) || 0), 0) || 0
+                                    total + (b.commentaries?.length || 0), 0) || 0
                                 }
                             </div>
-                            <div className="text-sm text-muted-foreground">Citation Refs</div>
+                            <div className="text-sm text-muted-foreground">Commentaries</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-primary">
+                                {document.contentBlocks?.filter(b =>
+                                    (b.page_number || b.chapter_number || b.halacha_number || b.daf_number || b.section_number)
+                                ).length || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">With Citation Info</div>
                         </div>
                     </div>
                 </div>

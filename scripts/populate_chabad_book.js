@@ -5,7 +5,7 @@ const path = require('path');
 const { getEntireChabadLibraryBookSequential } = require('./scrapers/chabadlibraryScraper');
 
 const DIRECTUS_URL = 'https://directus-production-20db.up.railway.app';
-const TOKEN = 'ChassidusWikiAdminToken2025';
+const TOKEN = 'f4Zk7OBxDQlkQuO60f3PeATYzjdgP2mv';
 
 // Language detection (simple heuristic for Hebrew/English)
 function detectLanguage(text) {
@@ -19,10 +19,63 @@ function detectLanguage(text) {
   return hebrewChars / totalChars > 0.1 ? 'he' : 'en';
 }
 
-// Generate sequential order key for paragraphs
+// Generate sequential order key for content blocks
 function generateOrderKey(index) {
   // Simple sequential for now (can upgrade to LexoRank later)
   return String(index + 1).padStart(3, '0');
+}
+
+// Extract citation information from Chabad Library structure
+function extractCitationInfo(heading, sectionPath = []) {
+  const citationInfo = {
+    page_number: null,
+    chapter_number: null,
+    halacha_number: null,
+    daf_number: null,
+    section_number: null,
+    citation_refs: []
+  };
+
+  // Extract folio reference (e.g., "א, א" -> page_number: "1a")
+  const folioReference = parseFolioReference(heading);
+  if (folioReference) {
+    citationInfo.page_number = folioReference;
+  }
+
+  // Extract chapter/section numbers from heading
+  const chapterMatch = heading.match(/פרק\s*(\d+)/);
+  if (chapterMatch) {
+    citationInfo.chapter_number = parseInt(chapterMatch[1]);
+  }
+
+  const halachaMatch = heading.match(/הלכה\s*(\d+)/);
+  if (halachaMatch) {
+    citationInfo.halacha_number = parseInt(halachaMatch[1]);
+  }
+
+  // Extract section numbers
+  const sectionMatch = heading.match(/שער\s*(\d+)/);
+  if (sectionMatch) {
+    citationInfo.section_number = parseInt(sectionMatch[1]);
+  }
+
+  // Add traditional citation formats if we have enough info
+  if (citationInfo.chapter_number && citationInfo.halacha_number) {
+    citationInfo.citation_refs.push({
+      system: 'traditional',
+      reference: `שער ${citationInfo.section_number || 'א'}, פרק ${citationInfo.chapter_number}, הלכה ${citationInfo.halacha_number}`
+    });
+  }
+
+  // Add Sefaria-style citation if we have page info
+  if (citationInfo.page_number) {
+    citationInfo.citation_refs.push({
+      system: 'sefaria',
+      reference: `${folioReference}`
+    });
+  }
+
+  return citationInfo;
 }
 
 // Parse footnotes and split text into statement segments
@@ -286,7 +339,7 @@ async function processSection(section, parentDocumentId) {
   }
 }
 
-// Process chapter/section as paragraph under a section document
+// Process chapter/section as content block under a section document
 async function processChapterAsParagraph(chapter, sectionDocumentId, orderCounter = { current: 0 }) {
   const chapterPath = chapter.heading;
 
@@ -294,47 +347,51 @@ async function processChapterAsParagraph(chapter, sectionDocumentId, orderCounte
   console.log(`DEBUG: Chapter has text: ${!!chapter.text}, has notes: ${!!chapter.notes}`);
 
   if (chapter.text && chapter.notes) {
-    // This is a leaf node with content - create a paragraph
+    // This is a leaf node with content - create a content block
     orderCounter.current += 1;
     const orderKey = generateOrderKey(orderCounter.current);
     const lang = detectLanguage(chapter.text);
 
     // Extract structural information from Chabad Library format
-    const folioReference = parseFolioReference(chapter.heading);
-    const folioNumber = folioReference ? parseInt(folioReference.replace(/[a-z]/, '')) : null;
+    const citationInfo = extractCitationInfo(chapter.heading, []);
     const sectionTitle = extractSectionTitle(chapter.text);
 
-    console.log(`DEBUG: Creating paragraph - Order: ${orderKey}, Folio: ${folioReference}, Lang: ${lang}`);
+    console.log(`DEBUG: Creating content block - Order: ${orderKey}, Folio: ${citationInfo.page_number}, Lang: ${lang}`);
 
-    const paragraphData = {
-      doc_id: sectionDocumentId, // Link to the section document
+    const contentBlockData = {
+      document_id: sectionDocumentId, // Link to the section document
+      block_type: 'paragraph', // Default to paragraph, could be heading/section_break
       order_key: orderKey,
-      original_lang: lang,
-      text: chapter.text,
-      page_number: folioNumber,
-      status: 'draft',
+      content: chapter.text,
+      page_number: citationInfo.page_number,
+      chapter_number: citationInfo.chapter_number,
+      halacha_number: citationInfo.halacha_number,
+      daf_number: citationInfo.daf_number,
+      section_number: citationInfo.section_number,
+      citation_refs: citationInfo.citation_refs.length > 0 ? citationInfo.citation_refs : null,
       metadata: {
         source: 'chabad_library',
         path: chapterPath,
         original_id: chapter.id,
         section_title: sectionTitle,
         heading_type: 'folio_reference',
-        folio_notation: folioReference,
-        chapter_type: 'chapter' // This is a chapter within a section
+        folio_notation: citationInfo.page_number,
+        chapter_type: 'chapter', // This is a chapter within a section
+        original_lang: lang
       }
     };
 
-    console.log(`DEBUG: Paragraph data prepared, calling API...`);
+    console.log(`DEBUG: Content block data prepared, calling API...`);
 
-    const paragraph = await createDirectusItem('paragraphs', paragraphData);
-    if (!paragraph) {
-      console.error(`FAILED to create paragraph: ${chapter.heading}`);
+    const contentBlock = await createDirectusItem('content_blocks', contentBlockData);
+    if (!contentBlock) {
+      console.error(`FAILED to create content block: ${chapter.heading}`);
       return;
     }
 
-    console.log(`SUCCESS: Created chapter paragraph: ${chapter.heading} (${folioReference}) (Order: ${orderKey}, ID: ${paragraph.id})`);
+    console.log(`SUCCESS: Created content block: ${chapter.heading} (${citationInfo.page_number}) (Order: ${orderKey}, ID: ${contentBlock.id})`);
 
-    // Create multiple statements for this paragraph based on footnote segments
+    // Create multiple statements for this content block based on footnote segments
     const statementSegments = parseFootnotesIntoStatements(chapter.text, chapter.notes);
     console.log(`DEBUG: Creating ${statementSegments.length} statements from ${statementSegments.filter(s => s.appended_text).length} footnote segments`);
 
@@ -344,7 +401,7 @@ async function processChapterAsParagraph(chapter, sectionDocumentId, orderCounte
       const statementOrderKey = String(statementOrderCounter).padStart(3, '0');
 
       const statementData = {
-        paragraph_id: paragraph.id,
+        block_id: contentBlock.id, // CHANGED: block_id instead of paragraph_id
         order_key: statementOrderKey,
         original_lang: lang,
         text: segment.text,
@@ -354,8 +411,8 @@ async function processChapterAsParagraph(chapter, sectionDocumentId, orderCounte
         metadata: {
           source: 'chabad_library',
           auto_generated: true,
-          page_number: folioNumber,
-          folio_notation: folioReference,
+          page_number: citationInfo.page_number,
+          folio_notation: citationInfo.page_number,
           section_title: sectionTitle,
           has_footnote: !!segment.appended_text,
           citation_references: segment.citation_references || [] // Store parsed citation data
@@ -368,7 +425,7 @@ async function processChapterAsParagraph(chapter, sectionDocumentId, orderCounte
       if (statement) {
         console.log(`SUCCESS: Created statement ${statementOrderKey} (ID: ${statement.id})`);
       } else {
-        console.error(`FAILED to create statement ${statementOrderKey} for paragraph ${paragraph.id}`);
+        console.error(`FAILED to create statement ${statementOrderKey} for content block ${contentBlock.id}`);
       }
     }
   } else if (chapter.children && Array.isArray(chapter.children)) {
@@ -443,8 +500,9 @@ async function populateChabadBook(bookId, bookTitle) {
     }
 
     console.log('\n🎯 Population completed!');
-    console.log(`Created hierarchical structure: ${bookTitle} > ${totalSections} sections > ${totalChapters} chapters > paragraphs > statements`);
+    console.log(`Created hierarchical structure: ${bookTitle} > ${totalSections} sections > ${totalChapters} chapters > content blocks > statements`);
     console.log(`Total documents created: 1 main + ${totalSections} sections = ${totalSections + 1} documents`);
+    console.log(`Citation fields populated: page_number, chapter_number, halacha_number, section_number, citation_refs`);
     
   } catch (error) {
     console.error('Error populating book:', error);

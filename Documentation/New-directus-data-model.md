@@ -894,3 +894,39 @@ const document = await client.request(
 5. **Build Frontend:** Use Directus SDK to build your application
 
 Your database is now fully operational in Directus!
+
+Statements vs Commentaries
+Statements (Content Breakdown):
+What: Logical subdivisions of content_blocks
+Purpose: Break text into searchable claims/teachings
+Example: Tanya paragraph → 3 statements (each claim)
+Citation: appended_text shows sources the statement references
+Relationships: Tagged with topics, linked to sources
+Block Commentaries (Content Enhancement):
+What: Explanations/translations layered on content_blocks
+Purpose: Add insights without changing base text
+Example: Tanya paragraph + Tzemach Tzedek commentary + translation
+Citation: citation_source shows where commentary comes from
+Relationships: Can cite other sources (rabbit hole following)
+Key Differences:
+Aspect	Statements	Commentaries
+Granularity	Subdivides content_block	Enhances entire content_block
+Citation Flow	Statement cites sources	Commentary cites its own sources
+Display	Individual claims	Layered commentary view
+Search	Core searchable units	Additional insights
+Creation	AI/ML breaking	Manual/expert addition
+Real Example:
+Original Tanya Text (content_block):
+
+"The tzaddik is defined as one who serves G-d with self-nullification"
+
+Statements (breakdowns):
+
+"The tzaddik serves G-d" (appended_text: "Tanya 1:1")
+"Service is with self-nullification" (appended_text: "Tanya 1:2")
+Block Commentaries (enhancements):
+
+Type: commentary - "Alter Rebbe explains this means complete submission"
+Type: translation - "The righteous one is defined as..."
+Citation: Commentary from "Likkutei Sichos, Vol 2, p. 45"
+Bottom Line: Statements break down text for search/analysis, commentaries enrich text with wisdom layers. Both enable citation chains, but serve different purposes in the learning journey.

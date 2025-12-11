@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { readItems } from '@directus/sdk';
+import { handleApiError } from '@/lib/utils/api-errors';
 
 export async function GET(request: NextRequest) {
     try {
@@ -18,7 +19,6 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(docsArray);
     } catch (error) {
-        console.error('Error fetching documents:', error);
-        return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
+        return handleApiError(error);
     }
 }

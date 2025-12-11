@@ -109,49 +109,25 @@ export async function getTopicBySlug(slug: string) {
                 const statementTopics = await directus.request(readItems('statement_topics', {
                     filter: {
                         topic_id: { _eq: topic.id },
-                        statement_id: { _nnull: true } // Only include records where statement_id exists
+                        // Remove statement_id null check for now to avoid permission issues
                     } as any,
                     fields: [
-                        '*',
-                        {
-                            statement_id: [
-                                'id',
-                                'text',
-                                'order_key',
-                                {
-                                    block_id: [ // **[CHANGED]** from paragraph_id
-                                        'id',
-                                        'content', // **[CHANGED]** from text
-                                        'order_key',
-                                        { document_id: ['title'] } // **[CHANGED]** from doc_id
-                                    ]
-                                }
-                            ]
-                        }
+                        'id',
+                        'statement_id',
+                        'topic_id',
+                        'relevance_score',
+                        'is_primary'
+                        // Remove nested relations to avoid permission issues
                     ] as any,
                     sort: ['-relevance_score'] as any
                 })) as any[];
 
                 console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
-                // Process statement_topics for additional sources (skip if already in main content)
-                const existingStmtIds = new Set(contentBlocks.flatMap(cb => cb.statements.map((s: any) => s.id))); // **[CHANGED]** from paragraphs
-
-                for (const stmtTopic of statementTopics) {
-                    const stmt = stmtTopic.statement_id;
-                    if (!stmt?.id || existingStmtIds.has(stmt.id)) continue; // Skip if already included
-
-                    const block = stmt.block_id; // **[CHANGED]** from para (paragraph_id)
-                    if (!block?.id || !block.document_id?.title) continue; // **[CHANGED]** from para?.id || !para.doc_id?.title - Skip if content_block or document missing
-
-                    // Additional validation: ensure statement has valid text
-                    if (!stmt.text || stmt.text.trim() === '') continue;
-
-                    // Add as additional source
-                    validStatementTopics.push(stmtTopic);
-                }
-
-                console.log(`After filtering, ${validStatementTopics.length} valid statement_topics remain`);
+                // For now, just add the statement_topics without additional processing
+                // to avoid nested relation permission issues
+                validStatementTopics = statementTopics;
+                console.log(`Using ${validStatementTopics.length} basic statement_topics records`);
             } catch (statementTopicsError) {
                 console.warn('Failed to fetch statement_topics (likely permissions issue):', (statementTopicsError as any)?.message || statementTopicsError);
                 // Continue without statement_topics data - this is not critical
@@ -210,22 +186,30 @@ export async function getTopicBySlug(slug: string) {
             // Get all statement IDs
             const allStatementIds = contentBlocks.flatMap(cb => cb.statements.map((s: any) => s.id)); // **[CHANGED]** from paragraphs
             const validStatementIds = new Set(allStatementIds);
+            console.log('Fetching sources for', allStatementIds.length, 'statement IDs');
             if (allStatementIds.length > 0) {
                 // Get source_links for these statements
+                console.log('Fetching source_links...');
                 const sourceLinks = await directus.request(readItems('source_links', {
                     filter: { statement_id: { _in: allStatementIds } } as any,
                     fields: ['id', 'statement_id', 'source_id', 'relationship_type', 'page_number', 'verse_reference']
                 })) as any[];
 
+                console.log('Found', sourceLinks.length, 'source links');
+
                 if (sourceLinks.length > 0) {
                     // Get unique source IDs
                     const sourceIds = Array.from(new Set(sourceLinks.map(sl => sl.source_id)));
-                    
+                    console.log('Fetching', sourceIds.length, 'unique sources:', sourceIds);
+
                     // Fetch sources
+                    console.log('Fetching sources data...');
                     const sourcesData = await directus.request(readItems('sources', {
                         filter: { id: { _in: sourceIds } } as any,
                         fields: ['id', 'title', 'external_url']
                     })) as any[];
+
+                    console.log('Found', sourcesData.length, 'sources');
 
                     // Attach relationship info to sources
                     sources = sourcesData.map((source: any) => {
@@ -240,10 +224,18 @@ export async function getTopicBySlug(slug: string) {
                             }))
                         };
                     });
+                    console.log('Attached relationships to', sources.length, 'sources');
                 }
             }
         } catch (error) {
             console.error('Error fetching sources:', error);
+            console.error('Error details:', {
+                message: (error as any)?.message,
+                code: (error as any)?.code,
+                response: (error as any)?.response?.data,
+                status: (error as any)?.response?.status,
+                stack: (error as any)?.stack
+            });
             // Continue without sources
         }
 
