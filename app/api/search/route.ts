@@ -5,10 +5,66 @@ import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 import { cache } from '@/lib/cache';
 
+// Simple in-memory rate limiter for search endpoints
+const searchRateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+function checkSearchRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute for search (more lenient than auth)
+  const maxRequests = 20; // Allow 20 searches per minute per IP
+
+  // Skip rate limiting in development
+  if (process.env.NODE_ENV === 'development') {
+    return { allowed: true, remaining: maxRequests, resetTime: now + windowMs };
+  }
+
+  const record = searchRateLimitStore.get(ip);
+
+  if (!record || now > record.resetTime) {
+    // First request or window expired
+    searchRateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: maxRequests - 1, resetTime: now + windowMs };
+  }
+
+  if (record.count >= maxRequests) {
+    return { allowed: false, remaining: 0, resetTime: record.resetTime };
+  }
+
+  // Increment counter
+  record.count++;
+  searchRateLimitStore.set(ip, record);
+  return { allowed: true, remaining: maxRequests - record.count, resetTime: record.resetTime };
+}
+
 // Cache key for search results
 const getSearchCacheKey = (query: string) => `search:results:${query.toLowerCase().trim()}`;
 
 export async function GET(request: NextRequest) {
+    // Get client IP for rate limiting
+    const ip = request.headers.get('x-forwarded-for') ||
+               request.headers.get('x-real-ip') ||
+               'unknown';
+
+    // Check rate limit
+    const rateLimitResult = checkSearchRateLimit(ip);
+    if (!rateLimitResult.allowed) {
+      const resetInSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+      return NextResponse.json(
+        {
+          error: 'Too many search requests. Please try again in a moment.',
+          retryAfter: resetInSeconds
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': resetInSeconds.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.resetTime.toString()
+          }
+        }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
 
