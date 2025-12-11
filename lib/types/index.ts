@@ -178,10 +178,10 @@ export interface Topic {
     definition_negative?: string;
     overview?: string;
     article?: string;
-    practical_takeaways?: string;
+    practical_takeaways?: string; // **[NEW]** Rich text field for practical applications
+    historical_context?: string; // **[NEW]** Rich text field for historical background
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
-    historical_context?: string;
     
     // Related content (document > paragraphs > statements)
     paragraphs?: {

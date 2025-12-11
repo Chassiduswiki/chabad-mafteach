@@ -6,9 +6,9 @@ import BoundariesTab from "./BoundariesTab";
 import SourcesTab from "./SourcesTab";
 import RelatedTab from "./RelatedTab";
 import { Topic } from "@/lib/types";
-import { FileText, Target, BookOpen, Sparkles } from 'lucide-react';
+import { FileText, Target, BookOpen, Sparkles, Lightbulb, Clock } from 'lucide-react';
 
-type TabType = 'overview' | 'boundaries' | 'sources' | 'related';
+type TabType = 'overview' | 'practical' | 'historical' | 'boundaries' | 'sources' | 'related';
 
 interface TopicTabsProps {
     topic: Topic;
@@ -17,7 +17,9 @@ interface TopicTabsProps {
 }
 
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string; comingSoon?: boolean }[] = [
-    { id: 'overview', label: 'Article', icon: FileText, description: 'Full document content and paragraphs' },
+    { id: 'overview', label: 'Overview', icon: FileText, description: 'Basic topic information and description' },
+    { id: 'practical', label: 'Practical', icon: Lightbulb, description: 'Practical applications and takeaways', comingSoon: true },
+    { id: 'historical', label: 'Historical', icon: Clock, description: 'Historical context and background', comingSoon: true },
     { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not', comingSoon: true },
     { id: 'sources', label: 'Seforim', icon: BookOpen, description: 'References and citations', comingSoon: true },
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts', comingSoon: true },
@@ -30,11 +32,15 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
     const hasBoundaries = topic.definition_positive || topic.definition_negative;
     const hasSources = sources && sources.length > 0;
     const hasRelated = relatedTopics && relatedTopics.length > 0;
+    const hasPractical = topic.practical_takeaways && topic.practical_takeaways.trim().length > 0; // **[NEW]**
+    const hasHistorical = topic.historical_context && topic.historical_context.trim().length > 0; // **[NEW]**
 
     const renderTabContent = () => {
         // Check if current tab is coming soon AND has no content
         const currentTabData = tabs.find(tab => tab.id === activeTab);
         const hasContent = activeTab === 'overview' ||
+            (activeTab === 'practical' && hasPractical) || // **[NEW]**
+            (activeTab === 'historical' && hasHistorical) || // **[NEW]**
             (activeTab === 'boundaries' && hasBoundaries) ||
             (activeTab === 'sources' && hasSources) ||
             (activeTab === 'related' && hasRelated);
@@ -56,6 +62,37 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
         switch (activeTab) {
             case 'overview':
                 return <ArticleTab topic={topic} />;
+            case 'practical': // **[NEW]**
+                return hasPractical ? (
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                        <h2 className="text-2xl font-bold mb-6">Practical Applications</h2>
+                        <div dangerouslySetInnerHTML={{ __html: topic.practical_takeaways! }} />
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Lightbulb className="mx-auto h-16 w-16 mb-4 opacity-20" />
+                        <h3 className="text-lg font-medium mb-2">Practical Applications Coming Soon</h3>
+                        <p className="text-sm max-w-md mx-auto">
+                            Practical takeaways and real-world applications will be available once this topic's content is fully developed.
+                        </p>
+                    </div>
+                );
+            case 'historical': // **[NEW]**
+                return hasHistorical ? (
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                        <h2 className="text-2xl font-bold mb-6">Historical Context</h2>
+                        <div dangerouslySetInnerHTML={{ __html: topic.historical_context! }} />
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <Clock className="mx-auto h-16 w-16 mb-4 opacity-20" />
+                        <h3 className="text-lg font-medium mb-2">Historical Context Coming Soon</h3>
+                        <p className="text-sm max-w-md mx-auto">
+                            Historical background and development will be available once this topic's content is fully developed.
+                        </p>
+                    </div>
+                );
+            case 'boundaries':
             case 'boundaries':
                 return hasBoundaries ? (
                     <BoundariesTab topic={topic} />
@@ -104,6 +141,8 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
                         const hasContent = tab.id === 'overview' ||
+                            (tab.id === 'practical' && hasPractical) || // **[NEW]**
+                            (tab.id === 'historical' && hasHistorical) || // **[NEW]**
                             (tab.id === 'boundaries' && hasBoundaries) ||
                             (tab.id === 'sources' && hasSources) ||
                             (tab.id === 'related' && hasRelated);

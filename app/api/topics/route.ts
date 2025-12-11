@@ -5,7 +5,7 @@ import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 
 // Add translation query
-const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en'];
+const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en', 'practical_takeaways', 'historical_context'];
 
 // Function to fetch topics with translations (now using native Directus fields)
 async function fetchTopicsWithTranslations(filter: any = {}, limit?: number) {
