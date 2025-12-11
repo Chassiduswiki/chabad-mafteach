@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen } from 'lucide-react';
 import { Topic } from '@/lib/types';
+import { TipTapEditor } from '@/components/editor/TipTapEditor';
 
 export default function TopicEditorPage() {
   const router = useRouter();
@@ -15,12 +16,27 @@ export default function TopicEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [editors, setEditors] = useState<{
+    overview: any;
+    article: any;
+    practical_takeaways: any;
+    historical_context: any;
+  }>({
+    overview: null,
+    article: null,
+    practical_takeaways: null,
+    historical_context: null,
+  });
   const [formData, setFormData] = useState({
     canonical_title: '',
     description: '',
     topic_type: '',
     definition_positive: '',
-    definition_negative: ''
+    definition_negative: '',
+    overview: '',
+    article: '',
+    practical_takeaways: '',
+    historical_context: ''
   });
 
   // Load topic data
@@ -45,7 +61,11 @@ export default function TopicEditorPage() {
           description: topicData.description || '',
           topic_type: topicData.topic_type || '',
           definition_positive: topicData.definition_positive || '',
-          definition_negative: topicData.definition_negative || ''
+          definition_negative: topicData.definition_negative || '',
+          overview: topicData.overview || '',
+          article: topicData.article || '',
+          practical_takeaways: topicData.practical_takeaways || '',
+          historical_context: topicData.historical_context || ''
         });
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -68,13 +88,27 @@ export default function TopicEditorPage() {
     setSaveStatus('idle');
 
     try {
+      // Collect rich text content from editors
+      const richTextData = {
+        overview: editors.overview?.getHTML() || formData.overview,
+        article: editors.article?.getHTML() || formData.article,
+        practical_takeaways: editors.practical_takeaways?.getHTML() || formData.practical_takeaways,
+        historical_context: editors.historical_context?.getHTML() || formData.historical_context,
+      };
+
+      // Combine form data with rich text data
+      const saveData = {
+        ...formData,
+        ...richTextData,
+      };
+
       const response = await fetch(`/api/topics/${topic.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(saveData)
       });
 
       if (response.ok) {
@@ -293,6 +327,116 @@ export default function TopicEditorPage() {
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-vertical font-serif"
                   placeholder="Clarify common misconceptions and set clear boundaries..."
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Content Sections */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Content Sections</h2>
+
+            <div className="space-y-8">
+              {/* Overview */}
+              <div>
+                <label htmlFor="overview" className="block text-sm font-medium text-foreground mb-3">
+                  Overview
+                </label>
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current overview content
+                      if (formData.overview && editor) {
+                        editor.commands.setContent(formData.overview);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, overview: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Article */}
+              <div>
+                <label htmlFor="article" className="block text-sm font-medium text-foreground mb-3">
+                  Article Content
+                </label>
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current article content
+                      if (formData.article && editor) {
+                        editor.commands.setContent(formData.article);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, article: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Content */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Advanced Content</h2>
+
+            <div className="space-y-8">
+              {/* Practical Takeaways */}
+              <div>
+                <label htmlFor="practical_takeaways" className="block text-sm font-medium text-foreground mb-3">
+                  Practical Takeaways
+                </label>
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current practical_takeaways content
+                      if (formData.practical_takeaways && editor) {
+                        editor.commands.setContent(formData.practical_takeaways);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, practical_takeaways: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Historical Context */}
+              <div>
+                <label htmlFor="historical_context" className="block text-sm font-medium text-foreground mb-3">
+                  Historical Context
+                </label>
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current historical_context content
+                      if (formData.historical_context && editor) {
+                        editor.commands.setContent(formData.historical_context);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, historical_context: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
