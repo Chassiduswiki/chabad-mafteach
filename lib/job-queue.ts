@@ -343,7 +343,7 @@ class JobQueue {
 
         // Create statement
         await directus.request(createItem('statements', {
-          paragraph_id: paragraph.id,
+          block_id: paragraph.id,
           order_key: '0',
           text: paragraphText,
           metadata: {

@@ -30,7 +30,7 @@ export async function fixDataIntegrityIssues() {
         );
 
         if (!statement || statement.length === 0) {
-          orphanedIds.push(record.id);
+          orphanedIds.push(record.id.toString());
           console.log(`  Found orphaned record: statement_topics.id=${record.id}, missing statement_id=${record.statement_id}`);
         }
       } catch (error) {

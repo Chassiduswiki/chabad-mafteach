@@ -10,8 +10,8 @@ export function useEditor(docId: string | null) {
   const [initialContent, setInitialContent] = useState<any>(null);
 
   useEffect(() => {
-    if (document && document.paragraphs) {
-      const pmJson = transformToProseMirror(document.paragraphs);
+    if (document && document.contentBlocks) {
+      const pmJson = transformToProseMirror(document.contentBlocks);
       setInitialContent(pmJson);
       setEditorContent(pmJson);
     }

@@ -57,21 +57,20 @@ interface Document {
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { seferId: string } }
+    { params }: { params: Promise<{ seferId: string }> }
 ) {
     try {
-        console.log('API route called with params:', params);
-        console.log('seferId param:', params.seferId, 'type:', typeof params.seferId);
-        const seferId = parseInt(params.seferId);
-        console.log('parsed seferId:', seferId, 'isNaN:', isNaN(seferId));
-        if (isNaN(seferId)) {
+        const { seferId } = await params;
+        const seferIdNum = parseInt(seferId);
+        console.log('parsed seferId:', seferIdNum, 'isNaN:', isNaN(seferIdNum));
+        if (isNaN(seferIdNum)) {
             return NextResponse.json({ error: 'Invalid sefer ID' }, { status: 400 });
         }
 
         // First check if this document has children (hierarchical navigation)
         console.log('Fetching children documents for seferId:', seferId);
         const childrenResult = await directus.request(readItems('documents', {
-            filter: { parent_id: { _eq: seferId } },
+            filter: { parent_id: { _eq: seferIdNum } },
             fields: ['id', 'title', 'doc_type', 'author', 'category'],
             sort: ['title']
         })) as any;
@@ -103,7 +102,7 @@ export async function GET(
             // Get parent document info
             console.log('Fetching parent document info...');
             const parentDoc = await directus.request(readItems('documents', {
-                filter: { id: { _eq: seferId } },
+                filter: { id: { _eq: seferIdNum } },
                 fields: ['id', 'title', 'doc_type'],
                 limit: 1
             })) as any;
@@ -120,7 +119,7 @@ export async function GET(
             console.log('No children found, fetching document content...');
             // Fetch the document first
             const docResult = await directus.request(readItems('documents', {
-                filter: { id: { _eq: seferId } },
+                filter: { id: { _eq: seferIdNum } },
                 fields: ['id', 'title', 'doc_type'],
                 limit: 1
             })) as any;
@@ -136,7 +135,7 @@ export async function GET(
             // Fetch content blocks separately
             console.log('Fetching content blocks...');
             const blockResult = await directus.request(readItems('content_blocks', {
-                filter: { document_id: { _eq: seferId } },
+                filter: { document_id: { _eq: seferIdNum } },
                 fields: ['id', 'order_key', 'content', 'block_type', 'page_number', 'chapter_number', 'halacha_number', 'daf_number', 'section_number', 'citation_refs', 'metadata'],
                 sort: ['order_key']
             })) as any;

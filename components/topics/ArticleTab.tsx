@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Topic } from '@/lib/types';
+import { Topic, ContentBlock, Statement } from '@/lib/types';
 import { FileText, BookOpen, Plus, X, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/directus';
 const directus = createClient();
@@ -36,13 +36,6 @@ const validateStatementText = (text: string): boolean => {
  * Topic.contentBlocks[] → prepareArticleData() → ContentBlockWithStatements[] → ArticleReader **[UPDATED]**
  */
 
-interface Statement {
-    id: number;
-    order_key: string;
-    text: string;
-    block_id?: number; // **[CHANGED]** from paragraph_id
-}
-
 interface StatementWithTopics {
     id: number;
     order_key: string;
@@ -58,13 +51,18 @@ interface ArticleTabProps {
 }
 
 export default function ArticleTab({ topic }: ArticleTabProps) {
-    const { contentBlocks = [] } = topic;
-    const [selectedContentBlock, setSelectedContentBlock] = useState<typeof contentBlocks[0] | null>(null);
+    const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
     const [statements, setStatements] = useState<Record<number, Statement[]>>({});
     const [newStatementText, setNewStatementText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [loadingStatements, setLoadingStatements] = useState<Set<number>>(new Set());
+    const [selectedContentBlock, setSelectedContentBlock] = useState<ContentBlock | null>(null);
+
+    // Load contentBlocks for this topic
+    useEffect(() => {
+        loadContentBlocks();
+    }, [topic.id]);
 
     // Seed statements map from API payload (document > contentBlocks > statements)
     useEffect(() => {
@@ -79,6 +77,76 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             return next;
         });
     }, [contentBlocks]);
+
+    const loadContentBlocks = async () => {
+        try {
+            setIsLoading(true);
+            // Fetch statements for this topic
+            const statementResults = await directus.request(readItems('statement_topics', {
+                filter: { topic_id: { _eq: topic.id } },
+                fields: ['statement_id'],
+                limit: -1
+            })) as any;
+
+            if (statementResults.length === 0) {
+                setContentBlocks([]);
+                return;
+            }
+
+            const statementIds = statementResults.map((st: any) => st.statement_id);
+
+            // Fetch the actual statements
+            const statements = await directus.request(readItems('statements', {
+                filter: { id: { _in: statementIds } },
+                fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
+                limit: -1
+            })) as any;
+
+            if (statements.length === 0) {
+                setContentBlocks([]);
+                return;
+            }
+
+            // Get unique block_ids
+            const blockIds: number[] = Array.from(new Set(
+                statements
+                    .map((s: any) => s.block_id)
+                    .filter((id: any): id is number => typeof id === 'number' && id !== null && id !== undefined)
+            ));
+
+            if (blockIds.length === 0) {
+                setContentBlocks([]);
+                return;
+            }
+
+            // Fetch content blocks
+            const contentBlocksResult = await directus.request(readItems('content_blocks', {
+                filter: { id: { _in: blockIds } },
+                fields: ['id', 'order_key', 'content', 'block_type', 'page_number', 'chapter_number', 'halacha_number', 'daf_number', 'section_number', 'citation_refs', 'metadata', 'document_id'],
+                sort: ['order_key']
+            })) as any;
+
+            // Group statements by block_id
+            const statementsByBlock = statements.reduce((acc: any, stmt: any) => {
+                if (!acc[stmt.block_id]) acc[stmt.block_id] = [];
+                acc[stmt.block_id].push(stmt);
+                return acc;
+            }, {});
+
+            // Attach statements to content blocks
+            const contentBlocksWithStatements = contentBlocksResult.map((block: any) => ({
+                ...block,
+                statements: statementsByBlock[block.id] || []
+            }));
+
+            setContentBlocks(contentBlocksWithStatements);
+        } catch (error) {
+            console.error('Error loading content blocks:', error);
+            setContentBlocks([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Fetch statements for a content block
     const fetchStatements = async (contentBlockId: number) => {
@@ -168,14 +236,14 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                 appended_text: (stmt as any).appended_text, // Citation HTML
                 topics: [topic], // For now, just the current topic
                 sources: [], // TODO: Fetch sources when available
-                document_title: block.document_title
+                document_title: undefined // ContentBlock doesn't have document_title
             }));
 
             return {
                 id: block.id,
                 content: block.content, // Full HTML content block content
                 order_key: block.order_key,
-                document_title: block.document_title,
+                document_title: undefined, // ContentBlock doesn't have document_title
                 statements: statementsWithTopics // Footnotes with citations
             };
         });

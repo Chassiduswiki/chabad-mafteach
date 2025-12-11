@@ -14,20 +14,20 @@ export const useEditorDocument = (documentId: string | number | null) => {
         queryFn: async () => {
             if (!documentId) return null;
             try {
-                // Fetch document with paragraphs
+                // Fetch document with contentBlocks
                 // We cast the result because the SDK types for deep relations can be tricky
                 const result = await directus.request(readItem('documents', documentId, {
                     fields: [
                         '*',
                         {
-                            paragraphs: ['id', 'text', 'order_key', 'status']
+                            contentBlocks: ['id', 'content', 'order_key', 'status']
                         }
                     ]
                 })) as unknown as EditorDocument;
 
-                // Sort paragraphs by order_key if they exist
-                if (result && result.paragraphs && Array.isArray(result.paragraphs)) {
-                    result.paragraphs.sort((a, b) => {
+                // Sort contentBlocks by order_key if they exist
+                if (result && result.contentBlocks && Array.isArray(result.contentBlocks)) {
+                    result.contentBlocks.sort((a, b) => {
                         return (a.order_key || '').localeCompare(b.order_key || '', undefined, { numeric: true });
                     });
                 }

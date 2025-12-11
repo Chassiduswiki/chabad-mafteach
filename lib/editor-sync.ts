@@ -71,7 +71,7 @@ export const syncEditorContent = async (
 
         return {
             id: node.attrs?.id ? Number(node.attrs.id) : undefined,
-            text: html,
+            content: html,
             order_key,
             status: node.attrs?.status || 'draft',
             citations
@@ -96,15 +96,14 @@ export const syncEditorContent = async (
             // We ALWAYS run the citation sync logic for existing paragraphs to be safe
             toUpdate.push({
                 ...p,
-                isModified: original.text !== p.text || original.order_key !== p.order_key
+                isModified: original.content !== p.content || original.order_key !== p.order_key
             });
         } else {
             toCreate.push({
-                doc_id: Number(docId),
-                text: p.text,
+                document_id: Number(docId),
+                content: p.content,
                 order_key: p.order_key,
                 status: 'draft',
-                original_lang: 'en',
                 citations: p.citations
             });
         }
@@ -129,70 +128,69 @@ export const syncEditorContent = async (
     // 1. Deletes
     for (const id of toDelete) {
         try {
-            await directus.request(deleteItem('paragraphs', id));
+            await directus.request(deleteItem('content_blocks', id));
             results.deleted++;
         } catch (e) {
-            results.errors.push(`Failed to delete paragraph ${id}`);
+            results.errors.push(`Failed to delete content block ${id}`);
         }
     }
 
     // 2. Updates
     for (const item of toUpdate) {
         try {
-            // Update paragraph text only if modified
+            // Update content block only if modified
             if (item.isModified) {
-                await directus.request(updateItem('paragraphs', item.id, {
-                    text: item.text,
+                await directus.request(updateItem('content_blocks', item.id, {
+                    content: item.content,
                     order_key: item.order_key
                 }));
                 results.updated++;
             }
             // Sync Citations (Statement Logic)
-            await syncParagraphCitations(item.id, item.text, item.citations);
+            await syncBlockCitations(item.id, item.content, item.citations);
             results.citations_linked += item.citations.length;
         } catch (e) {
             console.error(e);
-            results.errors.push(`Failed to update paragraph ${item.id}`);
+            results.errors.push(`Failed to update content block ${item.id}`);
         }
     }
 
     // 3. Creates
     for (const item of toCreate) {
         try {
-            const newPara = await directus.request(createItem('paragraphs', {
-                doc_id: item.doc_id,
-                text: item.text,
+            const newBlock = await directus.request(createItem('content_blocks', {
+                document_id: item.document_id,
+                content: item.content,
                 order_key: item.order_key,
-                status: item.status,
-                original_lang: item.original_lang
+                status: item.status
             }));
             
             results.created++;
             
-            // Sync Citations for the new paragraph
-            if (newPara && newPara.id) {
-                await syncParagraphCitations(newPara.id, item.text, item.citations);
+            // Sync Citations for the new content block
+            if (newBlock && newBlock.id) {
+                await syncBlockCitations(newBlock.id, item.content, item.citations);
                 results.citations_linked += item.citations.length;
             }
         } catch (e) {
             console.error(e);
-            results.errors.push('Failed to create new paragraph');
+            results.errors.push('Failed to create new content block');
         }
     }
 
     return results;
 };
 
-// Helper: Ensure a Statement exists for the paragraph, then link sources
-async function syncParagraphCitations(paragraphId: number, text: string, citations: CitationData[]) {
+// Helper: Ensure a Statement exists for the content block, then link sources
+async function syncBlockCitations(blockId: number, content: string, citations: CitationData[]) {
     // Even if no citations, we might want to update the statement text? 
-    // For now, only sync if we have citations to process or if we want to keep statements in sync with paragraphs generally.
-    // Let's assume for this editor that 1 Paragraph = 1 Statement (simplified model)
+    // For now, only sync if we have citations to process or if we want to keep statements in sync with content blocks generally.
+    // Let's assume for this editor that 1 Content Block = 1 Statement (simplified model)
     
     try {
-        // 1. Find existing statement for this paragraph
+        // 1. Find existing statement for this content block
         const existingStatements = await directus.request(readItems('statements', {
-            filter: { paragraph_id: { _eq: paragraphId } },
+            filter: { block_id: { _eq: blockId } },
             limit: 1
         })) as Statement[];
 
@@ -200,17 +198,17 @@ async function syncParagraphCitations(paragraphId: number, text: string, citatio
 
         if (existingStatements.length > 0) {
             statementId = existingStatements[0].id;
-            // Update text to match paragraph if it changed
-            if (existingStatements[0].text !== text) {
+            // Update text to match content block if it changed
+            if (existingStatements[0].text !== content) {
                 await directus.request(updateItem('statements', statementId, {
-                    text: text
+                    text: content
                 }));
             }
         } else {
             // Create new statement
             const newStatement = await directus.request(createItem('statements', {
-                paragraph_id: paragraphId,
-                text: text,
+                block_id: blockId,
+                text: content,
                 order_key: '10', // Default
                 status: 'draft'
             }));
