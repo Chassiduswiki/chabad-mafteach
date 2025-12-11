@@ -197,10 +197,10 @@ export async function GET(request: NextRequest) {
                         {
                             _or: [
                                 { title: { _icontains: normalizedQuery } },
-                                { description: { _icontains: normalizedQuery } },
                                 { author: { _icontains: normalizedQuery } },
                                 { doc_type: { _icontains: normalizedQuery } },
-                                { language: { _icontains: normalizedQuery } }
+                                { original_lang: { _icontains: normalizedQuery } },
+                                { category: { _icontains: normalizedQuery } }
                             ]
                         }
                     ]
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
 
                 return await directus.request(
                     readItems('documents', {
-                        fields: ['id', 'title', 'description', 'author', 'doc_type', 'language', 'publish_year', 'slug'],
+                        fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category'],
                         filter: seferFilter,
                         limit: Math.min(MAX_RESULTS_PER_TYPE, 20), // Limit seforim results
                         sort: ['title']
@@ -219,7 +219,7 @@ export async function GET(request: NextRequest) {
         })();
 
         // Wait for all searches to complete
-        const [seforimRaw] = await Promise.all([seforimPromise()]);
+        const seforimRaw = await seforimPromise;
         await Promise.all([searchPromise, topicsPromise]);
 
         // Format response
