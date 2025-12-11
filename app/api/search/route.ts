@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q');
 
     if (!query) {
-        return NextResponse.json({ documents: [], locations: [], topics: [], statements: [] });
+        return NextResponse.json({ documents: [], locations: [], topics: [], statements: [], seforim: [] });
     }
 
     // Normalize query for caching
@@ -188,7 +188,38 @@ export async function GET(request: NextRequest) {
             }
         })();
 
-        // Wait for both searches to complete
+        // **[NEW]** Seforim search - add document/sefer search functionality
+        const seforimPromise = (async () => {
+            if (normalizedQuery.length > 0) {
+                const seferFilter: any = {
+                    _and: [
+                        { status: { _eq: 'published' } },
+                        {
+                            _or: [
+                                { title: { _icontains: normalizedQuery } },
+                                { description: { _icontains: normalizedQuery } },
+                                { author: { _icontains: normalizedQuery } },
+                                { doc_type: { _icontains: normalizedQuery } },
+                                { language: { _icontains: normalizedQuery } }
+                            ]
+                        }
+                    ]
+                };
+
+                return await directus.request(
+                    readItems('documents', {
+                        fields: ['id', 'title', 'description', 'author', 'doc_type', 'language', 'publish_year', 'slug'],
+                        filter: seferFilter,
+                        limit: Math.min(MAX_RESULTS_PER_TYPE, 20), // Limit seforim results
+                        sort: ['title']
+                    })
+                ) as any[];
+            }
+            return [];
+        })();
+
+        // Wait for all searches to complete
+        const [seforimRaw] = await Promise.all([seforimPromise()]);
         await Promise.all([searchPromise, topicsPromise]);
 
         // Format response
@@ -225,7 +256,19 @@ export async function GET(request: NextRequest) {
             definition_short: t.description,
         }));
 
-        const result = { documents, locations, topics, statements };
+        // **[NEW]** Format seforim results
+        const seforim = (seforimRaw as any[]).map((s) => ({
+            id: s.id,
+            title: s.title,
+            description: s.description,
+            author: s.author,
+            doc_type: s.doc_type,
+            language: s.language,
+            publish_year: s.publish_year,
+            slug: s.slug,
+        }));
+
+        const result = { documents, locations, topics, statements, seforim };
 
         // Cache results for 5 minutes
         cache.set(cacheKey, result, 5 * 60 * 1000);
