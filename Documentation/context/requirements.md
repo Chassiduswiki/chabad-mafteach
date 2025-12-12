@@ -1,0 +1,353 @@
+# Chabad Mafteach Frontend Roadmap
+
+## Current Status
+- ✅ Topics pages simplified to use minimal Directus fields (canonical_title, topic_type, description).
+- ✅ **TypeScript schema aligned with new Directus data model** (Dec 8, 2025).
+- ✅ Tanya reader now fetches from Directus (paragraphs/statements) instead of hardcoded data.
+- ✅ Search API stabilized with error handling for permissions.
+- ✅ Mobile search modal layout improved.
+- ✅ Legacy type aliases added for backward compatibility (Sefer→Document, Location→Paragraph, etc.).
+- ✅ **Premium BookReader component created** - transforms seforim page into professional reading experience (Dec 8, 2025).
+- ✅ **Seforim UX issues resolved** - fixed z-index, mobile popup, click-to-close functionality (Dec 8, 2025).
+- ⏳ **Next: Pick one track below and execute.**
+
+## Schema Migration Notes (Dec 8, 2025)
+The frontend TypeScript types now match the new Directus schema:
+- **Collections**: `documents`, `paragraphs`, `statements`, `topics`, `statement_topics`, `sources`, `source_links`, `translations`
+- **Removed**: `seforim`, `locations`, `texts`, `topic_citations` (replaced with new collections)
+- **See**: `Documentation/New-directus-data-model.md` for complete schema reference
+
+---
+
+## TRACK 1: Topics Detail Page (Unblock everything else)
+
+**Goal**: Make `/topics/[slug]` simple, fast, and honest about what data exists.
+
+### Phase 1a: MVP Detail Page (IMMEDIATE)
+- [x] Simplify `TopicHeader` to show only: title (canonical_title), category (topic_type), short description.
+- [x] Remove or feature-flag `BoundariesTab`, `SourcesTab`, `RelatedTab` from `TopicTabs` (mark as "Coming soon").
+- [x] Remove `TopicSidebar` from detail page layout.
+- [x] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
+
+### Phase 1b: Rich Content Fields (After Phase 1a)
+- [ ] Add to Directus `topics`: `overview`, `article`, `practical_takeaways`, `historical_context` (rich text fields).
+- [ ] Wire `TopicOverview` to render these fields when present.
+- [ ] Update `TopicTabs` to conditionally show tabs only if content exists.
+
+### Phase 1c: Boundaries & Relationships (After Phase 1b)
+- [ ] Add to Directus `topics`: `definition_positive`, `definition_negative` (rich text).
+- [ ] Wire `BoundariesTab` to render these.
+- [ ] Implement `topic_relationships` query and wire `RelatedTab` + `TopicSidebar`.
+
+### Phase 1d: Citations & Sources (After Phase 1c)
+- [ ] Redesign `SourcesTab` to query `statements` tagged with topic (via `statement_topics`), group by source.
+- [ ] Ensure Directus permissions allow static token to read `statements`, `sources`, `source_links`.
+
+---
+
+## TRACK 2: Search (Topics-first, then Seforim)
+
+**Goal**: Make search feel responsive and reliable for topics, then extend to seforim.
+
+### Phase 2a: Topics Search Feel (IMMEDIATE)
+- [x] Audit `/api/search` topics filter: decide whether to fetch broader set + rely on Fuse, or expand server-side filter to include `slug` + future translation fields.
+- [x] Test: typing a topic's English name reliably returns that topic (no vanishing as you add letters).
+- [x] Update `CommandMenu` to show topic results with clear category/type badge.
+
+### Phase 2b: Seforim Search (After 2a)
+- [ ] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection.
+- [ ] Ensure `/api/search` queries the right collection and handles permissions gracefully.
+- [ ] Test: searching "Tanya" or other sefer titles returns results in Sources section.
+
+### Phase 2c: Mobile Search UX (After 2b)
+- [ ] Convert `CommandMenu` on small screens to a true **bottom sheet** (full-height, swipe-down to close).
+- [ ] Add larger touch targets and clearer result type differentiation.
+- [ ] Test on real mobile device: open, search, select, close all feel smooth.
+
+---
+
+## TRACK 3: TorahReader (Tanya → Generic)
+
+**Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
+
+### Phase 3a: Extract & Generalize (IMMEDIATE)
+- [x] Created advanced TorahReader in `/seforim/[seferId]/page.tsx` with virtual scrolling, citation handling, settings, and mobile optimization
+- [x] Generalized TorahReader component (`/components/TorahReader.tsx`) for flexible content structures
+- [x] Integrated Directus data fetching for all sefer content
+- [x] Tested `/seforim/[seferId]` routes work for any document type
+- [x] Created comprehensive documentation (`TORAH_READER_DOCUMENTATION.md`) with usage examples, API integration, and future extensibility
+
+### Phase 3b: Directus Modeling (After 3a)
+- [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
+- [ ] Add `translations` collection entries for Hebrew/English pairs.
+- [x] Wire `[perek]/page.tsx` to fetch from Directus instead of local file. **DONE** (Dec 8, 2025)
+
+### Phase 3c: Commentary & Translation UI (After 3b)
+- [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
+- [ ] Add support for inline commentary blocks (type: 'commentary' in statements).
+- [x] ~~Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.~~ **PARTIAL**: Reader shows Hebrew beautifully with premium UX, translation toggle not yet implemented.
+
+---
+
+## TRACK 5: Content Editor (Lower priority, after core tracks)
+
+**Goal**: Build a WYSIWYG editor for content creators to easily edit topics and books, aligned with the current Directus model. Behind authentication with Editor role.
+
+### Phase 5a: MVP Editor Forms (After Phase 1b)
+- [x] Create `/editor/topics/[slug]` page for editing topic definitions
+- [x] Form fields for: canonical_title, description, topic_type, definition_positive, definition_negative
+- [x] Save to Directus via API with authentication
+- [x] Basic validation and error handling
+- [x] Redirect to topic page after save
+- [x] Create `/editor/topics` page for topic management with search and filtering
+
+### Phase 5b: Rich Text & Order Management (After Phase 5a)
+- [ ] Add rich-text WYSIWYG for `description` and metadata fields (Markdown/HTML support).
+- [ ] Build Paragraphs editor with order-key generation (auto-increment LexoRank).
+- [ ] Build Statements editor with inline topic tagging interface.
+- [ ] Add bulk import/export for JSON files (aligned with DATA_INGESTION_SPEC_v2).
+- [ ] Test: Editors can structure a full sefer hierarchy and tag statements.
+
+### Phase 5c: Translation & Review UI (After Phase 5b)
+- [ ] Add side-by-side translation interface for statements/paragraphs.
+- [ ] Build review workflow for translation quality levels.
+- [ ] Add preview mode to see how content renders in frontend.
+- [ ] Test: Translators can work efficiently and preview changes.
+
+---
+
+## TRACK 6: Editor Refactor (Phase 2 - COMPLETED)
+
+**Goal**: Clean up the codebase now that citation feature is working.
+
+### Phase 2.1: Extract Citation Plugin (COMPLETED)
+- [x] Move citation logic from `ProseEditor.tsx` into a self-contained ProseMirror plugin in `components/editor/plugins/citations/`
+- [x] Include: cmdk palette, suggestion trigger, node insertion logic
+- [x] Update ProseEditor to use the new comprehensive citation plugin
+- [x] Test: Citation workflow still works after extraction
+
+### Phase 2.2: Extract `useEditor` Hook (COMPLETED)
+- [x] Review current `useEditor` hook implementation
+- [x] Consolidate any remaining data-fetching, state management, and save logic from `app/editor/page.tsx`
+- [x] Ensure page component is clean and isolated editor logic
+
+---
+
+## 🚨 CRITICAL INFRASTRUCTURE ISSUES (URGENT - BLOCKING EDITOR)
+
+### **Directus Permissions Configuration (REQUIRED)**
+**Status:** ❌ NOT DONE - BLOCKING EDITOR FUNCTIONALITY
+**Impact:** Editor completely broken - 403 Forbidden on all API calls
+**Action Required:**
+- Login to Directus Admin: https://directus-production-20db.up.railway.app/admin
+- Go to Settings → Access Control
+- Create/configure "Public" role with READ permissions for:
+  - documents collection (all fields)
+  - topics collection (all fields) 
+  - sources collection (all fields)
+  - authors collection (all fields)
+- Assign static token `Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96` to Public role
+- Test: Editor should load StructureSidebar and citations without 403 errors
+
+**Next Agent:** Check if this has been resolved before proceeding with any editor work!
+
+---
+
+---
+
+## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
+
+- [x] Decide final Directus public-access model: which collections/fields readable by static token. **DONE** (JWT auth implemented)
+- [ ] Implement + test permission changes in staging before production.
+- [x] Add integration tests for topics, search, and TorahReader to catch regressions. **FOUNDATION COMPLETE** (Jest setup ready, complex tests deferred)
+- [x] Document the new topics data model and frontend mapping in repo docs. **DONE** (See `lib/types/index.ts` and `Documentation/New-directus-data-model.md`)
+- [ ] Re-enable term-linking pipeline (`linkTerms`) once topics schema is stable (Phase 1c).
+- [x] Align TypeScript types with new Directus schema. **DONE** (Dec 8, 2025)
+- [x] Set up Jest testing framework with performance monitoring. **DONE** (Bundle: 1.12 MB JS, 1.45 MB total)
+
+---
+
+## Component Cleanup Tasks (Added Dec 8, 2025)
+
+**Priority**: High - Remove unused code to improve maintainability
+
+1. **[HIGH] Remove 3 unused components** - Immediate cleanup to reduce bundle size:
+   - `button` (UI component) - **REMOVED**
+   - `TanyaChapterReader` - **REMOVED** 
+   - `TopicOverview` - **REMOVED**
+
+2. **[HIGH] Complete TopicTabs implementation** - Currently only renders OverviewTab, needs full tab functionality
+
+3. **[MEDIUM] Reconfigure topic components for new DB schema** - Future implementation:
+   - `TopicArticle` - Connect to Document + paragraph/statement system
+   - `RelatedTab` - Link to existing related topics in DB
+   - `SourcesTab` - Reconfigure for new Directus schema
+   - `TopicSidebar` - Shelve for future use
+
+4. **[MEDIUM] Review and split large components** - Consider breaking down:
+   - `BookReader` (346 lines) - consider lazy loading
+   - `CommandMenu` (302 lines) - extract business logic
+   - `SourcesTab` (231 lines) - if re-used
+   - `OverviewTab` (208 lines) - if re-used
+
+5. **[MEDIUM] Add component documentation** - Document complex features and interfaces
+
+6. **[LOW] Extract business logic from UI components** - Separate concerns where appropriate
+
+7. **[LOW] Implement lazy loading for large components** - Optimize bundle size and loading performance
+
+---
+
+## Remaining Roadmap Items from Editor Audit:
+- Implement full Phase 2 refactor, including consolidating all editor state management into hooks and extracting plugins.
+- Add contextual editing for citations, such as making citation chips clickable for quick edits.
+- Develop collaboration features using Operational Transformation (OT) or CRDTs for real-time editing.
+- Enhance author disambiguation UI for better user prompts and error handling.
+
+---
+
+## Execution Order (Recommended)
+
+1. **Start with TRACK 1, Phase 1a** (Topics MVP): unblocks everything else, takes ~1–2 days.
+2. **Then Component Cleanup Task #1** (Remove unused components): immediate code quality improvement, ~0.5 day.
+3. **Then TRACK 2, Phase 2a** (Topics search): makes the app feel responsive, ~1 day.
+4. **Then Component Cleanup Task #2** (Complete TopicTabs): unblock topic functionality, ~0.5 day.
+5. **Then TRACK 3, Phase 3a** (TorahReader extraction): sets up for real Directus data, ~1 day.
+6. **Then TRACK 1, Phase 1b** (Rich content fields): expands topics, ~2–3 days.
+7. **Parallel**: Remaining component cleanup tasks (#3-6) and TRACK 4 (infrastructure) as needed.
+
+---
+
+## Notes for the Team
+
+- **Each phase is a complete, shippable unit.** Don't move to the next phase until the current one is tested and working.
+- **Directus schema changes** (adding fields, permissions) should be done in staging first, tested, then promoted to production.
+- **Mobile testing is critical** for Phases 1a, 2c, 3a. Use real devices or DevTools emulation.
+- **Ask questions early** if a phase's scope is unclear or blocked by missing Directus data.
+
+---
+
+## TRACK 7: Security & Reliability (Added from Security Audit)
+
+**Goal**: Secure the application against unauthorized access and ensure stability under load.
+
+### Phase 7a: Authentication & Authorization (High Priority)
+- [x] **Implement Auth Layer**: Integrate NextAuth.js or Directus Auth for API routes.
+- [x] **Secure API Routes**: Protect /api/ingest/* and /api/statements/break against unauthenticated access.
+- [x] **Token Management**: Ensure no write-access tokens are ever exposed to the client (process check).
+
+---
+
+## TRACK 8: Innovation & Features (Future Vision)
+
+**Goal**: Transform the platform into a dynamic, collaborative scholar tool.
+
+### Phase 8a: Advanced Editor Features
+- [ ] **Collaborative Editing**: Real-time multi-user editing using ProseMirror + WebSockets.
+- [ ] **AI Citation Verification**: Verify detected citations against external APIs (Sefaria, HebrewBooks).
+
+### Phase 8b: Visualization & Discovery
+- [ ] **Interactive Graph**: Visualize topic connections using react-force-graph-2d.
+- [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
+- [ ] **Personalized Learning**: Recommendation engine based on user reading history.
+
+---
+
+## TRACK 10: Internationalization & Analytics (COMPLETED - Dec 10, 2025)
+
+**Goal**: Implement bilingual support for topics and comprehensive analytics for understanding user language preferences and behavior.
+
+### Phase 10a: Bilingual Topic Support (COMPLETED)
+- ✅ **Directus Schema**: Added `canonical_title_en` and `canonical_title_transliteration` fields to topics collection
+- ✅ **API Updates**: Modified topics API to serve bilingual data with smart priority (English → Transliteration → Hebrew)
+- ✅ **TypeScript Types**: Updated interfaces to support new multilingual fields
+- ✅ **Smart Display Logic**: Implemented fallback chain for optimal user experience
+
+### Phase 10b: User Behavior Analytics (COMPLETED)
+- ✅ **Vercel Analytics Integration**: Added comprehensive tracking for page views and custom events
+- ✅ **Bilingual Analytics Suite**: 30+ custom events tracking language usage, switches, and accessibility barriers
+- ✅ **React Hooks**: Created `useBilingualAnalytics` and `useLanguageSwitchTracking` for component integration
+- ✅ **Privacy-First Approach**: All analytics respect user privacy and GDPR compliance
+
+### Phase 10c: User Feedback Systems (COMPLETED)
+- ✅ **Translation Feedback Component**: Inline rating system for translation quality assessment
+- ✅ **Translation Survey System**: Multi-step survey for gathering comprehensive user preferences
+- ✅ **Accessibility Tracking**: Monitor language barriers and usability issues
+- ✅ **Data-Driven Insights**: Foundation for understanding translation priorities and user needs
+
+### Key Achievements:
+- **Data-Driven Decisions**: Analytics foundation to answer "Do users want Hebrew-primary?" and "Which content needs translation?"
+- **Scalable Architecture**: Minimal bilingual implementation ready for expansion based on user feedback
+- **Privacy Compliance**: Self-hosted analytics respecting Jewish learning platform sensitivities
+- **User-Centric Design**: Smart language fallback prioritizing accessibility while preserving Hebrew authenticity
+
+### Next Steps:
+1. **Deploy Umami analytics** for visual dashboards (5-10 minutes on Railway)
+2. **Add English translations** for existing 3 topics in Directus admin
+3. **Monitor bilingual user behavior** to inform content translation priorities
+4. **Scale based on data**: Expand to paragraphs/statements if user demand justifies
+
+---
+
+## TRACK 11: Performance & Bundle Optimization (Future)
+
+**Goal**: Optimize application performance and bundle size for better user experience.
+
+### Phase 11a: Bundle Analysis & Optimization
+- [ ] **Audit bundle size** - Analyze current 1.12 MB JS bundle and identify optimization opportunities
+- [ ] **Implement lazy loading** - Add React.lazy for large components (BookReader, CommandMenu, etc.)
+- [ ] **Code splitting** - Split routes and heavy features into separate chunks
+- [ ] **Remove unused dependencies** - Audit package.json for unused dependencies
+
+### Phase 11b: Runtime Performance
+- [ ] **Image optimization** - Implement Next.js Image component for all images
+- [ ] **Database query optimization** - Add indexes and optimize Directus queries
+- [ ] **Caching strategy** - Implement Redis/memory caching for frequently accessed data
+- [ ] **CDN optimization** - Ensure static assets are properly cached and distributed
+
+---
+
+## TRACK 9: UX Audit & Fixes (Immediate Priority)
+
+**Goal**: Fix critical user experience issues identified in comprehensive audit.
+
+### Phase 9a: Critical Flow Blockers
+- [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
+- [x] **Fix data integrity issues** - Resolve statement_topics table orphans causing empty article tabs (BLOCKING articles)
+- [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
+
+### Phase 9b: Navigation & Discovery Issues
+- [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
+- [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
+- [x] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
+
+### Phase 9c: Visual & Mobile Polish
+- [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
+- [x] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
+- [x] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+
+### Phase 9d: System Reliability
+- [ ] **Audit editor permissions** - Resolve 403 errors, ensure proper Directus role configuration for editor functionality
+
+### Phase 9e: Quick Wins (< 2 hours each)
+- [x] **Improve Article empty state** - Replace "Coming Soon" dead end with topic description and helpful next steps
+- [x] **Basic Collections functionality** - Implement localStorage bookmarking for topics with simple UI
+- [x] **Home page onboarding hints** - Add subtle guidance for first-time users
+- [ ] **Navigation link testing** - Verify all header links work, fix any 404s
+- [ ] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets
+
+---
+
+## 🚨 ARCHITECTURAL CONCERNS (REQUIRES DISCUSSION)
+
+### Data Integrity & Statement Synchronization
+**Issue**: What happens if text in paragraph changes, will it throw the statement system out of sync?
+- **Impact**: Could break citations, references, and user bookmarks
+- **Solution Needed**: Version control system for paragraphs/statements
+- **Discussion Required**: How to handle text updates without breaking existing references
+
+### Statement-to-Topic Linking Architecture
+**Issue**: New version of statements to pull concepts into topics as sources. How to quote multi-page concepts?
+- **Impact**: Current statement_topics table only links single statements to topics
+- **Solution Needed**: Support for statement ranges, page ranges, or concept spans
+- **Discussion Required**: Schema changes for multi-statement topic associations

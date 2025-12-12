@@ -2,9 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/directus';
-const directus = createClient();
-import { readItems } from '@directus/sdk';
 import { BookOpen, ChevronLeft, FileText, Eye, EyeOff, X, ArrowLeft, Settings, ChevronDown, Bookmark, BookmarkCheck } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,12 +15,37 @@ interface Statement {
     };
 }
 
-interface Paragraph {
+interface ContentBlock {
     id: number;
     title?: string;
     order_key: string;
-    text?: string;
+    content?: string;
+    block_type?: string;
+    page_number?: string;
+    chapter_number?: number;
+    halacha_number?: number;
+    daf_number?: string;
+    section_number?: number;
+    citation_refs?: any[];
+    metadata?: any;
     statements: Statement[];
+    commentaries: BlockCommentary[];
+}
+
+interface BlockCommentary {
+    id: number;
+    block_id: number;
+    commentary_text: string;
+    author?: string;
+    source?: string;
+    commentary_type: string;
+    language: string;
+    order_position: number;
+    is_official: boolean;
+    quality_score: number;
+    citation_source?: number;
+    citation_page?: string;
+    citation_reference?: string;
 }
 
 interface Document {
@@ -32,7 +54,7 @@ interface Document {
     doc_type?: string;
     author?: string; // Added for hierarchical display
     hasContent?: boolean; // Added for content detection
-    paragraphs: Paragraph[];
+    contentBlocks: ContentBlock[];
 }
 
 interface CitationModal {
@@ -42,9 +64,9 @@ interface CitationModal {
     references: any[];
 }
 
-interface ParagraphModal {
+interface ContentBlockModal {
     isOpen: boolean;
-    paragraph: Paragraph | null;
+    contentBlock: ContentBlock | null;
     isBookmarked: boolean;
 }
 
@@ -68,14 +90,66 @@ export default function SeferPage() {
     const observerRef = useRef<IntersectionObserver | null>(null);
     const paragraphRefs = useRef<Map<number, HTMLDivElement>>(new Map());
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-    const [paragraphModal, setParagraphModal] = useState<ParagraphModal>({
+    const [contentBlockModal, setContentBlockModal] = useState<ContentBlockModal>({
         isOpen: false,
-        paragraph: null,
+        contentBlock: null,
         isBookmarked: false
     });
 
+    // Citation Info Component
+    const CitationInfo = ({ contentBlock }: { contentBlock: ContentBlock }) => {
+        const citationParts = [];
+        if (contentBlock.page_number) citationParts.push(`Page ${contentBlock.page_number}`);
+        if (contentBlock.chapter_number) citationParts.push(`Chapter ${contentBlock.chapter_number}`);
+        if (contentBlock.halacha_number) citationParts.push(`Halacha ${contentBlock.halacha_number}`);
+        if (contentBlock.daf_number) citationParts.push(`Daf ${contentBlock.daf_number}`);
+        if (contentBlock.section_number) citationParts.push(`Section ${contentBlock.section_number}`);
+
+        if (citationParts.length === 0) return null;
+
+        return (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border/50 pb-2 mb-4">
+                <span className="font-medium text-primary">📖</span>
+                <span>{citationParts.join(' • ')}</span>
+                {contentBlock.citation_refs && contentBlock.citation_refs.length > 0 && (
+                    <span className="text-xs bg-muted px-2 py-1 rounded">
+                        {contentBlock.citation_refs.length} citation format{contentBlock.citation_refs.length > 1 ? 's' : ''}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
     // Hebrew detection helper
     const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
+    const CommentaryPanel = ({ commentary }: { commentary: BlockCommentary }) => {
+        const getTypeIcon = (type: string) => {
+            switch (type) {
+                case 'commentary': return '💬';
+                case 'translation': return '🌍';
+                case 'cross_reference': return '🔗';
+                case 'explanation': return '💡';
+                default: return '📝';
+            }
+        };
+
+        return (
+            <div className="bg-muted/30 rounded-lg p-3 border border-border/50 mb-2">
+                <div className="flex items-center gap-2 mb-2 text-xs">
+                    <span>{getTypeIcon(commentary.commentary_type)}</span>
+                    <span className="font-medium">{commentary.author || 'Anonymous'}</span>
+                    {commentary.source && <span className="text-muted-foreground">• {commentary.source}</span>}
+                    {commentary.is_official && <span className="bg-primary/10 text-primary px-1 rounded text-xs">Official</span>}
+                </div>
+                <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: commentary.commentary_text }} />
+                {commentary.citation_reference && (
+                    <div className="mt-2 text-xs text-muted-foreground italic">
+                        Source: {commentary.citation_reference}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // Font size classes
     const fontSizeClasses = {
@@ -124,96 +198,32 @@ export default function SeferPage() {
             if (!seferId) return;
 
             try {
-                // First check if this document has children (hierarchical navigation)
-                const childrenResult = await directus.request(readItems('documents', {
-                    filter: { parent_id: { _eq: seferId } },
-                    fields: ['id', 'title', 'doc_type', 'author', 'category'],
-                    sort: ['title']
-                })) as any;
+                console.log('Fetching sefer data from API for seferId:', seferId);
+                const response = await fetch(`/api/seforim/${seferId}`);
+                console.log('API response status:', response.status);
+                console.log('API response ok:', response.ok);
 
-                const childrenArray = Array.isArray(childrenResult) ? childrenResult : [childrenResult];
-
-                if (childrenArray.length > 0) {
-                    // This document has children - show hierarchical navigation
-                    const childrenWithContent = await Promise.all(
-                        childrenArray.map(async (child: any) => {
-                            try {
-                                const paragraphs = await directus.request(readItems('paragraphs', {
-                                    filter: { doc_id: { _eq: child.id } },
-                                    limit: 1
-                                })) as any;
-                                const paraArray = Array.isArray(paragraphs) ? paragraphs : paragraphs ? [paragraphs] : [];
-                                return { ...child, hasContent: paraArray.length > 0 };
-                            } catch {
-                                return { ...child, hasContent: false };
-                            }
-                        })
-                    );
-
-                    // Get parent document info
-                    const parentDoc = await directus.request(readItems('documents', {
-                        filter: { id: { _eq: seferId } },
-                        fields: ['id', 'title', 'doc_type'],
-                        limit: 1
-                    })) as any;
-
-                    const parentArray = Array.isArray(parentDoc) ? parentDoc : [parentDoc];
-                    setDocument(parentArray[0] || null);
-                    setChildDocuments(childrenWithContent);
-                } else {
-                    // This document has no children - show content
-                    // Fetch the document first
-                    const docResult = await directus.request(readItems('documents', {
-                        filter: { id: { _eq: seferId } },
-                        fields: ['id', 'title', 'doc_type'],
-                        limit: 1
-                    })) as any;
-
-                    const docsArray = Array.isArray(docResult) ? docResult : docResult ? [docResult] : [];
-                    const doc = docsArray[0] || null;
-
-                    if (doc) {
-                        // Fetch paragraphs separately
-                        const paraResult = await directus.request(readItems('paragraphs', {
-                            filter: { doc_id: { _eq: seferId } },
-                            fields: ['id', 'order_key', 'text'],
-                            sort: ['order_key']
-                        })) as any;
-
-                        const paragraphsArray = Array.isArray(paraResult) ? paraResult : [paraResult];
-                        doc.paragraphs = paragraphsArray;
-
-                        // Fetch statements for all paragraphs
-                        const paragraphIds = paragraphsArray.map((p: any) => p.id);
-                        if (paragraphIds.length > 0) {
-                            const statementsResult = await (directus.request(readItems('statements', {
-                                filter: { paragraph_id: { _in: paragraphIds } },
-                                fields: ['id', 'text', 'appended_text', 'order_key', 'metadata', 'paragraph_id'] as any,
-                                sort: ['order_key']
-                            })) as Promise<any>);
-
-                            const statementsArray = Array.isArray(statementsResult) ? statementsResult : [statementsResult];
-
-                            // Group statements by paragraph_id
-                            const statementsByParagraph = statementsArray.reduce((acc: any, stmt: any) => {
-                                if (!acc[stmt.paragraph_id]) acc[stmt.paragraph_id] = [];
-                                acc[stmt.paragraph_id].push(stmt);
-                                return acc;
-                            }, {});
-
-                            // Attach statements to paragraphs
-                            doc.paragraphs = doc.paragraphs.map((p: any) => ({
-                                ...p,
-                                statements: statementsByParagraph[p.id] || []
-                            }));
-                        }
-
-                        setDocument(doc);
-                        setChildDocuments([]);
-                    }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.log('API error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
                 }
+
+                const data = await response.json();
+                console.log('API response data:', data);
+
+                setDocument(data.document);
+                setChildDocuments(data.childDocuments || []);
+                console.log('Document and child documents set successfully');
             } catch (error) {
                 console.error('Error fetching sefer data:', error);
+                console.error('Error type:', typeof error);
+                console.error('Error details:', {
+                    message: (error as any)?.message,
+                    code: (error as any)?.code,
+                    stack: (error as any)?.stack
+                });
+                // Don't re-throw, just log - the component will handle null document state
             } finally {
                 setLoading(false);
             }
@@ -242,61 +252,61 @@ export default function SeferPage() {
         setCitationModal(prev => ({ ...prev, isOpen: false }));
     };
 
-    // Long-press handlers for paragraphs
-    const handleParagraphMouseDown = (paragraph: Paragraph) => {
+    // Long-press handlers for content blocks
+    const handleContentBlockMouseDown = (contentBlock: ContentBlock) => {
         longPressTimer.current = setTimeout(() => {
-            // Check if paragraph has citations
-            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            // Check if content block has citations
+            const hasCitations = contentBlock.statements.some(s => s.appended_text);
             if (hasCitations) {
-                setParagraphModal({
+                setContentBlockModal({
                     isOpen: true,
-                    paragraph,
+                    contentBlock,
                     isBookmarked: false // TODO: Check actual bookmark status
                 });
             }
         }, 500); // 500ms long press
     };
 
-    const handleParagraphMouseUp = () => {
+    const handleContentBlockMouseUp = () => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
         }
     };
 
-    const handleParagraphMouseLeave = () => {
+    const handleContentBlockMouseLeave = () => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
         }
     };
 
     // Touch handlers for mobile
-    const handleParagraphTouchStart = (paragraph: Paragraph) => {
+    const handleContentBlockTouchStart = (contentBlock: ContentBlock) => {
         longPressTimer.current = setTimeout(() => {
-            const hasCitations = paragraph.statements.some(s => s.appended_text);
+            const hasCitations = contentBlock.statements.some(s => s.appended_text);
             if (hasCitations) {
-                setParagraphModal({
+                setContentBlockModal({
                     isOpen: true,
-                    paragraph,
+                    contentBlock,
                     isBookmarked: false // TODO: Check actual bookmark status
                 });
             }
         }, 500);
     };
 
-    const handleParagraphTouchEnd = () => {
+    const handleContentBlockTouchEnd = () => {
         if (longPressTimer.current) {
             clearTimeout(longPressTimer.current);
         }
     };
 
-    // Close paragraph modal
-    const closeParagraphModal = () => {
-        setParagraphModal(prev => ({ ...prev, isOpen: false }));
+    // Close content block modal
+    const closeContentBlockModal = () => {
+        setContentBlockModal(prev => ({ ...prev, isOpen: false }));
     };
 
     // Toggle bookmark
     const toggleBookmark = () => {
-        setParagraphModal(prev => ({
+        setContentBlockModal(prev => ({
             ...prev,
             isBookmarked: !prev.isBookmarked
         }));
@@ -349,8 +359,8 @@ export default function SeferPage() {
                                 <BookOpen className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-semibold text-foreground">{document.title}</h1>
-                                <p className="text-sm text-muted-foreground capitalize">{document.doc_type}</p>
+                                <h1 className="text-xl font-semibold text-foreground">{document?.title || 'Untitled'}</h1>
+                                <p className="text-sm text-muted-foreground capitalize">{document?.doc_type || ''}</p>
                             </div>
                         </div>
                         <Link
@@ -533,71 +543,103 @@ export default function SeferPage() {
                     </div>
                 </div>
 
-                {/* Content - Continuous Flow */}
+                {/* Content - Al HaTorah Style Layered Display */}
                 <div className="bg-card/90 dark:bg-card/30 rounded-2xl p-8 sm:p-10 lg:p-14 border border-border/50">
-                    <div className={`font-serif ${fontSizeClasses[fontSize]} leading-[2.2] text-foreground tracking-wide`}>
-                        {document.paragraphs && document.paragraphs.length > 0 ? (
-                            document.paragraphs.map((paragraph, paraIndex) => (
+                    <div className={`leading-[2.2] text-foreground tracking-wide`}>
+                        {document.contentBlocks && document.contentBlocks.length > 0 ? (
+                            document.contentBlocks.map((contentBlock, blockIndex) => (
                                 <div
-                                    key={paragraph.id}
-                                    ref={(el) => observeParagraph(paragraph.id, el)}
-                                    data-paragraph-id={paragraph.id}
+                                    key={contentBlock.id}
+                                    ref={(el) => observeParagraph(contentBlock.id, el)}
+                                    data-paragraph-id={contentBlock.id}
                                     className={`mb-12 transition-opacity duration-700 ${
-                                        visibleParagraphs.has(paragraph.id) ? 'opacity-100' : 'opacity-0'
-                                    } ${paragraph.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
-                                    style={{
-                                        direction: isHebrew(paragraph.text || '') ? 'rtl' : 'ltr',
-                                        textAlign: 'justify',
-                                        textAlignLast: isHebrew(paragraph.text || '') ? 'right' : 'left'
-                                    }}
-                                    onMouseDown={() => handleParagraphMouseDown(paragraph)}
-                                    onMouseUp={handleParagraphMouseUp}
-                                    onMouseLeave={handleParagraphMouseLeave}
-                                    onTouchStart={() => handleParagraphTouchStart(paragraph)}
-                                    onTouchEnd={handleParagraphTouchEnd}
+                                        visibleParagraphs.has(contentBlock.id) ? 'opacity-100' : 'opacity-0'
+                                    } ${contentBlock.statements.some(s => s.appended_text) ? 'cursor-pointer select-none' : ''}`}
                                 >
-                                    {paragraph.title && (
-                                        <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
-                                            {paragraph.title}
-                                        </h3>
-                                    )}
+                                    {/* Citation Info Header */}
+                                    <CitationInfo contentBlock={contentBlock} />
 
-                                    <div className="space-y-6">
-                                        {paragraph.statements && paragraph.statements.length > 0 ? (
-                                            paragraph.statements
-                                                .sort((a, b) => a.order_key.localeCompare(b.order_key))
-                                                .map((statement, stmtIndex) => (
-                                                    <span key={statement.id} className="inline">
-                                                        {/* Main text */}
-                                                        <span
-                                                            className="text-foreground"
-                                                            dangerouslySetInnerHTML={{ __html: statement.text }}
-                                                        />
+                                    {/* Al HaTorah Style Layout: Base Text + Commentaries */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {/* Main Text Column */}
+                                        <div className="lg:col-span-2">
+                                            <div
+                                                className={`${fontSizeClasses[fontSize]} font-serif`}
+                                                style={{
+                                                    direction: isHebrew(contentBlock.content || '') ? 'rtl' : 'ltr',
+                                                    textAlign: 'justify',
+                                                    textAlignLast: isHebrew(contentBlock.content || '') ? 'right' : 'left'
+                                                }}
+                                                onMouseDown={() => handleContentBlockMouseDown(contentBlock)}
+                                                onMouseUp={handleContentBlockMouseUp}
+                                                onMouseLeave={handleContentBlockMouseLeave}
+                                                onTouchStart={() => handleContentBlockTouchStart(contentBlock)}
+                                                onTouchEnd={handleContentBlockTouchEnd}
+                                            >
+                                                {contentBlock.title && (
+                                                    <h3 className="text-2xl font-semibold mb-6 text-primary border-b border-primary/20 pb-3">
+                                                        {contentBlock.title}
+                                                    </h3>
+                                                )}
 
-                                                        {/* Citation with hover effect */}
-                                                        {statement.appended_text && showCitations && (
-                                                            <span
-                                                                className="inline-block mx-1 px-2 py-1 text-xs bg-accent/60 text-accent-foreground hover:bg-accent rounded border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
-                                                                dangerouslySetInnerHTML={{ __html: statement.appended_text }}
-                                                                onClick={() => handleCitationClick(statement.appended_text, statement)}
-                                                            />
-                                                        )}
+                                                <div className="space-y-6">
+                                                    {contentBlock.statements && contentBlock.statements.length > 0 ? (
+                                                        contentBlock.statements
+                                                            .sort((a, b) => a.order_key.localeCompare(b.order_key))
+                                                            .map((statement, stmtIndex) => (
+                                                                <span key={statement.id} className="inline">
+                                                                    {/* Main text */}
+                                                                    <span
+                                                                        className="text-foreground"
+                                                                        dangerouslySetInnerHTML={{ __html: statement.text }}
+                                                                    />
 
-                                                        {/* Citation references indicator */}
-                                                        {statement.metadata?.citation_references && statement.metadata.citation_references.length > 0 && (
-                                                            <span className="mx-1 text-xs text-muted-foreground">
-                                                                ({statement.metadata.citation_references.length} refs)
-                                                            </span>
-                                                        )}
+                                                                    {/* Citation with hover effect */}
+                                                                    {statement.appended_text && showCitations && (
+                                                                        <span
+                                                                            className="inline-block mx-1 px-2 py-1 text-xs bg-accent/60 text-accent-foreground hover:bg-accent rounded border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
+                                                                            dangerouslySetInnerHTML={{ __html: statement.appended_text }}
+                                                                            onClick={() => handleCitationClick(statement.appended_text, statement)}
+                                                                        />
+                                                                    )}
 
-                                                        {/* Add space between statements unless it's the last one */}
-                                                        {stmtIndex < paragraph.statements.length - 1 && ' '}
-                                                    </span>
-                                                ))
-                                        ) : (
-                                            <p className="text-muted-foreground italic">
-                                                {paragraph.text || 'No content available for this paragraph.'}
-                                            </p>
+                                                                    {/* Citation references indicator */}
+                                                                    {statement.metadata?.citation_references && statement.metadata.citation_references.length > 0 && (
+                                                                        <span className="mx-1 text-xs text-muted-foreground">
+                                                                            ({statement.metadata.citation_references.length} refs)
+                                                                        </span>
+                                                                    )}
+
+                                                                    {/* Add space between statements unless it's the last one */}
+                                                                    {stmtIndex < contentBlock.statements.length - 1 && ' '}
+                                                                </span>
+                                                            ))
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">
+                                                            {contentBlock.content || 'No content available for this block.'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Commentaries Column - Al HaTorah Style */}
+                                        {contentBlock.commentaries && contentBlock.commentaries.length > 0 && (
+                                            <div className="lg:col-span-1">
+                                                <div className="sticky top-8">
+                                                    <h4 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
+                                                        <span>📚</span>
+                                                        Commentaries ({contentBlock.commentaries.length})
+                                                    </h4>
+                                                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                                                        {contentBlock.commentaries
+                                                            .sort((a, b) => (a.order_position || 0) - (b.order_position || 0))
+                                                            .map((commentary) => (
+                                                                <CommentaryPanel key={commentary.id} commentary={commentary} />
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -614,35 +656,42 @@ export default function SeferPage() {
 
                 {/* Statistics */}
                 <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
                         <div>
                             <div className="text-2xl font-bold text-primary">
-                                {document.paragraphs?.length || 0}
+                                {document.contentBlocks?.length || 0}
                             </div>
-                            <div className="text-sm text-muted-foreground">Paragraphs</div>
+                            <div className="text-sm text-muted-foreground">Content Blocks</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-primary">
-                                {document.paragraphs?.reduce((total, p) => total + (p.statements?.length || 0), 0) || 0}
+                                {document.contentBlocks?.reduce((total, b) => total + (b.statements?.length || 0), 0) || 0}
                             </div>
                             <div className="text-sm text-muted-foreground">Statements</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-primary">
-                                {document.paragraphs?.reduce((total, p) =>
-                                    total + (p.statements?.filter(s => s.appended_text)?.length || 0), 0) || 0
+                                {document.contentBlocks?.reduce((total, b) =>
+                                    total + (b.statements?.filter(s => s.appended_text)?.length || 0), 0) || 0
                                 }
                             </div>
                             <div className="text-sm text-muted-foreground">With Citations</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-primary">
-                                {document.paragraphs?.reduce((total, p) =>
-                                    total + (p.statements?.reduce((stmtTotal, s) =>
-                                        stmtTotal + (s.metadata?.citation_references?.length || 0), 0) || 0), 0) || 0
+                                {document.contentBlocks?.reduce((total, b) =>
+                                    total + (b.commentaries?.length || 0), 0) || 0
                                 }
                             </div>
-                            <div className="text-sm text-muted-foreground">Citation Refs</div>
+                            <div className="text-sm text-muted-foreground">Commentaries</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-primary">
+                                {document.contentBlocks?.filter(b =>
+                                    (b.page_number || b.chapter_number || b.halacha_number || b.daf_number || b.section_number)
+                                ).length || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">With Citation Info</div>
                         </div>
                     </div>
                 </div>
@@ -723,22 +772,22 @@ export default function SeferPage() {
                 )}
             </div>
 
-            {/* Paragraph Modal */}
-            {paragraphModal.isOpen && paragraphModal.paragraph && (
+            {/* Content Block Modal */}
+            {contentBlockModal.isOpen && contentBlockModal.contentBlock && (
                 <div className="fixed inset-0 z-[100] flex items-end justify-center">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={closeParagraphModal}
+                        onClick={closeContentBlockModal}
                     />
 
                     {/* Modal */}
                     <div className="relative w-full max-w-2xl mx-4 mb-4 bg-background rounded-t-2xl border border-border shadow-2xl transform transition-transform duration-300 ease-out animate-slide-up">
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-border">
-                            <h3 className="text-lg font-semibold text-foreground">Paragraph Actions</h3>
+                            <h3 className="text-lg font-semibold text-foreground">Content Block Actions</h3>
                             <button
-                                onClick={closeParagraphModal}
+                                onClick={closeContentBlockModal}
                                 className="p-2 rounded-lg hover:bg-accent transition-colors"
                             >
                                 <X className="h-5 w-5" />
@@ -751,7 +800,7 @@ export default function SeferPage() {
                             <div className="mb-4">
                                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Context</h4>
                                 <p className="text-foreground italic text-sm">
-                                    "{paragraphModal.paragraph.statements.slice(0, 2).map(s => s.text).join(' ').slice(0, 150)}..."
+                                    "{contentBlockModal.contentBlock.statements.slice(0, 2).map(s => s.text).join(' ').slice(0, 150)}..."
                                 </p>
                             </div>
 
@@ -759,13 +808,13 @@ export default function SeferPage() {
                             <div className="mb-4">
                                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Citations</h4>
                                 <div className="space-y-2">
-                                    {paragraphModal.paragraph.statements
+                                    {contentBlockModal.contentBlock.statements
                                         .filter(statement => statement.appended_text)
                                         .map((statement, index) => (
                                             <button
                                                 key={statement.id}
                                                 onClick={() => {
-                                                    closeParagraphModal();
+                                                    closeContentBlockModal();
                                                     handleCitationClick(statement.appended_text, statement);
                                                 }}
                                                 className="w-full text-left p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
@@ -793,24 +842,24 @@ export default function SeferPage() {
                                 <button
                                     onClick={toggleBookmark}
                                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
-                                        paragraphModal.isBookmarked
+                                        contentBlockModal.isBookmarked
                                             ? 'bg-primary text-primary-foreground border-primary'
                                             : 'border-border hover:bg-accent'
                                     }`}
                                 >
-                                    {paragraphModal.isBookmarked ? (
+                                    {contentBlockModal.isBookmarked ? (
                                         <BookmarkCheck className="h-4 w-4" />
                                     ) : (
                                         <Bookmark className="h-4 w-4" />
                                     )}
                                     <span className="text-sm">
-                                        {paragraphModal.isBookmarked ? 'Bookmarked' : 'Bookmark'}
+                                        {contentBlockModal.isBookmarked ? 'Bookmarked' : 'Bookmark'}
                                     </span>
                                 </button>
                                 <button
                                     onClick={() => {
                                         // TODO: Open collections modal for saving
-                                        closeParagraphModal();
+                                        closeContentBlockModal();
                                     }}
                                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border hover:bg-accent transition-colors"
                                 >

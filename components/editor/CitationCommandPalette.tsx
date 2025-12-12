@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState, useMemo } from "react";
 import { Command } from "cmdk";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import {
@@ -13,6 +13,8 @@ import {
 import { useSourceSearch } from "@/lib/hooks/useSourceSearch";
 import { useCreateSource } from "@/lib/hooks/useCreateSource";
 import { useAuthorSearch } from "@/lib/hooks/useAuthorSearch";
+import { useDocumentSearch } from "@/lib/hooks/useDocumentSearch";
+import { SefariaSearchModal } from "./SefariaSearchModal";
 
 type ViewState = "search" | "reference" | "create";
 
@@ -30,20 +32,73 @@ export function CitationCommandPalette({
   onFeedback,
 }: CitationCommandPaletteProps) {
   const { search, setSearch, results, isLoading } = useSourceSearch();
-  const { createSource, status, error, matchedAuthor, reset } = useCreateSource();
+  const { createSource, status, error, matchedAuthor, matchedDocument, reset } = useCreateSource();
   const {
     search: authorSearch,
     setSearch: setAuthorSearch,
     results: authorResults,
   } = useAuthorSearch();
+  const { search: docSearch, setSearch: setDocSearch, results: docResults, isLoading: isDocLoading } = useDocumentSearch();
 
   const [view, setView] = useState<ViewState>("search");
   const [selectedSource, setSelectedSource] = useState<{ id: number; title: string } | null>(
     null
   );
+  const [selectedDocument, setSelectedDocument] = useState<{ id: number; title: string; docType?: string; metadata?: any } | null>(
+    null
+  );
   const [draftTitle, setDraftTitle] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [reference, setReference] = useState("");
+  const [showSefariaModal, setShowSefariaModal] = useState(false);
+  const [externalSourceData, setExternalSourceData] = useState<{
+    external_id: string;
+    external_url: string;
+    external_system: 'sefaria' | 'wikisource' | 'hebrewbooks';
+    citation_text?: string;
+  } | null>(null);
+
+  // Sync search terms between source and document search
+  useEffect(() => {
+    setDocSearch(search);
+  }, [search, setDocSearch]);
+
+  // Combined search results: prioritize documents, then sources
+  const combinedResults = useMemo(() => {
+    const allResults: Array<{
+      id: number;
+      title: string;
+      type: 'document' | 'source';
+      docType?: string;
+      metadata?: any;
+    }> = [];
+
+    // Add document results first (higher priority)
+    docResults.forEach(doc => {
+      allResults.push({
+        id: doc.id,
+        title: doc.title,
+        type: 'document',
+        docType: doc.doc_type,
+        metadata: doc.metadata,
+      });
+    });
+
+    // Add source results (lower priority)
+    results.forEach(source => {
+      // Avoid duplicates if source is already linked to a document in results
+      const alreadyExists = allResults.some(r => r.type === 'document' && r.title === source.title);
+      if (!alreadyExists) {
+        allResults.push({
+          id: source.id,
+          title: source.title,
+          type: 'source',
+        });
+      }
+    });
+
+    return allResults.slice(0, 10); // Limit total results
+  }, [docResults, results]);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const referenceInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +134,8 @@ export function CitationCommandPalette({
   const goBackToSearch = () => {
     setView("search");
     setSelectedSource(null);
+    setSelectedDocument(null);
+    setExternalSourceData(null);
     setDraftTitle("");
     setAuthorName("");
     setReference("");
@@ -89,6 +146,16 @@ export function CitationCommandPalette({
     setSelectedSource(source);
     setReference("");
     setView("reference");
+  };
+
+  const handleSelectDocument = (document: { id: number; title: string; docType?: string; metadata?: any }) => {
+    // For documents, we create a source linked to this document
+    setSelectedDocument(document);
+    setDraftTitle(document.title);
+    setAuthorName(document.metadata?.author_name || "");
+    setAuthorSearch(document.metadata?.author_name || "");
+    setReference("");
+    setView("create");
   };
 
   const handleCreateOption = (title: string) => {
@@ -128,6 +195,8 @@ export function CitationCommandPalette({
       const source = await createSource({
         title: cleanedTitle,
         authorName: authorName.trim() ? authorName.trim() : undefined,
+        documentId: selectedDocument?.id, // Link to document if selected
+        externalSource: externalSourceData || undefined, // Include external source data if available
       });
 
       onComplete({ id: source.id, title: source.title }, cleanedReference);
@@ -168,29 +237,60 @@ export function CitationCommandPalette({
                   placeholder="Type to search sources..."
                   className="py-3 text-base outline-none flex-1"
                 />
-                {isLoading ? (
+                {isLoading || isDocLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                 ) : null}
               </div>
 
               <Command.List className="max-h-80 overflow-y-auto">
-                {results.length > 0 ? (
-                  <Command.Group heading="Sources">
-                    {results.map((source) => (
-                      <Command.Item
-                        key={source.id}
-                        value={`source:${source.id}`}
-                        onSelect={() => handleSelectSource(source)}
-                        className="px-4 py-3 flex items-center gap-3"
-                      >
-                        <BookOpenText className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-800">{source.title}</span>
-                      </Command.Item>
-                    ))}
-                  </Command.Group>
+                {combinedResults.length > 0 ? (
+                  <>
+                    {/* Document Results */}
+                    {combinedResults.some(r => r.type === 'document') && (
+                      <Command.Group heading="Documents in Library">
+                        {combinedResults
+                          .filter(r => r.type === 'document')
+                          .map((result) => (
+                            <Command.Item
+                              key={`doc-${result.id}`}
+                              value={`document:${result.id}`}
+                              onSelect={() => handleSelectDocument(result)}
+                              className="px-4 py-3 flex items-center gap-3"
+                            >
+                              <div className="flex items-center gap-2">
+                                <BookOpenText className="w-4 h-4 text-green-600" />
+                                <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
+                                  {result.docType === 'sefer' ? 'Book' : 'Entry'}
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-800">{result.title}</span>
+                            </Command.Item>
+                          ))}
+                      </Command.Group>
+                    )}
+
+                    {/* Source Results */}
+                    {combinedResults.some(r => r.type === 'source') && (
+                      <Command.Group heading="Existing Sources">
+                        {combinedResults
+                          .filter(r => r.type === 'source')
+                          .map((result) => (
+                            <Command.Item
+                              key={`source-${result.id}`}
+                              value={`source:${result.id}`}
+                              onSelect={() => handleSelectSource(result)}
+                              className="px-4 py-3 flex items-center gap-3"
+                            >
+                              <BookOpenText className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm text-gray-800">{result.title}</span>
+                            </Command.Item>
+                          ))}
+                      </Command.Group>
+                    )}
+                  </>
                 ) : (
                   <Command.Empty className="px-4 py-3 text-sm text-gray-500">
-                    No sources found
+                    No documents or sources found
                   </Command.Empty>
                 )}
 
@@ -204,6 +304,16 @@ export function CitationCommandPalette({
                       <PlusCircle className="w-4 h-4 text-green-500" />
                       <span className="text-sm text-gray-800">
                         Create new source "{search.trim()}"
+                      </span>
+                    </Command.Item>
+                    <Command.Item
+                      value={`sefaria:${search.trim()}`}
+                      onSelect={() => setShowSefariaModal(true)}
+                      className="px-4 py-3 flex items-center gap-3"
+                    >
+                      <BookOpenText className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm text-gray-800">
+                        Search Sefaria for "{search.trim()}"
                       </span>
                     </Command.Item>
                   </Command.Group>
@@ -278,6 +388,12 @@ export function CitationCommandPalette({
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 placeholder="Source title"
               />
+              {selectedDocument ? (
+                <div className="mt-2 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+                  <AlertCircle className="w-3 h-3" />
+                  Creating source linked to document “{selectedDocument.title}”
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-1">
@@ -364,6 +480,28 @@ export function CitationCommandPalette({
           </form>
         ) : null}
       </div>
+
+      {/* Sefaria Search Modal */}
+      <SefariaSearchModal
+        open={showSefariaModal}
+        searchQuery={search}
+        onClose={() => setShowSefariaModal(false)}
+        onSelectSource={(sourceData) => {
+          // Set external source data and prepare for source creation
+          setExternalSourceData({
+            external_id: sourceData.external_id,
+            external_url: sourceData.external_url,
+            external_system: 'sefaria',
+            citation_text: sourceData.citation_text,
+          });
+          setDraftTitle(sourceData.title);
+          setAuthorName(""); // Could be enhanced to extract author
+          setReference("");
+          setView("create");
+          setSelectedDocument(null); // Clear document selection for external source
+          setShowSefariaModal(false);
+        }}
+      />
     </Command.Dialog>
   );
 }

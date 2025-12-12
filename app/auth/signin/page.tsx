@@ -30,7 +30,7 @@ export default function SignInPage() {
 
       if (response.ok && data.success) {
         // Store the token in localStorage
-        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_token', data.accessToken);
 
         setSuccess(true);
 

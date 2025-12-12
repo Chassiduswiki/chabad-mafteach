@@ -22,7 +22,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
         notFound();
     }
 
-    const { topic, relatedTopics } = topicData;
+    const { topic, relatedTopics, sources } = topicData;
 
     return (
         <div className="min-h-screen bg-background pb-20">

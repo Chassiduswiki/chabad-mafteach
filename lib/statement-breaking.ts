@@ -97,7 +97,7 @@ export async function breakDocumentIntoStatements(documentId: number): Promise<{
         // Delete existing statements for this paragraph
         const existingStatements = await directus.request(readItems('statements', {
           filter: {
-            paragraph_id: {
+            block_id: {
               _eq: paragraph.id
             }
           },
@@ -114,7 +114,7 @@ export async function breakDocumentIntoStatements(documentId: number): Promise<{
         for (let i = 0; i < statements.length; i++) {
           const statement = statements[i];
           await directus.request(createItem('statements', {
-            paragraph_id: paragraph.id,
+            block_id: paragraph.id,
             text: statement.text,
             order_key: i.toString(),
             metadata: {

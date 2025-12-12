@@ -124,9 +124,9 @@ module.exports = {
 if (require.main === module) {
     (async () => {
         try {
-            console.log('Starting scrape of Shulchan Aruch...');
-            const data = await getEntireChabadLibraryBookSequential(3100000000);
-            saveToFile("Shulchan-Aruch.json", data);
+            console.log('Starting scrape of Tanya...');
+            const data = await getEntireChabadLibraryBookSequential(3400000000);
+            saveToFile("Tanya.json", data);
             console.log('Scrape completed!');
         } catch (error) {
             console.error('Error during scraping:', error);

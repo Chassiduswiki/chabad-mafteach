@@ -4,7 +4,47 @@ const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 
-// Input validation utilities
+// Add translation query
+const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en', 'practical_takeaways', 'historical_context'];
+
+// Function to fetch topics with translations (now using native Directus fields)
+async function fetchTopicsWithTranslations(filter: any = {}, limit?: number) {
+    const query: any = {
+        fields: TOPIC_FIELDS,
+        sort: ['canonical_title']
+    };
+
+    if (filter && Object.keys(filter).length > 0) {
+        query.filter = filter;
+    }
+
+    if (limit && limit !== -1) {
+        query.limit = limit;
+    }
+
+    try {
+        const topics = await directus.request(readItems('topics', query)) as any[];
+        return topics;
+    } catch (error) {
+        console.warn('Failed to fetch topics:', error);
+        return [];
+    }
+}
+
+// Helper function to get display name (English translation > transliteration > Hebrew)
+function getDisplayName(topic: any): string {
+    const englishName = topic.canonical_title_en;
+    const transliteration = topic.canonical_title_transliteration;
+    const hebrewName = topic.canonical_title;
+
+    // Priority: English > Transliteration > Hebrew
+    return englishName || transliteration || hebrewName;
+}
+
+// Helper function to get display description (English preferred, Hebrew fallback)
+function getDisplayDescription(topic: any): string {
+    return topic.description_en || topic.description;
+}
 const validateLimit = (limit: string | null): number => {
     const parsed = parseInt(limit || '10', 10);
     return isNaN(parsed) || parsed < 1 || parsed > 100 ? 10 : parsed;
@@ -33,32 +73,22 @@ export async function GET(request: NextRequest) {
             // We map them into the legacy Topic shape expected by the UI
             // (name, category, definition_short).
 
-            let rawTopics: any[] = [];
-            try {
-                rawTopics = await directus.request(
-                    readItems('topics', {
-                        fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                        limit: 50,
-                    })
-                ) as any[];
-            } catch (error) {
-                console.warn('Failed to fetch topics for discovery:', error);
-            }
+            const topics = await fetchTopicsWithTranslations({}, 50);
 
-            const topics = rawTopics.map((t) => ({
+            const processedTopics = topics.map((t) => ({
                 id: t.id,
                 slug: t.slug,
-                name: t.canonical_title,
-                name_hebrew: null,
+                name: getDisplayName(t), // English preferred, Hebrew fallback
+                name_hebrew: t.canonical_title, // Hebrew is always the original
                 category: t.topic_type,
-                definition_short: t.description,
+                definition_short: getDisplayDescription(t), // English preferred, Hebrew fallback
             }));
 
-            const featuredTopic = topics.length > 0
-                ? topics[Math.floor(Math.random() * topics.length)]
+            const featuredTopic = processedTopics.length > 0
+                ? processedTopics[Math.floor(Math.random() * processedTopics.length)]
                 : null;
 
-            const recentTopics = topics.slice(0, 5);
+            const recentTopics = processedTopics.slice(0, 5);
 
             // We no longer have topic_citations / locations in the new schema,
             // so for now expose an empty recentSources array to keep the UI happy.
@@ -74,20 +104,15 @@ export async function GET(request: NextRequest) {
         // MODE: FEATURED (Random topics with citation counts)
         if (mode === 'featured') {
             // Fetch all topics and map to legacy shape
-            const rawTopics = await directus.request(
-                readItems('topics', {
-                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                    limit: -1,
-                })
-            ) as any[];
+            const rawTopics = await fetchTopicsWithTranslations();
 
             const allTopics = rawTopics.map((t) => ({
                 id: t.id,
                 slug: t.slug,
-                name: t.canonical_title,
-                name_hebrew: null,
+                name: getDisplayName(t), // English preferred, Hebrew fallback
+                name_hebrew: t.canonical_title, // Hebrew is the original
                 category: t.topic_type,
-                definition_short: t.description,
+                definition_short: getDisplayDescription(t), // English preferred, Hebrew fallback
             }));
 
             const shuffled = allTopics.sort(() => Math.random() - 0.5);
@@ -105,20 +130,15 @@ export async function GET(request: NextRequest) {
         // DEFAULT: List topics
         const filter: any = category ? { topic_type: { _eq: category } } : {};
 
-        const rawTopics = await directus.request(readItems('topics', {
-            filter,
-            sort: ['canonical_title'],
-            fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-            limit: limit === -1 ? undefined : limit
-        }));
+        const rawTopics = await fetchTopicsWithTranslations(filter, limit);
 
-        const topics = (rawTopics as any[]).map((t) => ({
+        const topics = rawTopics.map((t) => ({
             id: t.id,
             slug: t.slug,
-            name: t.canonical_title,
-            name_hebrew: null,
+            name: getDisplayName(t), // English preferred, Hebrew fallback
+            name_hebrew: t.canonical_title, // Hebrew is the original
             category: t.topic_type,
-            definition_short: t.description,
+            definition_short: getDisplayDescription(t), // English preferred, Hebrew fallback
         }));
 
         return NextResponse.json({ topics });

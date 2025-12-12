@@ -3,6 +3,7 @@ import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { createItem } from '@directus/sdk';
 import { requireEditor } from '@/lib/auth';
+import { handleApiError } from '@/lib/utils/api-errors';
 
 export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
@@ -73,7 +74,7 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
 
       // Create initial statement (can be manually refined later)
       const statement = await directus.request(createItem('statements', {
-        paragraph_id: paragraph.id,
+        block_id: paragraph.id, // **[CHANGED]** from paragraph_id
         order_key: '0',
         text: paragraphText,
         metadata: {
@@ -99,11 +100,7 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
     });
 
   } catch (error) {
-    console.error('Text file import error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error during text file import' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 });
 

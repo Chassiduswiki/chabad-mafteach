@@ -1,0 +1,592 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Chabad Mafteach API",
+    "description": "API for the Chabad Mafteach Jewish learning platform. Provides access to Torah texts, topics, search functionality, and content management.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Chabad Mafteach Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://your-domain.com",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique user identifier"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address"
+          },
+          "name": {
+            "type": "string",
+            "description": "User display name"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["viewer", "editor", "admin"],
+            "description": "User role and permissions"
+          }
+        },
+        "required": ["id", "email", "role"]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token (24 hour expiration)"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "JWT refresh token (7 day expiration)"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": ["success", "accessToken", "refreshToken", "user"]
+      },
+      "Topic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique topic identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Topic display name (English preferred, Hebrew fallback)"
+          },
+          "name_hebrew": {
+            "type": "string",
+            "description": "Hebrew original name"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["person", "concept", "place", "event", "mitzvah", "sefirah"],
+            "description": "Topic category"
+          },
+          "definition_short": {
+            "type": "string",
+            "description": "Brief topic definition"
+          },
+          "citation_count": {
+            "type": "integer",
+            "description": "Number of citations (when in featured mode)",
+            "default": 0
+          }
+        },
+        "required": ["id", "name", "slug", "category"]
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique document identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Document title"
+          },
+          "doc_type": {
+            "type": "string",
+            "enum": ["entry", "sefer"],
+            "description": "Document type"
+          }
+        },
+        "required": ["id", "title"]
+      },
+      "ContentBlock": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique content block identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Block display title"
+          },
+          "content_preview": {
+            "type": "string",
+            "description": "Preview of block content"
+          },
+          "page_number": {
+            "type": "string",
+            "description": "Page number reference"
+          },
+          "chapter_number": {
+            "type": "integer",
+            "description": "Chapter number reference"
+          },
+          "halacha_number": {
+            "type": "integer",
+            "description": "Halacha number reference"
+          },
+          "document_id": {
+            "type": "integer",
+            "description": "Parent document ID"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["content_block"],
+            "description": "Result type identifier"
+          }
+        },
+        "required": ["id", "title", "type"]
+      },
+      "Statement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique statement identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Statement preview text"
+          },
+          "content_preview": {
+            "type": "string",
+            "description": "Additional content preview"
+          },
+          "block_id": {
+            "type": "integer",
+            "description": "Parent content block ID"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["statement"],
+            "description": "Result type identifier"
+          }
+        },
+        "required": ["id", "title", "type"]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            },
+            "description": "Matching documents"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "description": "Matching content blocks"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Topic"
+            },
+            "description": "Matching topics"
+          },
+          "statements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Statement"
+            },
+            "description": "Matching statements"
+          }
+        },
+        "required": ["documents", "locations", "topics", "statements"]
+      },
+      "TopicsResponse": {
+        "type": "object",
+        "properties": {
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Topic"
+            },
+            "description": "List of topics"
+          }
+        },
+        "required": ["topics"]
+      },
+      "DiscoveryResponse": {
+        "type": "object",
+        "properties": {
+          "featuredTopic": {
+            "$ref": "#/components/schemas/Topic"
+          },
+          "recentTopics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Topic"
+            },
+            "description": "Recently accessed topics"
+          },
+          "recentSources": {
+            "type": "array",
+            "description": "Recently accessed sources (placeholder)"
+          }
+        },
+        "required": ["featuredTopic", "recentTopics", "recentSources"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        },
+        "required": ["error"]
+      },
+      "RateLimitError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Rate limit error message"
+          },
+          "retryAfter": {
+            "type": "integer",
+            "description": "Seconds to wait before retrying"
+          }
+        },
+        "required": ["error", "retryAfter"]
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Authenticate user and get tokens",
+        "description": "Login with email and password to receive JWT access and refresh tokens. Implements rate limiting and account lockout protection.",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User email address"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "User password"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded or account locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "summary": "Refresh access token",
+        "description": "Exchange a valid refresh token for a new access token. Refresh tokens have a 7-day expiration.",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "Valid refresh token"
+                  }
+                },
+                "required": ["refreshToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refresh successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "description": "New JWT access token"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "summary": "Search across all content",
+        "description": "Comprehensive search across topics, content blocks, statements, and documents. Results are cached for 5 minutes.",
+        "tags": ["Search"],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "Search query string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid search query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics": {
+      "get": {
+        "summary": "Get topics with various display modes",
+        "description": "Retrieve topics with different presentation modes: default list, discovery (featured + recent), or featured (with citation counts).",
+        "tags": ["Topics"],
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["discovery", "featured"]
+            },
+            "description": "Display mode: 'discovery' for homepage, 'featured' for random selection"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["person", "concept", "place", "event", "mitzvah", "sefirah"]
+            },
+            "description": "Filter by topic category"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Maximum number of topics to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Topics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/TopicsResponse" },
+                    { "$ref": "#/components/schemas/DiscoveryResponse" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "summary": "Get documents by type",
+        "description": "Retrieve documents filtered by type (entry or sefer) or get all documents.",
+        "tags": ["Documents"],
+        "parameters": [
+          {
+            "name": "doc_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["entry", "sefer"]
+            },
+            "description": "Filter by document type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Document"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and token management"
+    },
+    {
+      "name": "Search",
+      "description": "Full-text search across all content types"
+    },
+    {
+      "name": "Topics",
+      "description": "Topic management and retrieval"
+    },
+    {
+      "name": "Documents",
+      "description": "Document management and retrieval"
+    }
+  ]
+}

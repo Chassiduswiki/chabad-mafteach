@@ -30,16 +30,16 @@ interface StatementWithTopics {
   document_title?: string;
 }
 
-interface ParagraphWithStatements {
+interface ContentBlockWithStatements {
   id: number;
-  text: string; // Full HTML content
+  content: string; // Full HTML content
   order_key: string;
   document_title?: string;
   statements: StatementWithTopics[]; // Footnotes/citations
 }
 
 interface ArticleReaderProps {
-  paragraphs: ParagraphWithStatements[];
+  contentBlocks: ContentBlockWithStatements[];
   topicsInArticle: Topic[];
   sources: { id: number; title: string; external_url?: string | null }[];
   articleTitle: string;
@@ -47,7 +47,7 @@ interface ArticleReaderProps {
 }
 
 export function ArticleReader({
-  paragraphs,
+  contentBlocks,
   topicsInArticle,
   sources,
   articleTitle,
@@ -64,9 +64,9 @@ export function ArticleReader({
   } | null>(null);
   const [isModalClosing, setIsModalClosing] = useState(false);
 
-  // Find selected statement across all paragraphs (if any)
+  // Find selected statement across all contentBlocks (if any)
   const selected = selectedId != null ? 
-    paragraphs.flatMap(p => p.statements).find((s) => s.id === selectedId) || null : null;
+    contentBlocks.flatMap(cb => cb.statements).find((s) => s.id === selectedId) || null : null;
 
   // Track paragraph viewing for progress
   const handleParagraphView = (paragraphId: number) => {
@@ -118,31 +118,31 @@ export function ArticleReader({
     });
   };
 
-  // Intersection Observer to track paragraph visibility
+  // Intersection Observer to track content block visibility
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const paragraphId = parseInt(entry.target.getAttribute('data-paragraph-id') || '0');
-            if (paragraphId) {
-              handleParagraphView(paragraphId);
+            const contentBlockId = parseInt(entry.target.getAttribute('data-paragraph-id') || '0');
+            if (contentBlockId) {
+              handleParagraphView(contentBlockId);
             }
           }
         });
       },
-      { threshold: 0.5 } // Consider paragraph "viewed" when 50% visible
+      { threshold: 0.5 } // Consider content block "viewed" when 50% visible
     );
 
-    // Observe all paragraph elements
-    const paragraphElements = document.querySelectorAll('[data-paragraph-id]');
-    paragraphElements.forEach((el) => observer.observe(el));
+    // Observe all content block elements
+    const contentBlockElements = document.querySelectorAll('[data-paragraph-id]');
+    contentBlockElements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [paragraphs]);
+  }, [contentBlocks]);
 
-  // Render paragraph with highlighted statements
-  const renderParagraphWithStatements = (paragraph: ParagraphWithStatements) => {
+  // Render content block with highlighted statements
+  const renderParagraphWithStatements = (contentBlock: ContentBlockWithStatements) => {
     // Detect if text is primarily Hebrew (RTL) or English (LTR)
     const isHebrew = (text: string) => {
       const hebrewChars = (text.match(/[\u0590-\u05FF]/g) || []).length;
@@ -150,10 +150,10 @@ export function ArticleReader({
       return hebrewChars > totalChars * 0.1; // More than 10% Hebrew characters
     };
 
-    const textDirection = isHebrew(paragraph.text) ? 'rtl' : 'ltr';
-    const textAlign = isHebrew(paragraph.text) ? 'right' : 'left';
+    const textDirection = isHebrew(contentBlock.content) ? 'rtl' : 'ltr';
+    const textAlign = isHebrew(contentBlock.content) ? 'right' : 'left';
 
-    // Function to highlight statement text within paragraph HTML
+    // Function to highlight statement text within content block HTML
     const highlightStatements = (htmlText: string, statements: StatementWithTopics[]): string => {
       if (!statements.length) return htmlText;
 
@@ -179,12 +179,12 @@ export function ArticleReader({
       return highlightedHtml;
     };
 
-    // Apply highlighting to paragraph text
-    const highlightedText = highlightStatements(paragraph.text, paragraph.statements);
+    // Apply highlighting to content block content
+    const highlightedText = highlightStatements(contentBlock.content, contentBlock.statements);
 
     // Handle statement click
     const handleStatementClick = (statementId: number) => {
-      const statement = paragraph.statements.find(s => s.id === statementId);
+      const statement = contentBlock.statements.find(s => s.id === statementId);
       if (statement) {
         setSelectedId(statementId);
       }
@@ -192,8 +192,8 @@ export function ArticleReader({
 
     return (
       <div
-        key={paragraph.id}
-        data-paragraph-id={paragraph.id}
+        key={contentBlock.id}
+        data-paragraph-id={contentBlock.id}
         className="space-y-4"
         style={{
           direction: textDirection,
@@ -261,19 +261,19 @@ export function ArticleReader({
         {/* Article-like Text Container */}
         <div className="bg-card/80 dark:bg-card/40 border border-border p-8 sm:p-10 lg:p-14 backdrop-blur-sm">
           <div className="space-y-8">
-            {paragraphs.length > 0 ? (
-              paragraphs.map((paragraph) => (
-                <div key={paragraph.id} className="space-y-4">
+            {contentBlocks.length > 0 ? (
+              contentBlocks.map((contentBlock) => (
+                <div key={contentBlock.id} className="space-y-4">
                   {/* Document title if different from article title */}
-                  {paragraph.document_title && paragraph.document_title !== articleTitle && (
+                  {contentBlock.document_title && contentBlock.document_title !== articleTitle && (
                     <div className="text-sm text-muted-foreground font-medium border-b border-border pb-2">
-                      {paragraph.document_title}
+                      {contentBlock.document_title}
                     </div>
                   )}
 
-                  {/* Paragraph content with highlighted statements */}
+                  {/* Content block content with highlighted statements */}
                   <div className="font-hebrew font-serif text-[18px] sm:text-[19px] lg:text-[21px] leading-[2] text-foreground tracking-wide">
-                    {renderParagraphWithStatements(paragraph)}
+                    {renderParagraphWithStatements(contentBlock)}
                   </div>
                 </div>
               ))
@@ -282,7 +282,7 @@ export function ArticleReader({
             )}
           </div>
 
-          {paragraphs.length > 0 && (
+          {contentBlocks.length > 0 && (
             <div className="mt-8 flex items-center justify-center">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />

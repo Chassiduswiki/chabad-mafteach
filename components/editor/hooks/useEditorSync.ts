@@ -2,25 +2,25 @@
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Paragraph } from "@/lib/types";
+import { ContentBlock } from "@/lib/types";
 import { syncEditorContent } from "@/lib/editor-sync";
 
-export const transformToProseMirror = (paragraphs: Paragraph[] = []) => {
-  if (!paragraphs.length) return null;
+export const transformToProseMirror = (contentBlocks: ContentBlock[] = []) => { // **[CHANGED]** from paragraphs: Paragraph[]
+  if (!contentBlocks.length) return null; // **[CHANGED]** from paragraphs
 
   return {
     type: "doc",
-    content: paragraphs.map((p) => ({
+    content: contentBlocks.map((block) => ({ // **[CHANGED]** from paragraphs.map((p)
       type: "paragraph",
       attrs: {
-        id: p.id,
-        status: p.status || "draft",
+        id: block.id, // **[CHANGED]** from p.id
+        status: block.status || "draft", // **[CHANGED]** from p.status
       },
-      content: p.text
+      content: block.content // **[CHANGED]** from p.text
         ? [
             {
               type: "text",
-              text: p.text,
+              text: block.content, // **[CHANGED]** from p.text
             },
           ]
         : [],
@@ -30,7 +30,7 @@ export const transformToProseMirror = (paragraphs: Paragraph[] = []) => {
 
 interface SaveArgs {
   docId: string | number | null;
-  document?: { paragraphs?: Paragraph[] };
+  document?: { contentBlocks?: ContentBlock[] }; // **[CHANGED]** from paragraphs?: Paragraph[]
   editorContent?: any;
 }
 
@@ -46,7 +46,7 @@ export const useEditorSync = () => {
       try {
         const results = await syncEditorContent(
           docId,
-          document.paragraphs || [],
+          document.contentBlocks || [], // **[CHANGED]** from paragraphs
           editorContent
         );
 

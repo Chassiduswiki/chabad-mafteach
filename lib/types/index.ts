@@ -32,8 +32,8 @@ export interface Document {
     parent_id?: number | Document;
     
     // Relations
-    paragraphs?: Paragraph[];
-    
+    contentBlocks?: ContentBlock[]; // **[CHANGED]** from paragraphs?: Paragraph[];
+
     // Topic association
     topic?: string | Topic;
     
@@ -61,6 +61,29 @@ export interface Paragraph {
     full_path?: string;
 }
 
+export interface ContentBlock {
+    id: number;
+    document_id?: number | Document;
+    block_type?: 'heading' | 'subheading' | 'paragraph' | 'section_break';
+    order_key: string;
+    content: string;
+    status?: 'draft' | 'reviewed' | 'published';
+    
+    // Citation fields
+    page_number?: string;
+    chapter_number?: number;
+    halacha_number?: number;
+    daf_number?: string;
+    section_number?: number;
+    citation_refs?: any[];
+    
+    metadata?: Record<string, unknown>;
+    
+    // Relations
+    statements?: Statement[];
+    block_commentaries?: BlockCommentary[];
+}
+
 export interface Statement {
     id: number;
     order_key: string;
@@ -72,8 +95,33 @@ export interface Statement {
     importance_score?: number;
     metadata?: Record<string, unknown>;
     deleted_at?: string;
-    paragraph_id?: number | Paragraph;
+    block_id?: number; // Changed from paragraph_id
     deleted_by?: string;
+}
+
+export interface BlockCommentary {
+    id: number;
+    block_id?: number | ContentBlock;
+    commentary_text: string;
+    author?: string | Author;
+    source?: string;
+    commentary_type?: 'commentary' | 'translation' | 'cross_reference' | 'explanation';
+    language?: string;
+    order_position?: number;
+    is_official?: boolean;
+    quality_score?: number;
+    moderation_status?: 'pending' | 'approved' | 'rejected' | 'flagged';
+    reviewed_by?: number | Author;
+    reviewed_at?: string;
+    rejection_reason?: string;
+    
+    // Citation support for rabbit hole following
+    citation_source?: number | Source; // Link to source document
+    citation_page?: string; // Page reference in source
+    citation_reference?: string; // Full citation string
+    
+    // Relations
+    source_links?: SourceLink[]; // Citations within this commentary
 }
 
 export interface Source {
@@ -90,6 +138,7 @@ export interface Source {
     citation_text?: string;
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
+    document_id?: number | Document; // Direct link to associated document
 }
 
 export interface SourceLink {
@@ -129,10 +178,10 @@ export interface Topic {
     definition_negative?: string;
     overview?: string;
     article?: string;
-    practical_takeaways?: string;
+    practical_takeaways?: string; // **[NEW]** Rich text field for practical applications
+    historical_context?: string; // **[NEW]** Rich text field for historical background
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
-    historical_context?: string;
     
     // Related content (document > paragraphs > statements)
     paragraphs?: {
@@ -204,7 +253,9 @@ export interface Schema {
     authors: Author[];
     documents: Document[];
     paragraphs: Paragraph[];
+    content_blocks: ContentBlock[];
     statements: Statement[];
+    block_commentaries: BlockCommentary[];
     sources: Source[];
     source_links: SourceLink[];
     topics: Topic[];
