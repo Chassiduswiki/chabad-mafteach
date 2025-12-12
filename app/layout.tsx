@@ -7,13 +7,12 @@ import { SearchProvider } from "@/lib/search-context";
 import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
+
 import { MobileNav } from "@/components/mobile/MobileNav";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
-
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -109,8 +108,6 @@ export default function RootLayout({
             </SearchProvider>
           </QueryProvider>
         </ThemeProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

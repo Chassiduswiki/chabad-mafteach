@@ -33,9 +33,7 @@ A living encyclopedia where:
 
 ### Current (Beta v1.0)
 - **10 Foundational Topics**: Ahavas Yisroel, Teshuvah, Tefillah, Tzedakah, Shabbos, Bittul, Dveikus, Simcha, Kavanah, Avodah SheBalev
-- **Smart Citations**: Automatically links to books in your library with Sefaria fallback
-- **Unified Search**: Single interface finds local documents, existing sources, or external texts
-- **Document Association**: Citations are now connected to source documents for better research
+- **Search**: Cmd+K command palette with fuzzy search
 - **Multi-Source Definitions**: Each topic has citations from multiple seforim
 - **Boundary Framework**: Clear "What it IS" vs "What it's NOT" for each concept
 - **Responsive Design**: Works beautifully on desktop and mobile
@@ -115,11 +113,7 @@ DIRECTUS_STATIC_TOKEN=your_static_token_here
 
 ## 📚 Documentation
 
-- [Citation System User Guide](Documentation/Citation-User-Guide.md) - Complete guide for the enhanced citation system
-- [Citation System Enhancement](Documentation/Citation-System-Implementation-Summary.md) - Technical implementation details
-- [Citation Integration Guide](Documentation/Citation-Integration-Guide.md) - Developer guide for extending the citation system
 - [TorahReader Component Guide](TORAH_READER_DOCUMENTATION.md) - Complete guide for the generalized Torah reading component
-- [API Procedures](Documentation/API-Procedure-Documentation.md) - Backend API and hooks reference
 - [Deployment Guide](Documentation/implementation_plan.md)
 - [Beta Launch Status](Documentation/BETA_LAUNCH_STATUS_DEC2.md)
 - [Comprehensive Task List](Documentation/Comprehensive%20Task%20list.md)
@@ -157,8 +151,8 @@ We welcome contributions! Whether you're:
 
 #### Phase 1: Beta Launch (Current)
 - ✅ Core 10 topics
-- ✅ Enhanced citation system with document association and Sefaria integration
 - ✅ Search functionality
+- ✅ Citation system
 - ⏳ Deployment to production
 
 #### Phase 2: Content Expansion (Next 3 months)

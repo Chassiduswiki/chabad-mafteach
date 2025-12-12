@@ -39,8 +39,7 @@ HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"
 #### Core Collections
 - `authors` - Author information
 - `documents` - Document content and metadata
-- `content_blocks` - Unified content elements (headings, paragraphs, etc.) **[NEW - replaces paragraphs]**
-- `block_commentaries` - Commentaries and translations for content blocks **[NEW]**
+- `paragraphs` - Paragraph data with ordering
 - `statements` - Statement/claim data with dispute tracking
 - `sources` - Source materials with external system integration
 - `source_links` - Source references with relationship types
@@ -49,7 +48,7 @@ HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"
 - `statement_topics` - Statement-topic mappings with relevance scoring
 - `translations` - Multilingual content translations
 - `document_versions` - Version control for documents
-- `paragraph_versions` - Version control for paragraphs **[LEGACY - migrated to content_blocks]**
+- `paragraph_versions` - Version control for paragraphs
 - `statement_versions` - Version control for statements
 - `comments` - Threaded comments on content
 - `audit_log` - Change tracking and audit trail
@@ -64,26 +63,23 @@ HEADERS="-H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json'"
 
 #### Phase 2: Content Data
 4. **documents** - No direct dependencies (can reference parent documents)
-5. **content_blocks** - Depends on documents **[UPDATED - replaces paragraphs]**
-6. **statements** - Depends on content_blocks **[UPDATED - references content_blocks instead of paragraphs]**
+5. **paragraphs** - Depends on documents
+6. **statements** - Depends on paragraphs
 
-#### Phase 3: Commentary Data **[NEW]**
-7. **block_commentaries** - Depends on content_blocks **[NEW - layered commentary system]**
+#### Phase 3: Relationship Data
+7. **source_links** - Depends on sources, statements
+8. **statement_topics** - Depends on statements, topics
+9. **topic_relationships** - Depends on topics
 
-#### Phase 4: Relationship Data
-8. **source_links** - Depends on sources, statements
-9. **statement_topics** - Depends on statements, topics
-10. **topic_relationships** - Depends on topics
+#### Phase 4: Enhanced Features
+10. **translations** - Depends on any translatable entity
+11. **comments** - Depends on statements
+12. **audit_log** - Auto-generated during operations
 
-#### Phase 5: Enhanced Features
-11. **translations** - Depends on any translatable entity
-12. **comments** - Depends on statements
-13. **audit_log** - Auto-generated during operations
-
-### 4. Content Blocks-to-Statements Relationship Logic **[UPDATED]**
+### 4. Paragraphs-to-Statements Relationship Logic
 
 #### Overview
-The system implements a hierarchical data structure: **documents > content_blocks > statements**, where content_blocks contain multiple statements and statements belong to exactly one content_block. This relationship enables granular topic mapping and citation tracking while supporting layered commentaries.
+The system implements a hierarchical data structure: **documents > paragraphs > statements**, where paragraphs contain multiple statements and statements belong to exactly one paragraph. This relationship enables granular topic mapping and citation tracking.
 
 #### Two Relationship Approaches
 
@@ -92,62 +88,36 @@ The system implements a hierarchical data structure: **documents > content_block
 
 **Data Flow:**
 ```
-topics → statement_topics (junction) → statements → content_blocks → documents
+topics → statement_topics (junction) → statements → paragraphs → documents
 ```
 
 **Logic Steps:**
 1. **Fetch topic** by slug
 2. **Query statement_topics** junction table for matching topic
-3. **Expand relations** to get statements and content_blocks **[UPDATED]**
+3. **Expand relations** to get statements and paragraphs
 4. **Filter orphaned records** (skip statements that don't exist)
-5. **Group statements** under their parent content_blocks **[UPDATED]**
-6. **Sort content_blocks** by `order_key` **[UPDATED]**
+5. **Group statements** under their parent paragraphs
+6. **Sort paragraphs** by `order_key`
 
 **API Endpoint:** `GET /api/topics/[slug]`
 
 **Key Behavior:**
 - Skips orphaned `statement_topics` records where referenced statements don't exist
-- Groups statements under content_blocks for hierarchical display **[UPDATED]**
-- Returns empty content_blocks array if no valid relationships found **[UPDATED]**
+- Groups statements under paragraphs for hierarchical display
+- Returns empty paragraphs array if no valid relationships found
 
-##### 4.2 Layered Commentary System **[NEW]**
-**Purpose:** Display content with multiple commentaries side-by-side (Al HaTorah style).
-
-**Data Flow:**
-```
-content_blocks → block_commentaries (multiple per block)
-```
-
-**Logic Steps:**
-1. **Fetch content_blocks** for a document
-2. **Load associated block_commentaries** for each content_block
-3. **Filter commentaries** by type (commentary, translation, etc.)
-4. **Sort commentaries** by order_position and author
-5. **Apply quality filters** (official vs community)
-6. **Display layered view** with base content and commentaries
-
-**API Endpoint:** `GET /api/documents/[id]/layered`
-
-**Display Structure:**
-```
-Content Block (base text)
-├── Commentary 1 (author, type, language)
-├── Commentary 2 (author, type, language)
-└── Commentary 3 (author, type, language)
-```
-
-##### 4.3 Statement Breaking (Creating New Entries)
-**Purpose:** Generate statement records from content_block text using AI.
+##### 4.2 Statement Breaking (Creating New Entries)
+**Purpose:** Generate statement records from paragraph text using AI.
 
 **Data Flow:**
 ```
-content_blocks → statements (create new records)
+paragraphs → statements (create new records)
 ```
 
 **Logic Steps:**
-1. **Fetch content_blocks** for a document **[UPDATED]**
-2. **Apply sentence boundary detection** on content_block text **[UPDATED]**
-3. **Delete existing statements** for each content_block **[UPDATED]**
+1. **Fetch paragraphs** for a document
+2. **Apply sentence boundary detection** on paragraph text
+3. **Delete existing statements** for each paragraph
 4. **Create new statement entries** with metadata
 5. **Track creation metrics**
 
@@ -312,174 +282,47 @@ curl -X PATCH $HEADERS "$BASE_URL/items/documents/{id}" \
   -d '{"status": "reviewed"}'
 ```
 
-#### Content Blocks Collection **[NEW - replaces paragraphs]**
-
-**Collection Name:** `content_blocks`  
-**Description:** Unified container for headings, paragraphs, and other content elements
-
-**Key Fields:**
-- `id` (integer, auto-increment) - Primary key
-- `document_id` (integer) - Foreign key to documents
-- `block_type` (string) - 'heading', 'subheading', 'paragraph', 'section_break'
-- `order_key` (string) - Sorting key (e.g., "1:001", "1:002:001")
-- `content` (text) - The actual content text
-- `page_number` (string) - Physical page reference (e.g., "17a", "23b") **[NEW]**
-- `chapter_number` (integer) - Chapter number **[NEW]**
-- `halacha_number` (integer) - Halacha/Siman number **[NEW]**
-- `daf_number` (string) - Talmud folio (e.g., "3b:6") **[NEW]**
-- `section_number` (integer) - Section within larger work **[NEW]**
-- `citation_refs` (json) - Alternative citation formats **[NEW]**
-- `metadata` (json) - Additional data (heading level, etc.)
-
+#### Paragraphs Collection
 ```bash
-# List content blocks
-curl $HEADERS "$BASE_URL/items/content_blocks"
+# List paragraphs
+curl $HEADERS "$BASE_URL/items/paragraphs"
 
-# Create content block
-curl -X POST $HEADERS "$BASE_URL/items/content_blocks" \
+# Create paragraph
+curl -X POST $HEADERS "$BASE_URL/items/paragraphs" \
   -d '{
-    "document_id": 1,
-    "block_type": "paragraph",
-    "order_key": "001",
-    "content": "Content text here",
-    "metadata": {"migrated": true}
-  }'
-
-# Create content block with citations
-curl -X POST $HEADERS "$BASE_URL/items/content_blocks" \
-  -d '{
-    "document_id": 1,
-    "block_type": "paragraph",
-    "order_key": "001",
-    "content": "Content text here",
-    "page_number": "17a",
-    "chapter_number": 2,
-    "halacha_number": 5,
-    "citation_refs": {
-      "sefaria": "Shabbat.17a",
-      "traditional": "סימן ה"
-    }
-  }'
-
-# Create commentary with citation source
-curl -X POST $HEADERS "$BASE_URL/items/block_commentaries" \
-  -d '{
-    "block_id": 1,
-    "commentary_text": "This commentary explains...",
-    "author": "Alter Rebbe",
-    "commentary_type": "commentary",
-    "language": "en",
-    "citation_source": 123,
-    "citation_page": "45b",
-    "citation_reference": "Likkutei Sichos Vol 2, p. 123"
-  }'
-```
-
-#### Block Commentaries Collection **[NEW]**
-
-**Collection Name:** `block_commentaries`  
-**Description:** Commentaries and translations for content blocks (layered commentary system)
-
-**Key Fields:**
-- `id` (integer, auto-increment) - Primary key
-- `block_id` (integer) - Foreign key to content_blocks
-- `commentary_text` (text) - The commentary content
-- `author` (string/integer) - Author (string or foreign key to authors)
-- `source` (string) - Source reference
-- `commentary_type` (string) - 'commentary', 'translation', 'cross_reference', 'explanation'
-- `language` (string) - Language code
-- `order_position` (integer) - Display order
-- `is_official` (boolean) - Official vs community contribution
-- `quality_score` (decimal) - 0-1 quality rating
-- `moderation_status` (string) - 'pending', 'approved', 'rejected', 'flagged'
-- `citation_source` (integer) - Link to source document **[NEW]**
-- `citation_page` (string) - Page reference in source **[NEW]**
-- `citation_reference` (string) - Full citation string **[NEW]**
-
-```bash
-# List commentaries for a content block
-curl $HEADERS "$BASE_URL/items/block_commentaries?filter[block_id][_eq]=1"
-
-# Create commentary
-curl -X POST $HEADERS "$BASE_URL/items/block_commentaries" \
-  -d '{
-    "block_id": 1,
-    "commentary_text": "This commentary explains...",
-    "author": "Alter Rebbe",
-    "source": "Tanya",
-    "commentary_type": "commentary",
-    "language": "en",
-    "order_position": 1,
-    "is_official": true,
-    "quality_score": 0.95
-  }'
-
-# Get approved commentaries only
-curl $HEADERS "$BASE_URL/items/block_commentaries?filter[moderation_status][_eq]=approved"
-
-# Update commentary quality
-curl -X PATCH $HEADERS "$BASE_URL/items/block_commentaries/{id}" \
-  -d '{"quality_score": 0.9, "moderation_status": "approved"}'
-```
-
-#### Statements Collection **[UPDATED]**
-
-**Key Changes:**
-- `block_id` (integer) - **NEW:** Foreign key to content_blocks (replaces `paragraph_id`)
-- All other fields remain the same
-
-```bash
-# List statements
-curl $HEADERS "$BASE_URL/items/statements?filter[is_deleted][_eq]=false"
-
-# Create statement **[UPDATED]**
-curl -X POST $HEADERS "$BASE_URL/items/statements" \
-  -d '{
-    "block_id": 1,  // CHANGED from paragraph_id
-    "order_key": "stmt_001_001_a",
+    "order_key": "doc_001_001",
     "original_lang": "he",
-    "text": "Statement text",
+    "text": "Paragraph content in Hebrew or English",
     "status": "draft",
-    "importance_score": 0.8,
-    "is_disputed": false
+    "page_number": 1,
+    "column_number": 1,
+    "doc_id": "uuid-of-document"
   }'
 
-# Get statements with content blocks **[UPDATED]**
-curl $HEADERS "$BASE_URL/items/statements?fields=*,block_id.*"
-```
-
-#### Documents Collection **[UPDATED]**
-
-**No structural changes, but now includes layered commentary API:**
-
-```bash
-# Get document with layered commentary view **[NEW]**
-curl $HEADERS "$BASE_URL/api/documents/1/layered"
-
-# Response includes content_blocks with associated commentaries
-{
-  "document": {...},
-  "content_blocks": [
-    {
-      "id": 1,
-      "content": "Base text...",
-      "block_type": "paragraph",
-      "block_commentaries": [
-        {
-          "commentary_text": "Translation...",
-          "author": "Alter Rebbe",
-          "commentary_type": "translation"
-        },
-        {
-          "commentary_text": "Commentary...",
-          "author": "Rebbe",
-          "commentary_type": "commentary"
-        }
-      ]
+# Create paragraph from Chabad Library (with structural data)
+curl -X POST $HEADERS "$BASE_URL/items/paragraphs" \
+  -d '{
+    "order_key": "001",
+    "original_lang": "he",
+    "text": "<h2>הקדמה</h2>כאב שמרגיש בצרת בנו...",
+    "status": "draft",
+    "page_number": 1,
+    "doc_id": "uuid-of-document",
+    "metadata": {
+      "source": "chabad_library",
+      "original_id": 2800530004,
+      "section_title": "הקדמה",
+      "heading_type": "folio_reference",
+      "folio_notation": "1a"
     }
-  ]
-}
+  }'
+
+# Update paragraph
+curl -X PATCH $HEADERS "$BASE_URL/items/paragraphs/{id}" \
+  -d '{"status": "reviewed"}'
 ```
+
+#### Statements Collection
 ```bash
 # List statements
 curl $HEADERS "$BASE_URL/items/statements?filter={is_deleted:{_eq:false}}"
@@ -709,24 +552,24 @@ curl -X POST "$BASE_URL/import/authors" \
 curl $HEADERS "$BASE_URL/items/documents?fields=*,sources.authors.*&filter={sources:{author_id:{_eq:\"uuid-of-author\"}}}"
 ```
 
-#### Get Content Blocks with Statements **[UPDATED]**
+#### Get Paragraphs with Statements
 ```bash
-curl $HEADERS "$BASE_URL/items/content_blocks?fields=*,statements.*&filter[document_id][_eq]=1"
+curl $HEADERS "$BASE_URL/items/paragraphs?fields=*,statements.*&filter={doc_id:{_eq:\"uuid-of-document\"}}"
 ```
 
-#### Get Topics with Content Blocks **[UPDATED]**
+#### Get Topics with Statement Count
 ```bash
-curl $HEADERS "$BASE_URL/items/topics?fields=*,statement_topics.statements.block_id.*"
+curl $HEADERS "$BASE_URL/items/topics?fields=*,statement_topics.statements.*"
 ```
 
-#### Get Statement with Content Block and Commentaries **[NEW]**
+#### Get Statement with Sources and Translations
 ```bash
-curl $HEADERS "$BASE_URL/items/statements?fields=*,block_id.*,block_id.block_commentaries.*&filter[id][_eq]=1"
+curl $HEADERS "$BASE_URL/items/statements?fields=*,source_links.sources.*,translations.*&filter={id:{_eq:\"uuid-of-statement\"}}"
 ```
 
-#### Get Document Hierarchy with Layered Content **[NEW]**
+#### Get Document Hierarchy (with nested content)
 ```bash
-curl $HEADERS "$BASE_URL/items/documents?fields=*,content_blocks.statements.*,content_blocks.block_commentaries.*&filter[id][_eq]=1"
+curl $HEADERS "$BASE_URL/items/documents?fields=*,paragraphs.statements.*&filter={id:{_eq:\"uuid-of-document\"}}"
 ```
 
 ### 8. Error Handling
@@ -738,14 +581,12 @@ curl $HEADERS "$BASE_URL/items/documents?fields=*,content_blocks.statements.*,co
 - `404 Not Found`: Collection or item doesn't exist
 - `422 Unprocessable Entity`: Validation error
 
-#### Validation Rules **[UPDATED]**
-- `content_blocks.document_id`: Must exist in documents table
-- `content_blocks.block_type`: Must be one of ['heading', 'subheading', 'paragraph', 'section_break']
-- `block_commentaries.block_id`: Must exist in content_blocks table
-- `block_commentaries.author`: Can be string or foreign key to authors table
-- `block_commentaries.quality_score`: Min: 0, Max: 1 **[NEW]**
-- `block_commentaries.commentary_type`: Must be one of ['commentary', 'translation', 'cross_reference', 'explanation']
-- `statements.block_id`: Must exist in content_blocks table **[UPDATED from paragraph_id]**
+#### Validation Rules
+- `authors.canonical_name`: Required, unique
+- `sources.author_id`: Must exist in authors table (if provided)
+- `documents.parent_id`: Must exist in documents table (if provided)
+- `paragraphs.doc_id`: Must exist in documents table
+- `statements.paragraph_id`: Must exist in paragraphs table
 - `source_links.statement_id`: Must exist in statements table
 - `source_links.source_id`: Must exist in sources table
 - `statement_topics.statement_id`: Must exist in statements table
@@ -759,60 +600,23 @@ curl $HEADERS "$BASE_URL/items/documents?fields=*,content_blocks.statements.*,co
 - `relevance_score`: Min: 0, Max: 1
 - `strength`: Min: 0, Max: 1
 
-### 9. Layered Commentary System Migration **[NEW]**
+### 9. MCP Tool Usage
 
-#### Migration Overview
-On December 10, 2025, the system was migrated from a paragraph-based structure to a unified content_blocks system with layered commentary support (Al HaTorah-style).
+#### Available Tools
+- `collections` - Manage collections
+- `fields` - Manage fields  
+- `relations` - Manage relationships
+- `items` - CRUD operations
+- `schema` - View complete schema
 
-#### What Changed
-- **paragraphs** collection → **content_blocks** collection (unified content elements)
-- **NEW:** block_commentaries collection (commentaries and translations)
-- **statements.paragraph_id** → **statements.block_id** (references content_blocks)
-- Added quality score validation and moderation workflow
-
-#### Migration Results
-- ✅ **71 paragraphs** migrated to content_blocks
-- ✅ **1 statement** updated to reference content_blocks  
-- ✅ **70/71** content_blocks successfully mapped
-- ✅ **Quality score validation** active (0-1 range)
-- ✅ **Layered commentary system** operational
-
-#### Data Structure Migration
-```typescript
-// OLD structure
-documents > paragraphs > statements > statement_topics
-
-// NEW structure  
-documents > content_blocks > statements > statement_topics
-                     ↓
-              block_commentaries (multiple per block)
-```
-
-#### API Changes
-- `GET /api/topics/[slug]` now returns content_blocks instead of paragraphs
-- `POST /api/statements/break` now works with content_blocks
-- `GET /api/documents/[id]/layered` - **NEW:** layered commentary view
-
-#### Backward Compatibility
-- Original `paragraphs` table renamed to `paragraphs_backup`
-- All existing data preserved in backup
-- Migration is one-way (no rollback capability)
-
-#### Testing the New System
+#### MCP Examples
 ```bash
-# Test content_blocks creation
-curl -X POST $HEADERS "$BASE_URL/items/content_blocks" \
-  -d '{"document_id": 1, "block_type": "paragraph", "order_key": "test", "content": "Test content"}'
+# List all items in collection
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","arguments":{"collection":"authors","method":"GET"}}}' | node directus-mcp-bridge.js
 
-# Test commentary creation
-curl -X POST $HEADERS "$BASE_URL/items/block_commentaries" \
-  -d '{"block_id": 1, "commentary_text": "Test commentary", "author": "Test Author", "commentary_type": "commentary", "language": "en", "quality_score": 0.8}'
-
-# Test layered view
-curl $HEADERS "$BASE_URL/items/content_blocks?fields=*,block_commentaries.*&filter[document_id][_eq]=1"
+# Create item
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"items","arguments":{"collection":"authors","method":"POST","data":{"canonical_name":"Test Author"}}}}' | node directus-mcp-bridge.js
 ```
-
-### 10. MCP Tool Usage **[UPDATED]**
 
 ### 10. Performance Tips
 
@@ -842,43 +646,41 @@ curl $HEADERS "$BASE_URL/items/content_blocks?fields=*,block_commentaries.*&filt
 - Implement client-side validation
 - Handle API errors gracefully
 
-### 12. Tanya Perek 1 Import Templates **[UPDATED]**
+### 12. Tanya Perek 1 Import Templates
 
-#### 12.1 Content Blocks (Hebrew + English) **[UPDATED]**
+#### 12.1 Paragraphs (Hebrew + English)
 
-Collection: `content_blocks`
+Collection: `paragraphs`
 
-**CSV headers (tanya_perek1_content_blocks.csv)**
+**CSV headers (tanya_perek1_paragraphs.csv)**
 
 ```text
-order_key,block_type,content,document_id,page_number,chapter_number,section_number,citation_refs,metadata
+order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
 ```
 
 **Notes**
 - `order_key` (required): shared key for Heb/Eng pairs, e.g. `tanya_1_001`, `tanya_1_002`, …
-- `block_type`: `paragraph` for regular content, `heading` for section titles
-- `content`: full content text (Directus rich-text HTML is allowed, but plain text is fine)
-- `document_id`: Integer ID of `Tanya – Likutei Amarim` in `documents`
-- `page_number`: Physical page reference (e.g., "1a", "2b")
-- `chapter_number`: Chapter number within the work
-- `section_number`: Section number (e.g., 1 for Likutei Amarim)
-- `citation_refs`: JSON array of alternative citation formats
-- `metadata`: JSON string (optional), e.g. `{"perek":1, "original_lang":"he"}`
+- `original_lang`: `he` for Hebrew, `en` for English
+- `text`: full paragraph text (Directus rich-text HTML is allowed, but plain text is fine)
+- `status`: e.g. `draft` or `reviewed`
+- `page_number` / `column_number`: optional (page/column in Tanya)
+- `metadata`: JSON string (optional), e.g. `{"perek":1}`
+- `doc_id`: UUID of `Tanya – Likutei Amarim` in `documents`
 
 **Example rows (conceptual)**
 
 ```text
-order_key,block_type,content,document_id,page_number,chapter_number,section_number,citation_refs,metadata
-"tanya_1_001","paragraph","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>",123,"1a",1,1,"[{""system"":""sefaria"",""reference"":""Tanya.1a""}]","{""perek"":1,""original_lang"":""he""}"
-"tanya_1_001","paragraph","<p>It is written in the end of chapter...</p>",123,"1a",1,1,"[{""system"":""sefaria"",""reference"":""Tanya.1a""}]","{""perek"":1,""original_lang"":""en""}"
+order_key,original_lang,text,status,page_number,column_number,metadata,doc_id
+"tanya_1_001","he","<p>טַנְיָא, בְּסוֹף פֶּרֶק...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
+"tanya_1_001","en","<p>It is written in the end of chapter...</p>","draft",1,1,"{\"perek\":1}","uuid-of-tanya-document"
 ```
 
 **Bulk import**
 
 ```bash
-curl -X POST "$BASE_URL/import/content_blocks" \
+curl -X POST "$BASE_URL/import/paragraphs" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@tanya_perek1_content_blocks.csv"
+  -F "file=@tanya_perek1_paragraphs.csv"
 ```
 
 #### 12.2 Statements (extracted claims / footnotes)
@@ -893,25 +695,24 @@ Key available fields:
 - `is_deleted` (boolean, default `false`)
 - `is_disputed` (boolean)
 - `importance_score` (float 0–1)
-- `appended_text` (text, for footnotes)
 - `metadata` (json)
-- `block_id` (integer FK → `content_blocks.id`) **[UPDATED from paragraph_id]**
+- `paragraph_id` (UUID FK → `paragraphs.id`)
 
 **CSV headers (tanya_perek1_statements.csv)**
 
 ```text
-order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,appended_text,metadata,block_id
+order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,metadata,paragraph_id
 ```
 
 **Example rows (conceptual)**
 
 ```text
-order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,appended_text,metadata,block_id
-"stmt_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"<div class=""footnote"">1.1 Footnote content...</div>","{""note"":""core definition""}",123
-"stmt_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"<div class=""footnote"">1.1 Footnote content...</div>","{""note"":""EN paraphrase""}",124
+order_key,original_lang,text,status,is_deleted,is_disputed,importance_score,metadata,paragraph_id
+"tanya_1_001_a","he","הַצַּדִּיק הוּא ...","draft",false,false,0.9,"{\"note\":\"core definition\"}","uuid-hebrew-paragraph"
+"tanya_1_001_b","en","The tzaddik is defined as ...","draft",false,false,0.9,"{\"note\":\"EN paraphrase\"}","uuid-english-paragraph"
 ```
 
-Replace `123`/`124` with real integer IDs from `content_blocks` after importing content blocks.
+Replace `uuid-hebrew-paragraph` / `uuid-english-paragraph` with real UUIDs from `paragraphs` after importing paragraphs.
 
 **Bulk import**
 
@@ -1316,262 +1117,3 @@ Improves text clarity, flow, and academic writing quality using AI.
 ```
 
 **Cost:** Free tier DeepSeek R1 model, perfect for development and testing.
-
-### 14. Citation System Enhancement
-
-#### 14.1 Overview
-The citation system has been enhanced to automatically associate quotes and sources with existing books in the database, with Sefaria integration as fallback for external sources.
-
-#### 14.2 New Hooks and Components
-
-##### `useDocumentSearch` Hook
-**Location:** `lib/hooks/useDocumentSearch.ts`
-
-**Purpose:** Fuzzy search across documents for citation association.
-
-**API:**
-```typescript
-const {
-  searchDocuments,
-  isLoading,
-  error,
-  results
-} = useDocumentSearch();
-```
-
-**Usage:**
-```typescript
-// Search for documents
-await searchDocuments("Tanya");
-
-// Results include fuzzy-matched documents with confidence scores
-results = [
-  {
-    id: 123,
-    title: "Tanya (Likkutei Amarim)",
-    score: 0.95, // High confidence match
-    type: "sefer"
-  }
-]
-```
-
-##### Enhanced `useCreateSource` Hook
-**Location:** `lib/hooks/useCreateSource.ts`
-
-**Enhancements:**
-- Automatic document association during source creation
-- Fuzzy matching against existing document titles
-- Support for external sources from Sefaria
-
-**New Parameters:**
-```typescript
-interface CreateSourceInput {
-  title: string;
-  author?: string;
-  documentId?: number; // NEW: Direct document association
-  externalSource?: {   // NEW: External source data
-    system: 'sefaria' | 'wikisource' | 'hebrewbooks';
-    id: string;
-    url: string;
-    data?: any;
-  };
-}
-```
-
-**Usage:**
-```typescript
-// Create source linked to existing document
-await createSource({
-  title: "Tanya - Chapter 1",
-  author: "Rabbi Shneur Zalman of Liadi",
-  documentId: 123 // Links to existing Tanya document
-});
-
-// Create external source from Sefaria
-await createSource({
-  title: "Mishneh Torah",
-  author: "Maimonides",
-  externalSource: {
-    system: 'sefaria',
-    id: 'Mishneh_Torah',
-    url: 'https://sefaria.org/Mishneh_Torah'
-  }
-});
-```
-
-##### `CitationCommandPalette` Component
-**Location:** `components/editor/CitationCommandPalette.tsx`
-
-**Enhancements:**
-- Unified search interface for documents, sources, and external content
-- Visual indicators: green (documents), blue (sources), purple (Sefaria)
-- Smart selection logic prioritizing local content
-
-**New Features:**
-```typescript
-// Combined search results
-const combinedResults = [
-  // Documents from library (highest priority)
-  { type: 'document', title: 'Tanya', score: 0.95, badge: '🟢' },
-  // Existing sources
-  { type: 'source', title: 'Likkutei Sichos', score: 0.8, badge: '🔵' },
-  // Sefaria fallback
-  { type: 'sefaria', title: 'Search Sefaria', badge: '🟣' }
-];
-```
-
-##### `SefariaSearchModal` Component
-**Location:** `components/editor/SefariaSearchModal.tsx`
-
-**Purpose:** External source discovery and import from Sefaria.
-
-**Features:**
-- Live preview of Hebrew/English text
-- Direct import of Sefaria sources
-- Citation formatting for external sources
-
-**API:**
-```typescript
-// Search Sefaria
-const results = await searchSefaria("Mishneh Torah");
-
-// Import as external source
-await importSefariaSource(selectedResult);
-```
-
-#### 14.3 Schema Changes
-
-##### Sources Collection Enhancements
-```json
-{
-  "document_id": {
-    "type": "integer",
-    "meta": {
-      "interface": "many-to-one",
-      "special": ["m2o"],
-      "options": {
-        "template": "{{title}}"
-      }
-    }
-  },
-  "is_external": {
-    "type": "boolean",
-    "default": false
-  },
-  "external_system": {
-    "type": "string",
-    "meta": {
-      "interface": "select-dropdown",
-      "options": {
-        "choices": [
-          {"text": "Sefaria", "value": "sefaria"},
-          {"text": "Wikisource", "value": "wikisource"},
-          {"text": "HebrewBooks", "value": "hebrewbooks"}
-        ]
-      }
-    }
-  },
-  "external_id": {
-    "type": "string"
-  },
-  "external_url": {
-    "type": "string",
-    "meta": {
-      "interface": "input",
-      "options": {
-        "placeholder": "https://..."
-      }
-    }
-  }
-}
-```
-
-#### 14.4 Search Priority Logic
-
-1. **Local Documents** (Highest Priority - Green 🟢)
-   - Books already in the Chabad Mafteach library
-   - Direct association creates linked citations
-
-2. **Existing Sources** (Medium Priority - Blue 🔵)
-   - Previously created sources
-   - May or may not be linked to documents
-
-3. **External Sources** (Fallback - Purple 🟣)
-   - Sefaria search when no local matches found
-   - Creates external source records
-
-#### 14.5 API Endpoints
-
-##### Document Search
-```bash
-# Search documents for citation association
-curl $HEADERS "$BASE_URL/items/documents?search=Tanya&fields=id,title,doc_type,metadata&filter={status:{_eq:'published'}}"
-```
-
-##### Enhanced Source Creation
-```bash
-# Create source with document association
-curl -X POST $HEADERS "$BASE_URL/items/sources" \
-  -d '{
-    "title": "Tanya - Chapter 1",
-    "author": "Rabbi Shneur Zalman of Liadi",
-    "document_id": 123,
-    "is_external": false
-  }'
-
-# Create external source
-curl -X POST $HEADERS "$BASE_URL/items/sources" \
-  -d '{
-    "title": "Mishneh Torah",
-    "author": "Maimonides",
-    "is_external": true,
-    "external_system": "sefaria",
-    "external_id": "Mishneh_Torah",
-    "external_url": "https://sefaria.org/Mishneh_Torah"
-  }'
-```
-
-#### 14.6 Performance Optimizations
-
-- **Document search caching:** 60-second cache for document queries
-- **Fuzzy search debouncing:** 300ms delay to prevent excessive API calls
-- **Result limiting:** Maximum 15 combined results to maintain performance
-- **Lazy loading:** Search components load only when needed
-
-#### 14.7 Error Handling
-
-```typescript
-// Hook error states
-const {
-  searchDocuments,
-  isLoading,
-  error // "No documents found" | "Network error" | "Invalid search"
-} = useDocumentSearch();
-
-// Component error boundaries
-try {
-  await createSource(input);
-} catch (error) {
-  if (error.code === 'DUPLICATE_SOURCE') {
-    // Handle duplicate source creation
-  }
-  if (error.code === 'DOCUMENT_NOT_FOUND') {
-    // Handle invalid document association
-  }
-}
-```
-
-#### 14.8 Migration Notes
-
-**Existing Citations:** All existing citation functionality remains unchanged. The enhancement is additive and backward compatible.
-
-**Data Integrity:** Sources without document associations continue to work normally. New citations can optionally be linked to documents.
-
-**External Sources:** Legacy external sources are automatically tagged with appropriate `external_system` values during upgrades.
-
----
-
-**Last Updated:** December 2025
-**Related Documentation:**
-- [Citation System User Guide](Citation-User-Guide.md)
-- [Citation System Enhancement Summary](Citation-System-Implementation-Summary.md)
