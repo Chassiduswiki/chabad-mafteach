@@ -4,8 +4,21 @@ import { useEffect, useState } from 'react';
 import { Topic, ContentBlock, Statement } from '@/lib/types';
 import { FileText, BookOpen, Plus, X, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/directus';
-const directus = createClient();
 import { readItems, createItem } from '@directus/sdk';
+
+// Lazy client initialization to avoid client-side URL errors
+let _directus: ReturnType<typeof createClient> | null = null;
+const getDirectus = () => {
+    if (!_directus) {
+        try {
+            _directus = createClient();
+        } catch (e) {
+            console.warn('Failed to create Directus client:', e);
+            return null;
+        }
+    }
+    return _directus;
+};
 import { ArticleReader } from './ArticleReader';
 
 // Input validation utilities
@@ -82,6 +95,8 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
         try {
             setIsLoading(true);
             // Fetch statements for this topic
+            const directus = getDirectus();
+            if (!directus) throw new Error('Directus client not available');
             const statementResults = await directus.request(readItems('statement_topics', {
                 filter: { topic_id: { _eq: topic.id } },
                 fields: ['statement_id'],
@@ -96,20 +111,20 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             const statementIds = statementResults.map((st: any) => st.statement_id);
 
             // Fetch the actual statements
-            const statements = await directus.request(readItems('statements', {
+            const statementsData = await directus.request(readItems('statements', {
                 filter: { id: { _in: statementIds } },
                 fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
                 limit: -1
             })) as any;
 
-            if (statements.length === 0) {
+            if (statementsData.length === 0) {
                 setContentBlocks([]);
                 return;
             }
 
             // Get unique block_ids
             const blockIds: number[] = Array.from(new Set(
-                statements
+                statementsData
                     .map((s: any) => s.block_id)
                     .filter((id: any): id is number => typeof id === 'number' && id !== null && id !== undefined)
             ));
@@ -127,7 +142,7 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             })) as any;
 
             // Group statements by block_id
-            const statementsByBlock = statements.reduce((acc: any, stmt: any) => {
+            const statementsByBlock = statementsData.reduce((acc: any, stmt: any) => {
                 if (!acc[stmt.block_id]) acc[stmt.block_id] = [];
                 acc[stmt.block_id].push(stmt);
                 return acc;
@@ -151,16 +166,18 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
     // Fetch statements for a content block
     const fetchStatements = async (contentBlockId: number) => {
         if (statements[contentBlockId]) return; // Already fetched
-        
+
         setLoadingStatements(prev => new Set(prev).add(contentBlockId));
         try {
+            const directus = getDirectus();
+            if (!directus) return;
             const result = await directus.request(readItems('statements', {
                 filter: { block_id: { _eq: contentBlockId } },
                 fields: ['id', 'order_key', 'text', 'block_id'],
                 sort: ['order_key'],
                 limit: -1
             }));
-            
+
             const statementsArray = Array.isArray(result) ? result : result ? [result] : [];
             setStatements(prev => ({ ...prev, [contentBlockId]: statementsArray }));
         } catch (error) {
@@ -190,9 +207,11 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             alert('Statement must be between 3 and 1000 characters long.');
             return;
         }
-        
+
         setIsCreating(true);
         try {
+            const directus = getDirectus();
+            if (!directus) throw new Error('Directus client not available');
             // Create the statement
             const statement = await directus.request(createItem('statements', {
                 text: sanitizedText,
@@ -335,15 +354,15 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
             {/* Statement Editing Modal - Keep for annotation */}
             {selectedContentBlock && (
                 <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setSelectedContentBlock(null)}>
-                    <div 
-                        className="w-full max-w-2xl rounded-t-2xl bg-background border-t border-border shadow-2xl" 
+                    <div
+                        className="w-full max-w-2xl rounded-t-2xl bg-background border-t border-border shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Handle Bar */}
                         <div className="flex justify-center py-3">
                             <div className="h-1.5 w-12 bg-muted-foreground/30 rounded-full" />
                         </div>
-                        
+
                         <div className="px-4 pb-6 sm:px-6">
                             <div className="mb-4 flex items-center justify-between">
                                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -356,13 +375,13 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
                                     Close
                                 </button>
                             </div>
-                            
+
                             {/* Content Block Text */}
                             <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border">
                                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                                     Content Block Text
                                 </div>
-                                <div 
+                                <div
                                     className="prose-sm dark:prose-invert text-sm leading-relaxed"
                                     dangerouslySetInnerHTML={{ __html: selectedContentBlock?.content || '' }}
                                 />

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
  * Basic citation extraction as fallback
  */
 function extractBasicCitations(text: string) {
-  const citations = [];
+  const citations: Array<{ text: string; type: string; confidence: number; source: string }> = [];
   // Look for common Jewish text patterns
   const patterns = [
     /(תניא|תורה אור|לקוטי תורה|שולחן ערוך)/g, // Common seforim

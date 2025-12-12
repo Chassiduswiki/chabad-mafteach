@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { createItem } from '@directus/sdk';
+import { createItem, updateItem } from '@directus/sdk';
 import { requireEditor } from '@/lib/auth';
 
 const directus = createClient();
@@ -14,6 +14,11 @@ interface EntryFrontmatter {
   status: 'Draft' | 'Published';
   last_updated: string;
   tags?: string[];
+  // New flexible mapping fields
+  content_type?: 'bio' | 'article' | 'reference' | 'metadata' | 'topic_description';
+  target_entity?: 'topic' | 'document' | 'statement';
+  target_id?: string;
+  mapping_rules?: Record<string, string>;
 }
 
 interface ParsedEntry {
@@ -142,6 +147,302 @@ function createStatementsFromParagraph(paragraphText: string): string[] {
   return sentences.filter(s => s.length > 0);
 }
 
+/**
+ * Process content based on flexible mapping rules
+ */
+async function processFlexibleContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  const contentType = frontmatter.content_type || 'article';
+
+  switch (contentType) {
+    case 'bio':
+      return await processBioContent(frontmatter, content, context);
+
+    case 'topic_description':
+      return await processTopicDescriptionContent(frontmatter, content, context);
+
+    case 'reference':
+      return await processReferenceContent(frontmatter, content, context);
+
+    case 'metadata':
+      return await processMetadataContent(frontmatter, content, context);
+
+    case 'article':
+    default:
+      return await processArticleContent(frontmatter, content, context);
+  }
+}
+
+/**
+ * Process bio content - short descriptions for topics
+ */
+async function processBioContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  // Find or create topic
+  let topic;
+  if (frontmatter.target_id) {
+    // Update existing topic
+    topic = { id: frontmatter.target_id };
+  } else {
+    // Create new topic
+    topic = await directus.request(createItem('topics', {
+      canonical_title: frontmatter.name,
+      slug: frontmatter.slug || frontmatter.name.toLowerCase().replace(/\s+/g, '-'),
+      topic_type: 'person', // Default for bios
+      description: content.trim(),
+      original_lang: 'en',
+      metadata: {
+        imported_at: new Date().toISOString(),
+        imported_by: context.userId,
+        source: 'bio_import'
+      }
+    }));
+  }
+
+  return {
+    success: true,
+    message: `Bio content added to topic: ${topic.canonical_title || frontmatter.name}`,
+    data: { topic_id: topic.id, content_type: 'bio' }
+  };
+}
+
+/**
+ * Process topic description content
+ */
+async function processTopicDescriptionContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  if (!frontmatter.target_id) {
+    throw new Error('target_id required for topic_description content type');
+  }
+
+    // Update existing topic's description
+  const updatedTopic = await directus.request(updateItem('topics', frontmatter.target_id, {
+    description: content.trim(),
+    metadata: {
+      description_updated_at: new Date().toISOString(),
+      description_updated_by: context.userId
+    }
+  }));
+
+  return {
+    success: true,
+    message: `Topic description updated`,
+    data: { topic_id: frontmatter.target_id, content_type: 'topic_description' }
+  };
+}
+
+/**
+ * Process reference content - single statement with citation
+ */
+async function processReferenceContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  // Create a minimal document for the reference
+  const document = await directus.request(createItem('documents', {
+    title: frontmatter.name,
+    doc_type: 'entry',
+    status: 'published',
+    source_format: 'manual_entry',
+    metadata: {
+      reference_type: 'citation',
+      imported_at: new Date().toISOString(),
+      imported_by: context.userId
+    }
+  }));
+
+  // Create single paragraph
+  const paragraph = await directus.request(createItem('paragraphs', {
+    doc_id: document.id,
+    order_key: '0',
+    text: content.trim(),
+    metadata: {
+      source: 'reference_import'
+    }
+  }));
+
+  // Create single statement
+  const statement = await directus.request(createItem('statements', {
+    block_id: paragraph.id,
+    order_key: '0',
+    text: content.trim(),
+    status: 'published',
+    metadata: {
+      reference: true,
+      imported_by: context.userId
+    }
+  }));
+
+  return {
+    success: true,
+    message: `Reference content added as statement`,
+    data: {
+      document_id: document.id,
+      statement_id: statement.id,
+      content_type: 'reference'
+    }
+  };
+}
+
+/**
+ * Map singular entity names to plural for Directus API
+ */
+function getEntityPlural(entity: 'topic' | 'document' | 'statement'): string {
+  const mapping = {
+    topic: 'topics',
+    document: 'documents',
+    statement: 'statements'
+  };
+  return mapping[entity];
+}
+
+/**
+ * Process metadata-only content - update existing records
+ */
+async function processMetadataContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  if (!frontmatter.target_entity || !frontmatter.target_id) {
+    throw new Error('target_entity and target_id required for metadata content type');
+  }
+
+  // Apply mapping rules to update existing record
+  const mappingRules = frontmatter.mapping_rules || {};
+  const updateData: any = {};
+
+  // Map frontmatter fields according to rules
+  Object.entries(mappingRules).forEach(([sourceField, targetField]) => {
+    if (frontmatter[sourceField as keyof EntryFrontmatter]) {
+      updateData[targetField] = frontmatter[sourceField as keyof EntryFrontmatter];
+    }
+  });
+
+  // Update the target entity
+  const entityPlural = getEntityPlural(frontmatter.target_entity);
+  const updatedRecord = await directus.request(updateItem(entityPlural as any, frontmatter.target_id, {
+    ...updateData,
+    metadata: {
+      metadata_updated_at: new Date().toISOString(),
+      metadata_updated_by: context.userId
+    }
+  }));
+
+  return {
+    success: true,
+    message: `Metadata updated for ${frontmatter.target_entity}`,
+    data: {
+      entity_type: frontmatter.target_entity,
+      entity_id: frontmatter.target_id,
+      content_type: 'metadata'
+    }
+  };
+}
+
+/**
+ * Process article content - default full document processing
+ */
+async function processArticleContent(
+  frontmatter: EntryFrontmatter,
+  content: string,
+  context: any
+): Promise<{ success: boolean; message: string; data?: any }> {
+  // This is the existing article processing logic
+  const statusMap: Record<string, 'draft' | 'reviewed' | 'published' | 'archived'> = {
+    'draft': 'draft',
+    'published': 'published',
+    'reviewed': 'reviewed',
+    'archived': 'archived'
+  };
+
+  const normalizedStatus = statusMap[frontmatter.status.toLowerCase()] || 'draft';
+
+  // Create the document
+  const document = await directus.request(createItem('documents', {
+    title: frontmatter.name,
+    doc_type: 'entry',
+    original_lang: 'en',
+    status: normalizedStatus,
+    source_format: 'manual_entry',
+    metadata: {
+      slug: frontmatter.slug,
+      name_hebrew: frontmatter.name_hebrew,
+      category: frontmatter.category,
+      difficulty: frontmatter.difficulty.toLowerCase(),
+      tags: frontmatter.tags || [],
+      last_updated: frontmatter.last_updated,
+      source: 'flexible_import',
+      imported_at: new Date().toISOString(),
+      imported_by: context.userId,
+      filename: 'flexible_import'
+    }
+  }));
+
+  console.log(`Created document: ${document.id} (${frontmatter.name})`);
+
+  // Process content into content blocks
+  const contentBlocks = processMarkdownContent(content);
+  let contentBlockOrder = 0;
+  let totalStatements = 0;
+
+  for (const blockContent of contentBlocks) {
+    // Create content block
+    const contentBlock = await directus.request(createItem('content_blocks', {
+      document_id: document.id,
+      order_key: String(contentBlockOrder++).padStart(3, '0'),
+      content: blockContent,
+      block_type: 'paragraph',
+      metadata: {
+        source: 'flexible_import',
+        imported_by: context.userId
+      }
+    }));
+
+    // Create statements from content block content
+    const statements = createStatementsFromParagraph(blockContent);
+    let statementOrder = 0;
+
+    for (const statementText of statements) {
+      await directus.request(createItem('statements', {
+        block_id: contentBlock.id,
+        order_key: String(statementOrder++),
+        text: statementText,
+        status: 'published',
+        metadata: {
+          source: 'flexible_import',
+          auto_generated: true,
+          imported_by: context.userId
+        }
+      }));
+      totalStatements++;
+    }
+
+    console.log(`Created content block ${contentBlock.id} with ${statements.length} statements`);
+  }
+
+  return {
+    success: true,
+    message: `Article processed with ${contentBlocks.length} content blocks and ${totalStatements} statements`,
+    data: {
+      document_id: document.id,
+      content_blocks_created: contentBlocks.length,
+      statements_created: totalStatements,
+      content_type: 'article'
+    }
+  };
+}
+
 export const POST = requireEditor(async (request: NextRequest, context) => {
   try {
     const formData = await request.formData();
@@ -162,99 +463,26 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
     const markdownContent = await file.text();
     const parsedEntry = parseFrontmatter(markdownContent);
 
-    // Validate required fields
-    if (!parsedEntry.frontmatter.slug || !parsedEntry.frontmatter.name) {
+    // Validate required fields based on content type
+    const contentType = parsedEntry.frontmatter.content_type || 'article';
+    if (!validateFrontmatterForContentType(parsedEntry.frontmatter, contentType)) {
       return NextResponse.json({
-        error: 'Missing required fields: slug and name are required in frontmatter'
+        error: `Missing required fields for content type '${contentType}'`
       }, { status: 400 });
     }
 
-    // Validate and normalize status
-    const statusMap: Record<string, 'draft' | 'reviewed' | 'published' | 'archived'> = {
-      'draft': 'draft',
-      'published': 'published',
-      'reviewed': 'reviewed',
-      'archived': 'archived'
-    };
-
-    const normalizedStatus = statusMap[parsedEntry.frontmatter.status.toLowerCase()] || 'draft';
-
-    // Create the document
-    const document = await directus.request(createItem('documents', {
-      title: parsedEntry.title,
-      doc_type: 'entry',
-      original_lang: 'en', // Assuming English primary with Hebrew references
-      status: normalizedStatus,
-      source_format: 'manual_entry',
-      metadata: {
-        slug: parsedEntry.frontmatter.slug,
-        name_hebrew: parsedEntry.frontmatter.name_hebrew,
-        category: parsedEntry.frontmatter.category,
-        difficulty: parsedEntry.frontmatter.difficulty.toLowerCase(),
-        tags: parsedEntry.frontmatter.tags || [],
-        last_updated: parsedEntry.frontmatter.last_updated,
-        source: 'markdown_import',
-        imported_at: new Date().toISOString(),
-        imported_by: context.userId,
-        filename: file.name
-      }
-    }));
-
-    console.log(`Created document: ${document.id} (${parsedEntry.title})`);
-
-    // Process content into content blocks
-    const contentBlocks = processMarkdownContent(parsedEntry.content);
-    let contentBlockOrder = 0;
-    let totalStatements = 0;
-
-    for (const blockContent of contentBlocks) {
-      // Create content block
-      const contentBlock = await directus.request(createItem('content_blocks', {
-        document_id: document.id,
-        order_key: String(contentBlockOrder++).padStart(3, '0'),
-        content: blockContent,
-        block_type: 'paragraph',
-        metadata: {
-          source: 'markdown_import',
-          imported_by: context.userId
-        }
-      }));
-
-      // Create statements from content block content
-      const statements = createStatementsFromParagraph(blockContent);
-      let statementOrder = 0;
-
-      for (const statementText of statements) {
-        await directus.request(createItem('statements', {
-          block_id: contentBlock.id,
-          order_key: `${statementOrder++}`,
-          text: statementText,
-          status: 'published',
-          metadata: {
-            source: 'markdown_import',
-            auto_generated: true,
-            imported_by: context.userId
-          }
-        }));
-        totalStatements++;
-      }
-
-      console.log(`Created content block ${contentBlock.id} with ${statements.length} statements`);
-    }
+    // Process content using flexible mapping system
+    const result = await processFlexibleContent(parsedEntry.frontmatter, parsedEntry.content, context);
 
     return NextResponse.json({
       success: true,
-      document_id: document.id,
+      message: result.message,
       file_info: {
         filename: file.name,
         title: parsedEntry.title,
-        content_blocks_created: contentBlocks.length,
-        statements_created: totalStatements,
-        category: parsedEntry.frontmatter.category,
-        difficulty: parsedEntry.frontmatter.difficulty,
-        tags: parsedEntry.frontmatter.tags
-      },
-      message: `Successfully imported "${parsedEntry.title}" with ${contentBlocks.length} content blocks and ${totalStatements} statements`
+        content_type: contentType,
+        ...result.data
+      }
     });
 
   } catch (error) {
@@ -266,35 +494,93 @@ export const POST = requireEditor(async (request: NextRequest, context) => {
   }
 });
 
+/**
+ * Validate frontmatter based on content type requirements
+ */
+function validateFrontmatterForContentType(frontmatter: EntryFrontmatter, contentType: string): boolean {
+  switch (contentType) {
+    case 'bio':
+      return !!(frontmatter.name);
+
+    case 'topic_description':
+      return !!(frontmatter.name && frontmatter.target_id);
+
+    case 'reference':
+      return !!(frontmatter.name);
+
+    case 'metadata':
+      return !!(frontmatter.target_entity && frontmatter.target_id);
+
+    case 'article':
+    default:
+      return !!(frontmatter.slug && frontmatter.name && frontmatter.category &&
+                frontmatter.difficulty && frontmatter.status);
+  }
+}
+
 export async function GET() {
   return NextResponse.json({
-    message: 'Entry document upload endpoint. Use POST to upload .md files.',
+    message: 'Entry document upload endpoint. Use POST to upload .md files with flexible content mapping.',
     supported_formats: ['.md'],
-    required_frontmatter: [
-      'slug',
-      'name',
-      'category',
-      'difficulty',
-      'status'
-    ],
-    optional_frontmatter: [
-      'name_hebrew',
-      'last_updated',
-      'tags'
+    content_types: {
+      article: {
+        description: 'Full article with paragraphs and statements (default)',
+        required_fields: ['slug', 'name', 'category', 'difficulty', 'status'],
+        optional_fields: ['name_hebrew', 'last_updated', 'tags']
+      },
+      bio: {
+        description: 'Short biography for topics',
+        required_fields: ['name'],
+        optional_fields: ['target_id', 'slug']
+      },
+      topic_description: {
+        description: 'Update existing topic description',
+        required_fields: ['name', 'target_id']
+      },
+      reference: {
+        description: 'Single citation or reference statement',
+        required_fields: ['name']
+      },
+      metadata: {
+        description: 'Update metadata on existing records',
+        required_fields: ['target_entity', 'target_id'],
+        optional_fields: ['mapping_rules']
+      }
+    },
+    flexible_mapping_fields: [
+      'content_type',
+      'target_entity',
+      'target_id',
+      'mapping_rules'
     ],
     parameters: {
       file: 'required - .md file with frontmatter',
       options: 'optional - JSON string with import options'
     },
-    example_frontmatter: `---
-slug: emunah
-name: Emunah
-name_hebrew: אֱמוּנָה
-category: Avodah
-difficulty: Beginner
+    example_frontmatter: {
+      article: `---
+slug: example-article
+name: Example Article
+category: Philosophy
+difficulty: Intermediate
 status: Draft
-last_updated: 2025-12-04
-tags: [emunah, faith, belief]
----`
+tags: [example, test]
+---
+
+Article content here...`,
+      bio: `---
+content_type: bio
+name: Rabbi Schneur Zalman
+---
+
+Biography content here...`,
+      topic_description: `---
+content_type: topic_description
+name: Bittul Description Update
+target_id: existing-topic-id
+---
+
+Updated description content...`
+    }
   });
 }

@@ -124,60 +124,12 @@ export default function SeforimPage() {
     useEffect(() => {
         const fetchSeforim = async () => {
             try {
-                // Fetch all documents
-                const result = await directus.request(readItems('documents', {
-                    fields: ['id', 'title', 'doc_type', 'parent_id', 'author', 'category'],
-                    sort: ['title'],
-                    limit: -1
-                }));
-
-                const docsArray = Array.isArray(result) ? result : result ? [result] : [];
-
-                // Build hierarchical structure
-                const docs: HierarchicalDocument[] = docsArray.map((doc: any) => ({
-                    id: doc.id,
-                    title: doc.title,
-                    doc_type: doc.doc_type,
-                    parent_id: doc.parent_id,
-                    author: doc.author,
-                    category: doc.category,
-                    children: []
-                }));
-
-                // Create parent-child relationships
-                const docMap = new Map<number, HierarchicalDocument>();
-                const roots: HierarchicalDocument[] = [];
-
-                // First pass: create map
-                docs.forEach(doc => {
-                    docMap.set(doc.id, doc);
-                });
-
-                // Second pass: build hierarchy
-                docs.forEach(doc => {
-                    if (doc.parent_id && docMap.has(doc.parent_id)) {
-                        const parent = docMap.get(doc.parent_id)!;
-                        if (!parent.children) parent.children = [];
-                        parent.children.push(doc);
-                    } else {
-                        roots.push(doc);
-                    }
-                });
-
-                // Check which documents have content (paragraphs)
-                for (const doc of docs) {
-                    try {
-                        const paragraphs = await directus.request(readItems('paragraphs', {
-                            filter: { doc_id: { _eq: doc.id } },
-                            limit: 1
-                        }));
-                        const paraArray = Array.isArray(paragraphs) ? paragraphs : paragraphs ? [paragraphs] : [];
-                        doc.hasContent = paraArray.length > 0;
-                    } catch {
-                        doc.hasContent = false;
-                    }
+                // Fetch from server-side API instead of client-side Directus
+                const response = await fetch('/api/seforim');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-
+                const roots = await response.json();
                 setSeforim(roots);
             } catch (error: any) {
                 console.error('Failed to fetch hierarchical seforim:', error);

@@ -1,10 +1,23 @@
 import { Document } from "@/lib/types";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/directus";
-const directus = createClient();
 import { readItems } from "@directus/sdk";
 import { ChevronRight, ChevronDown, FileText, Folder } from "lucide-react";
 import React, { useState } from "react";
+
+// Lazy client initialization to avoid client-side URL errors
+let _directus: ReturnType<typeof createClient> | null = null;
+const getDirectus = () => {
+  if (!_directus) {
+    try {
+      _directus = createClient();
+    } catch (e) {
+      console.warn('Failed to create Directus client:', e);
+      return null;
+    }
+  }
+  return _directus;
+};
 
 interface StructureSidebarProps {
   currentDocId: string | null;
@@ -30,9 +43,8 @@ const TreeNode = ({
   return (
     <div className="select-none">
       <div
-        className={`flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${
-          isSelected ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"
-        }`}
+        className={`flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${isSelected ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"
+          }`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={() => onSelectDoc(String(node.id))}
       >
@@ -55,13 +67,13 @@ const TreeNode = ({
             <div className="w-4 h-4" /> // Spacer
           )}
         </div>
-        
+
         {hasChildren ? (
-            <Folder className="w-4 h-4 text-gray-500" />
+          <Folder className="w-4 h-4 text-gray-500" />
         ) : (
-            <FileText className="w-4 h-4 text-gray-400" />
+          <FileText className="w-4 h-4 text-gray-400" />
         )}
-        
+
         <span className="truncate">{node.title}</span>
       </div>
 
@@ -96,6 +108,8 @@ export const StructureSidebar: React.FC<StructureSidebarProps> = ({
     queryKey: ["structure-tree"],
     queryFn: async () => {
       try {
+        const directus = getDirectus();
+        if (!directus) throw new Error('Directus client not available');
         const result = await directus.request(
           readItems("documents", {
             fields: ["id", "title", "parent_id", "doc_type"],
