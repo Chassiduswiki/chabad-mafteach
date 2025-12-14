@@ -16,8 +16,8 @@ interface ContentBlock {
     section_number?: number;
     citation_refs?: any[];
     metadata?: any;
-    statements: Statement[];
-    commentaries: BlockCommentary[];
+    statements?: Statement[];
+    commentaries?: BlockCommentary[];
 }
 
 interface Statement {
@@ -156,7 +156,7 @@ export async function GET(
             ]);
 
             const docsArray = Array.isArray(docResult) ? docResult : docResult ? [docResult] : [];
-            const doc = docsArray[0] || null;
+            const doc = docsArray[0] as Document || null;
 
             if (!doc) {
                 return NextResponse.json({ error: 'Document not found' }, { status: 404 });
