@@ -22,7 +22,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
         notFound();
     }
 
-    const { topic, relatedTopics, sources } = topicData;
+    const { topic, relatedTopics, sources, citations } = topicData;
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -43,7 +43,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                 </div>
 
                 <div className="w-full">
-                    <TopicTabs topic={topic} relatedTopics={relatedTopics} />
+                    <TopicTabs topic={topic} relatedTopics={relatedTopics} citations={citations} />
                 </div>
             </main>
         </div>

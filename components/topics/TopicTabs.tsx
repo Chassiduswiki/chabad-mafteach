@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import ArticleTab from "./ArticleTab";
+import OverviewTab from "./OverviewTab";
 import BoundariesTab from "./BoundariesTab";
 import SourcesTab from "./SourcesTab";
 import RelatedTab from "./RelatedTab";
-import { Topic } from "@/lib/types";
+import { Topic, Citation } from "@/lib/types";
 import { FileText, Target, BookOpen, Sparkles, Lightbulb, Clock } from 'lucide-react';
 
 type TabType = 'overview' | 'practical' | 'historical' | 'boundaries' | 'sources' | 'related';
@@ -14,45 +15,48 @@ interface TopicTabsProps {
     topic: Topic;
     relatedTopics?: any[];
     sources?: any[];
+    citations?: Citation[];
 }
 
 const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; description: string; comingSoon?: boolean }[] = [
-    { id: 'overview', label: 'Overview', icon: FileText, description: 'Basic topic information and description' },
+    { id: 'overview', label: 'Overview', icon: FileText, description: 'Comprehensive overview and summary' },
     { id: 'practical', label: 'Practical', icon: Lightbulb, description: 'Practical applications and takeaways', comingSoon: true },
     { id: 'historical', label: 'Historical', icon: Clock, description: 'Historical context and background', comingSoon: true },
     { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not', comingSoon: true },
-    { id: 'sources', label: 'Seforim', icon: BookOpen, description: 'References and citations', comingSoon: true },
+    { id: 'sources', label: 'Citations', icon: BookOpen, description: 'References and direct quotes' },
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts', comingSoon: true },
 ];
 
-export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsProps) {
+export default function TopicTabs({ topic, relatedTopics, sources, citations }: TopicTabsProps) {
     const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     // Check which tabs have content
     const hasBoundaries = topic.definition_positive || topic.definition_negative;
-    const hasSources = sources && sources.length > 0;
+    const hasSources = (sources && sources.length > 0) || (citations && citations.length > 0) || (topic.paragraphs && topic.paragraphs.length > 0);
     const hasRelated = relatedTopics && relatedTopics.length > 0;
-    const hasPractical = topic.practical_takeaways && topic.practical_takeaways.trim().length > 0; // **[NEW]**
-    const hasHistorical = topic.historical_context && topic.historical_context.trim().length > 0; // **[NEW]**
+    const hasPractical = topic.practical_takeaways && topic.practical_takeaways.trim().length > 0;
+    const hasHistorical = topic.historical_context && topic.historical_context.trim().length > 0;
+    const hasOverview = topic.overview || topic.article || topic.description;
 
     const renderTabContent = () => {
         // Check if current tab is coming soon AND has no content
         const currentTabData = tabs.find(tab => tab.id === activeTab);
-        const hasContent = activeTab === 'overview' ||
-            (activeTab === 'practical' && hasPractical) || // **[NEW]**
-            (activeTab === 'historical' && hasHistorical) || // **[NEW]**
+        const hasContent = (activeTab === 'overview' && hasOverview) ||
+            (activeTab === 'practical' && hasPractical) ||
+            (activeTab === 'historical' && hasHistorical) ||
             (activeTab === 'boundaries' && hasBoundaries) ||
             (activeTab === 'sources' && hasSources) ||
             (activeTab === 'related' && hasRelated);
+
         const isComingSoon = currentTabData?.comingSoon && !hasContent;
 
         if (isComingSoon) {
             const Icon = currentTabData!.icon;
             return (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/50">
                     <Icon className="mx-auto h-16 w-16 mb-4 opacity-20" />
                     <h3 className="text-lg font-medium mb-2">{currentTabData!.label} Coming Soon</h3>
-                    <p className="text-sm max-w-md mx-auto">
+                    <p className="text-sm max-w-md mx-auto px-6">
                         {currentTabData!.description} will be available once this topic's content is fully developed.
                     </p>
                 </div>
@@ -61,7 +65,7 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
 
         switch (activeTab) {
             case 'overview':
-                return <ArticleTab topic={topic} />;
+                return <OverviewTab topic={topic} />;
             case 'practical': // **[NEW]**
                 return hasPractical ? (
                     <div className="prose prose-slate dark:prose-invert max-w-none">
@@ -92,22 +96,20 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
                         </p>
                     </div>
                 );
-            case 'boundaries':
-            case 'boundaries':
                 return hasBoundaries ? (
                     <BoundariesTab topic={topic} />
                 ) : (
-                    <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/50">
                         <Target className="mx-auto h-16 w-16 mb-4 opacity-20" />
                         <h3 className="text-lg font-medium mb-2">Boundaries Coming Soon</h3>
-                        <p className="text-sm max-w-md mx-auto">
+                        <p className="text-sm max-w-md mx-auto px-6">
                             Detailed boundaries and definitions will be available once this topic's content is fully developed.
                         </p>
                     </div>
                 );
             case 'sources':
                 return hasSources ? (
-                    <SourcesTab sources={[]} />
+                    <SourcesTab sources={sources || []} citations={citations || []} />
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         <BookOpen className="mx-auto h-16 w-16 mb-4 opacity-20" />
@@ -140,23 +142,22 @@ export default function TopicTabs({ topic, relatedTopics, sources }: TopicTabsPr
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
-                        const hasContent = tab.id === 'overview' ||
-                            (tab.id === 'practical' && hasPractical) || // **[NEW]**
-                            (tab.id === 'historical' && hasHistorical) || // **[NEW]**
+                        const hasContent = (tab.id === 'overview' && hasOverview) ||
+                            (tab.id === 'practical' && hasPractical) ||
+                            (tab.id === 'historical' && hasHistorical) ||
                             (tab.id === 'boundaries' && hasBoundaries) ||
                             (tab.id === 'sources' && hasSources) ||
                             (tab.id === 'related' && hasRelated);
-                        const isComingSoon = tab.comingSoon && !hasContent; // Only show as coming soon if no content
+                        const isComingSoon = tab.comingSoon && !hasContent;
 
                         return (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 disabled={isComingSoon}
-                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${
-                                    isActive
-                                        ? 'border-primary text-primary'
-                                        : isComingSoon
+                                className={`flex items-center gap-2 pb-4 px-1 border-b-2 transition-colors ${isActive
+                                    ? 'border-primary text-primary'
+                                    : isComingSoon
                                         ? 'border-transparent text-muted-foreground/50 cursor-not-allowed'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                     }`}

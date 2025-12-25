@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import type { Topic } from '@/lib/types';
-import { Loader2, BookOpen, Languages, Eye, EyeOff } from 'lucide-react';
+import { Loader2, BookOpen, Languages, Eye, EyeOff, Settings as SettingsIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ReaderSettingsModal, type ReaderSettings } from './features/reader/ReaderSettings';
 
 interface StatementWithTopics {
   id: number;
@@ -59,6 +60,13 @@ export function TorahReader({
   const [viewedStatements, setViewedStatements] = useState<Set<number>>(new Set());
   const [displayMode, setDisplayMode] = useState<DisplayMode>('hebrew-only'); // **[NEW]** Bilingual display mode
   const [showCommentaries, setShowCommentaries] = useState(false); // **[NEW]** Commentary toggle
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<ReaderSettings>({
+    fontSize: 19,
+    fontFamily: 'serif',
+    lineHeight: 1.8,
+    theme: 'light'
+  });
   const router = useRouter();
 
   // Get current section data
@@ -118,11 +126,10 @@ export function TorahReader({
               {/* Commentary Toggle */}
               <button
                 onClick={() => setShowCommentaries(!showCommentaries)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  showCommentaries
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted hover:bg-accent text-muted-foreground hover:text-foreground'
-                }`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showCommentaries
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-accent text-muted-foreground hover:text-foreground'
+                  }`}
                 title="Toggle commentary display"
               >
                 {showCommentaries ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -133,38 +140,44 @@ export function TorahReader({
               <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                 <button
                   onClick={() => setDisplayMode('hebrew-only')}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                    displayMode === 'hebrew-only'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${displayMode === 'hebrew-only'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="Hebrew only"
                 >
                   עברית
                 </button>
                 <button
                   onClick={() => setDisplayMode('english-only')}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                    displayMode === 'english-only'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${displayMode === 'english-only'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="English only"
                 >
                   EN
                 </button>
                 <button
                   onClick={() => setDisplayMode('side-by-side')}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                    displayMode === 'side-by-side'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${displayMode === 'side-by-side'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="Side by side"
                 >
                   <Languages className="h-3 w-3" />
                 </button>
               </div>
+
+              {/* Settings Button */}
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="ml-2 p-2 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                title="Reader Settings"
+              >
+                <SettingsIcon className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -186,10 +199,17 @@ export function TorahReader({
 
                 {/* Section content with bilingual display */}
                 {displayMode === 'hebrew-only' && (
-                  <div className="font-hebrew font-serif text-[18px] sm:text-[19px] lg:text-[21px] leading-[2] text-foreground tracking-wide">
+                  <div
+                    className="text-foreground tracking-wide"
+                    style={{
+                      fontSize: `${settings.fontSize}px`,
+                      fontFamily: settings.fontFamily === 'serif' ? 'var(--font-hebrew)' : 'sans-serif',
+                      lineHeight: settings.lineHeight
+                    }}
+                  >
                     {currentSectionData.statements.length > 0 ? (
                       currentSectionData.statements.map((s, idx) => (
-                        <div key={s.id} className="mb-4">
+                        <div key={s.id} className="mb-4 font-hebrew">
                           <span
                             onClick={() => handleSelect(s.id)}
                             className={`
@@ -228,7 +248,14 @@ export function TorahReader({
                 )}
 
                 {displayMode === 'english-only' && (
-                  <div className="font-serif text-[16px] sm:text-[17px] lg:text-[18px] leading-[1.8] text-foreground">
+                  <div
+                    className="text-foreground"
+                    style={{
+                      fontSize: `${settings.fontSize}px`,
+                      fontFamily: settings.fontFamily === 'serif' ? 'serif' : 'sans-serif',
+                      lineHeight: settings.lineHeight
+                    }}
+                  >
                     {currentSectionData.statements.length > 0 ? (
                       currentSectionData.statements.map((s, idx) => (
                         <div key={s.id} className="mb-4">
@@ -270,66 +297,60 @@ export function TorahReader({
                 )}
 
                 {displayMode === 'side-by-side' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Hebrew Column */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                        עברית (Hebrew)
-                      </h3>
-                      <div className="font-hebrew font-serif text-[16px] sm:text-[17px] lg:text-[18px] leading-[2] text-foreground tracking-wide">
-                        {currentSectionData.statements.length > 0 ? (
-                          currentSectionData.statements.map((s, idx) => (
-                            <div key={`he-${s.id}`} className="mb-4">
-                              <span
-                                onClick={() => handleSelect(s.id)}
-                                className={`
-                                  cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
-                                  hover:bg-accent/50 dark:hover:bg-accent/10
-                                  ${viewedStatements.has(s.id)
-                                    ? 'text-muted-foreground'
-                                    : 'text-foreground'
-                                  }
+                  <div className="space-y-12">
+                    {currentSectionData.statements.length > 0 ? (
+                      currentSectionData.statements.map((s, idx) => (
+                        <div key={`pair-${s.id}`} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start border-b border-border/40 pb-8 last:border-0">
+                          {/* Hebrew Side */}
+                          <div className="space-y-4">
+                            <div
+                              onClick={() => handleSelect(s.id)}
+                              className={`
+                                    font-hebrew cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
+                                    hover:bg-accent/50 dark:hover:bg-accent/10
+                                    ${viewedStatements.has(s.id) ? 'text-muted-foreground' : 'text-foreground'}
                                 `}
-                              >
-                                {s.text}
-                              </span>
+                              style={{
+                                fontSize: `${settings.fontSize}px`,
+                                fontFamily: settings.fontFamily === 'serif' ? 'var(--font-hebrew)' : 'sans-serif',
+                                lineHeight: settings.lineHeight
+                              }}
+                            >
+                              {s.text}
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-foreground leading-relaxed">No content available for this section.</p>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* English Column */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-2">
-                        English Translation
-                      </h3>
-                      <div className="font-serif text-[14px] sm:text-[15px] lg:text-[16px] leading-[1.8] text-foreground">
-                        {currentSectionData.statements.length > 0 ? (
-                          currentSectionData.statements.map((s, idx) => (
-                            <div key={`en-${s.id}`} className="mb-4">
-                              <span
-                                onClick={() => handleSelect(s.id)}
-                                className={`
-                                  cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
-                                  hover:bg-accent/50 dark:hover:bg-accent/10
-                                  ${viewedStatements.has(s.id)
-                                    ? 'text-muted-foreground'
-                                    : 'text-foreground'
-                                  }
+                            {/* Hebrew Commentary if exists and toggled */}
+                            {showCommentaries && s.commentary_text && (
+                              <div className="p-3 bg-accent/10 rounded-lg border-r-4 border-primary font-hebrew text-sm leading-relaxed">
+                                <span className="font-semibold">{s.commentary_author || 'Commentary'}: </span>
+                                {s.commentary_text}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* English Side */}
+                          <div className="space-y-4">
+                            <div
+                              onClick={() => handleSelect(s.id)}
+                              className={`
+                                    cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
+                                    hover:bg-accent/50 dark:hover:bg-accent/10
+                                    ${viewedStatements.has(s.id) ? 'text-muted-foreground' : 'text-foreground'}
                                 `}
-                              >
-                                {s.translated_text || s.text}
-                              </span>
+                              style={{
+                                fontSize: `${Math.max(14, settings.fontSize - 3)}px`,
+                                fontFamily: settings.fontFamily === 'serif' ? 'serif' : 'sans-serif',
+                                lineHeight: settings.lineHeight
+                              }}
+                            >
+                              {s.translated_text || s.text}
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-foreground leading-relaxed">No content available for this section.</p>
-                        )}
-                      </div>
-                    </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-foreground leading-relaxed">No content available for this section.</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -487,6 +508,15 @@ export function TorahReader({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <ReaderSettingsModal
+          settings={settings}
+          onUpdate={(u) => setSettings({ ...settings, ...u })}
+          onClose={() => setIsSettingsOpen(false)}
+        />
       )}
     </div>
   );

@@ -143,6 +143,30 @@
   }
 }
 
+/* Sepia Theme - Classical Book Feel */
+.theme-sepia {
+  --background: hsl(40 30% 88%);
+  --foreground: hsl(40 10% 15%);
+  --primary: hsl(40 10% 15%);
+  --secondary-foreground: hsl(40 10% 25%);
+  --muted: hsl(40 20% 80%);
+  --muted-foreground: hsl(40 10% 35%);
+  --border: hsl(40 20% 75%);
+  --accent: hsl(46 65% 52%);
+}
+
+/* Charcoal Theme - Pitch Black OLED optimization */
+.theme-charcoal {
+  --background: hsl(0 0% 0%);
+  --foreground: hsl(60 10% 90%);
+  --primary: hsl(46 65% 52%);
+  --secondary-foreground: hsl(0 0% 70%);
+  --muted: hsl(0 0% 10%);
+  --muted-foreground: hsl(0 0% 60%);
+  --border: hsl(0 0% 15%);
+  --accent: hsl(46 65% 52%);
+}
+
 /* Manual dark mode override via next-themes class */
 :root.dark {
   /* Base - Deep Charcoal */
@@ -671,6 +695,7 @@ html {
     transform: translateY(100%);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
