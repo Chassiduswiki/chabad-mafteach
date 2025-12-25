@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { BookOpen, ChevronDown, ChevronRight, FileText, FolderOpen } from 'lucide-react';
 import { createClient } from '@/lib/directus';
-const directus = createClient();
+// No top-level call here - we use the API routes for data fetching
 import { readItems } from '@directus/sdk';
 import { Document } from '@/lib/directus';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 // Force dynamic rendering - always fetch fresh data
 export const dynamic = 'force-dynamic';
@@ -117,15 +118,22 @@ function DocumentTree({ documents, level = 0 }: { documents: HierarchicalDocumen
     );
 }
 
-export default function SeforimPage() {
+function SeforimContent() {
+    const searchParams = useSearchParams();
+    const category = searchParams?.get('category');
+
     const [seforim, setSeforim] = useState<HierarchicalDocument[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchSeforim = async () => {
             try {
-                // Fetch from server-side API instead of client-side Directus
-                const response = await fetch('/api/seforim');
+                // Fetch from server-side API with optional category filter
+                const url = category
+                    ? `/api/seforim?category=${encodeURIComponent(category)}`
+                    : '/api/seforim';
+
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -140,7 +148,7 @@ export default function SeforimPage() {
         };
 
         fetchSeforim();
-    }, []);
+    }, [category]);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -163,7 +171,13 @@ export default function SeforimPage() {
                         Sources & Seforim
                     </h1>
                     <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Browse the Chabad literature collection and explore source texts
+                        {category ? (
+                            <span>
+                                Showing <span className="font-semibold text-foreground capitalize">{category}</span> sources
+                            </span>
+                        ) : (
+                            'Browse the Chabad literature collection and explore source texts'
+                        )}
                     </p>
                 </div>
 
@@ -214,14 +228,40 @@ export default function SeforimPage() {
                     ))}
                 </div>
 
-                {seforim.length === 0 && (
+                {seforim.length === 0 && !loading && (
                     <div className="text-center py-12">
                         <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground mb-2">No sources found</h3>
-                        <p className="text-muted-foreground">Sources will appear here once they are added to the system.</p>
+                        <p className="text-muted-foreground">
+                            {category
+                                ? `No sources found in the ${category} category.`
+                                : 'Sources will appear here once they are added to the system.'
+                            }
+                        </p>
                     </div>
                 )}
             </div>
         </div>
+    );
+}
+
+export default function SeforimPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-background text-foreground">
+                <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 sm:px-8 sm:py-16">
+                    <div className="animate-pulse space-y-4">
+                        <div className="h-8 bg-muted rounded-lg w-48"></div>
+                        <div className="space-y-2">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="h-16 bg-muted rounded-lg"></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }>
+            <SeforimContent />
+        </Suspense>
     );
 }

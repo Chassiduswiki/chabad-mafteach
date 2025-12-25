@@ -30,13 +30,13 @@ export interface Document {
     published_at?: string;
     created_by?: string;
     parent_id?: number | Document;
-    
+
     // Relations
     contentBlocks?: ContentBlock[]; // **[CHANGED]** from paragraphs?: Paragraph[];
 
     // Topic association
     topic?: string | Topic;
-    
+
     // Legacy compatibility fields for citation system
     hebrewbooks_id?: number;
     title_hebrew?: string;
@@ -54,7 +54,7 @@ export interface Paragraph {
     column_number?: number;
     metadata?: Record<string, unknown>;
     doc_id?: number | Document;
-    
+
     // Legacy compatibility fields for citation system
     reference_text?: string; // Alias for order_key
     reference_hebrew?: string;
@@ -68,7 +68,7 @@ export interface ContentBlock {
     order_key: string;
     content: string;
     status?: 'draft' | 'reviewed' | 'published';
-    
+
     // Citation fields
     page_number?: string;
     chapter_number?: number;
@@ -76,9 +76,9 @@ export interface ContentBlock {
     daf_number?: string;
     section_number?: number;
     citation_refs?: any[];
-    
+
     metadata?: Record<string, unknown>;
-    
+
     // Relations
     statements?: Statement[];
     block_commentaries?: BlockCommentary[];
@@ -114,12 +114,12 @@ export interface BlockCommentary {
     reviewed_by?: number | Author;
     reviewed_at?: string;
     rejection_reason?: string;
-    
+
     // Citation support for rabbit hole following
     citation_source?: number | Source; // Link to source document
     citation_page?: string; // Page reference in source
     citation_reference?: string; // Full citation string
-    
+
     // Relations
     source_links?: SourceLink[]; // Citations within this commentary
 }
@@ -164,7 +164,7 @@ export interface Topic {
     topic_type?: 'person' | 'concept' | 'place' | 'event' | 'mitzvah' | 'sefirah';
     description?: string;
     metadata?: Record<string, unknown>;
-    
+
     // Legacy compatibility fields (mapped from new schema)
     name?: string; // Alias for canonical_title
     name_hebrew?: string; // Can be fetched from translations table if needed
@@ -172,7 +172,7 @@ export interface Topic {
     alternate_names?: string[];
     category?: string; // Alias for topic_type
     definition_short?: string; // Alias for description
-    
+
     // Content fields (can be stored in metadata or separate content table)
     definition_positive?: string;
     definition_negative?: string;
@@ -182,7 +182,7 @@ export interface Topic {
     historical_context?: string; // **[NEW]** Rich text field for historical background
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
-    
+
     // Related content (document > paragraphs > statements)
     paragraphs?: {
         id: number;
@@ -196,13 +196,25 @@ export interface Topic {
             order_key: string;
         }[];
     }[];
-    
+
     // Metadata fields
     difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
     estimated_read_time?: number;
     view_count?: number;
     is_published?: boolean;
     meta_description?: string;
+}
+
+export interface Citation {
+    id: number;
+    text: string;
+    appended_text?: string;
+    document_title: string;
+    document_id?: number;
+    document_type?: string;
+    order_key?: string;
+    relevance_score?: number;
+    is_primary?: boolean;
 }
 
 export interface TopicRelationship {
@@ -214,7 +226,7 @@ export interface TopicRelationship {
     parent_topic_id?: number | Topic;
     child_topic_id?: number | Topic;
     created_by?: string;
-    
+
     // Legacy compatibility fields
     from_topic?: number | Topic;
     to_topic?: number | Topic;
