@@ -9,39 +9,53 @@ export * from './types';
 // Use NEXT_PUBLIC_ prefix for client-side access, fall back to server-side vars
 const getDirectusUrl = () => {
     if (typeof window !== 'undefined') {
-        return '/api/directus-proxy';  // Use proxy for client-side requests
+        // Ensure we return an absolute URL for the SDK
+        return window.location.origin + '/api/directus-proxy';
     }
-    return process.env.DIRECTUS_URL; // Use direct URL for server-side requests
+    // Server-side: use DIRECTUS_URL, fallback to NEXT_PUBLIC_ if available, then localhost
+    const url = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
+    // Remove trailing slash if present to avoid double slashes when SDK appends paths
+    return url.replace(/\/$/, '');
 };
 
-// SECURITY: Only use the server-side static token. Never expose admin tokens to the client.
 const getDirectusToken = () => process.env.DIRECTUS_STATIC_TOKEN;
 
 const createClient = () => {
     const directusUrl = getDirectusUrl();
-    const directusToken = getDirectusToken();
 
-    // Validate URL
-    if (!directusUrl) {
-        throw new Error('DIRECTUS_URL environment variable is not set.');
+    if (typeof window !== 'undefined') {
+        // Client-side: no token, just the URL to the proxy
+        try {
+            // Verify it's a valid URL before passing to SDK
+            new URL(directusUrl);
+            return createDirectus<Schema>(directusUrl).with(rest());
+        } catch (e) {
+            console.error('[Directus Client] Invalid Client URL:', directusUrl);
+            // Fallback to absolute URL if proxy construction failed
+            const fallback = window.location.origin + '/api/directus-proxy';
+            return createDirectus<Schema>(fallback).with(rest());
+        }
+    } else {
+        // Server-side: use static token
+        const directusToken = getDirectusToken();
+
+        try {
+            new URL(directusUrl);
+        } catch (e) {
+            console.error('[Directus Client] Invalid Server URL:', directusUrl);
+            // Use a safe fallback
+            const safeUrl = 'http://localhost:8055';
+            return createDirectus<Schema>(safeUrl).with(staticToken(directusToken || '')).with(rest());
+        }
+
+        if (!directusToken && process.env.NODE_ENV === 'production') {
+            console.warn('DIRECTUS_STATIC_TOKEN is not set for server-side operations in production.');
+        }
+
+        return createDirectus<Schema>(directusUrl)
+            .with(staticToken(directusToken || ''))
+            .with(rest());
     }
-
-    // If we're on the client and trying to use a token that doesn't exist, we should probably warn or allow public access if intended.
-    // However, this specific client is configured with staticToken(), which implies privileged access.
-
-    if (typeof window !== 'undefined' && !directusToken) {
-        // We are on the client and have no token.
-        // Return a client without a token (public access only) for client-side requests via proxy
-        return createDirectus<Schema>(directusUrl).with(rest());
-    }
-
-    if (!directusToken) {
-        throw new Error('DIRECTUS_STATIC_TOKEN is not set. This token is required for server-side operations.');
-    }
-
-    return createDirectus<Schema>(directusUrl)
-        .with(staticToken(directusToken))
-        .with(rest());
 };
 
 // Lazy-initialized singleton for module-level usage

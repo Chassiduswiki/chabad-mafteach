@@ -104,33 +104,73 @@ export async function getTopicBySlug(slug: string) {
             }
 
             // SECONDARY: Get additional statement_topics for sources/citations
-            // Filter out orphaned records where statement doesn't exist
             try {
                 const statementTopics = await directus.request(readItems('statement_topics', {
                     filter: {
-                        topic_id: { _eq: topic.id },
-                        // Remove statement_id null check for now to avoid permission issues
+                        topic_id: { _eq: topic.id }
                     } as any,
-                    fields: [
-                        'id',
-                        'statement_id',
-                        'topic_id',
-                        'relevance_score',
-                        'is_primary'
-                        // Remove nested relations to avoid permission issues
-                    ] as any,
-                    sort: ['-relevance_score'] as any
+                    fields: ['statement_id', 'relevance_score', 'is_primary'],
+                    sort: ['-relevance_score'] as any,
+                    limit: -1
                 })) as any[];
 
                 console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
-                // For now, just add the statement_topics without additional processing
-                // to avoid nested relation permission issues
-                validStatementTopics = statementTopics;
-                console.log(`Using ${validStatementTopics.length} basic statement_topics records`);
+                if (statementTopics.length > 0) {
+                    const statementIds = Array.from(new Set(statementTopics.map(st => st.statement_id).filter(id => !!id)));
+
+                    if (statementIds.length > 0) {
+                        // Fetch the actual statements
+                        const citationStatements = await directus.request(readItems('statements', {
+                            filter: { id: { _in: statementIds } } as any,
+                            fields: ['id', 'text', 'appended_text', 'block_id', 'order_key'],
+                            limit: -1
+                        })) as any[];
+
+                        console.log(`Fetched ${citationStatements.length} statements for citations`);
+
+                        // Fetch blocks and documents for these statements
+                        const blockIds = Array.from(new Set(citationStatements.map(s => s.block_id).filter(id => !!id)));
+                        if (blockIds.length > 0) {
+                            const blocks = await directus.request(readItems('content_blocks' as any, {
+                                filter: { id: { _in: blockIds } } as any,
+                                fields: ['id', 'document_id', 'order_key'],
+                                limit: -1
+                            })) as any[];
+
+                            const docIds = Array.from(new Set(blocks.map(b => b.document_id).filter(id => !!id)));
+                            if (docIds.length > 0) {
+                                const docs = await directus.request(readItems('documents', {
+                                    filter: { id: { _in: docIds } } as any,
+                                    fields: ['id', 'title', 'doc_type'],
+                                    limit: -1
+                                })) as any[];
+
+                                // Map everything together
+                                validStatementTopics = citationStatements.map(stmt => {
+                                    const block = blocks.find(b => b.id === stmt.block_id);
+                                    const doc = block ? docs.find(d => d.id === block.document_id) : null;
+                                    const stRecord = statementTopics.find(st => st.statement_id === stmt.id);
+
+                                    return {
+                                        id: stmt.id,
+                                        text: stmt.text,
+                                        appended_text: stmt.appended_text,
+                                        document_title: doc?.title || 'Unknown Source',
+                                        document_id: doc?.id,
+                                        document_type: doc?.doc_type,
+                                        order_key: stmt.order_key,
+                                        relevance_score: stRecord?.relevance_score,
+                                        is_primary: stRecord?.is_primary
+                                    };
+                                });
+                            }
+                        }
+                    }
+                }
+                console.log(`Processed ${validStatementTopics.length} enriched citations`);
             } catch (statementTopicsError) {
-                console.warn('Failed to fetch statement_topics (likely permissions issue):', (statementTopicsError as any)?.message || statementTopicsError);
-                // Continue without statement_topics data - this is not critical
+                console.warn('Failed to fetch enriched citations:', (statementTopicsError as any)?.message || statementTopicsError);
             }
         } catch (error) {
             console.warn('Failed to fetch topic content:', error);

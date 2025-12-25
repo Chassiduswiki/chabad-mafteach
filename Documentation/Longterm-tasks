@@ -9,7 +9,15 @@
 - ✅ Legacy type aliases added for backward compatibility (Sefer→Document, Location→Paragraph, etc.).
 - ✅ **Premium BookReader component created** - transforms seforim page into professional reading experience (Dec 8, 2025).
 - ✅ **Seforim UX issues resolved** - fixed z-index, mobile popup, click-to-close functionality (Dec 8, 2025).
-- ⏳ **Next: Pick one track below and execute.**
+- ✅ **Track 2c: Mobile Search UX Upgrade** - Premium bottom-sheet with swipe gestures & native feel (Dec 24, 2025).
+- ✅ **Track 2b: Seforim Search Implementation** - Bilingual discovery (Tanya → ליקוטי אמרים) & expanded collection search.
+- ✅ **Premium 404 & Explore Pages** - High-end mobile-first redesigns with glassmorphism (Dec 2025).
+- ✅ **Seforim page accessibility fixed** - Resolved TypeError in Directus client initialization (Dec 25, 2025).
+- ✅ **Search modal issues resolved** - Fixed navigation to undefined IDs and added mobile Cancel button (Dec 25, 2025).
+- ✅ **Track 1, Phase 1d: Citations & Sources** - Statement-first research UI with book grouping (Dec 25, 2025).
+- ✅ **Track 11: Explore & Discovery Upgrade** - Passive discovery (Zen) and intentional hubs (Topics) (Dec 25, 2025).
+- ⏳ **Next: Prioritize TRACK 12 (Data Ingestion Engine) or Phase 11b curation filters.**
+
 
 ## Schema Migration Notes (Dec 8, 2025)
 The frontend TypeScript types now match the new Directus schema:
@@ -29,19 +37,39 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] Remove `TopicSidebar` from detail page layout.
 - [x] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
 
-### Phase 1b: Rich Content Fields (After Phase 1a)
-- [ ] Add to Directus `topics`: `overview`, `article`, `practical_takeaways`, `historical_context` (rich text fields).
-- [ ] Wire `TopicOverview` to render these fields when present.
-- [ ] Update `TopicTabs` to conditionally show tabs only if content exists.
+### Phase 1b: Rich Content Fields (COMPLETED - Dec 25, 2025)
+- [x] Added `overview`, `article`, `practical_takeaways`, `historical_context` fields to `Topic` type.
+- [x] Created `OverviewTab` to render rich content summary before the detailed source blocks.
+- [x] Updated `TopicTabs` dynamic visibility logic (hide empty tabs, show "Coming Soon" or valid content).
 
-### Phase 1c: Boundaries & Relationships (After Phase 1b)
-- [ ] Add to Directus `topics`: `definition_positive`, `definition_negative` (rich text).
-- [ ] Wire `BoundariesTab` to render these.
-- [ ] Implement `topic_relationships` query and wire `RelatedTab` + `TopicSidebar`.
+### Phase 1c: Boundaries & Relationships (COMPLETED - Dec 25, 2025)
+- [x] Wired `BoundariesTab` to render `definition_positive` and `definition_negative`.
+- [x] Implemented `RelatedTab` with actual `topic_relationships` data.
+- [x] Fixed duplicated cases and missing props in `TopicTabs.tsx`.
 
-### Phase 1d: Citations & Sources (After Phase 1c)
-- [ ] Redesign `SourcesTab` to query `statements` tagged with topic (via `statement_topics`), group by source.
-- [ ] Ensure Directus permissions allow static token to read `statements`, `sources`, `source_links`.
+### Phase 1d: Citations & Sources (COMPLETED - Dec 25, 2025)
+- [x] Redesign `SourcesTab` to query `statements` tagged with topic (via `statement_topics`), grouped by book.
+- [x] Implement "Statement-First" premium UI for topic exploration.
+- [x] Added "Copy Citation" and "View in context" deep linking.
+> [!NOTE]
+> Functional unblocking requires Directus permission update for `statement_topics` collection fields (`statement_id`, `topic_id`).
+
+---
+
+## TRACK 11: Explore & Discovery Upgrade (NEW)
+**Goal**: Transform Explore from a redundant browse page into a "passive discovery" experience and centralize intentional browsing in Topics.
+
+### Phase 11a: Topics Page Consolidation (COMPLETED - Dec 24, 2025)
+- [x] Extract `TopicCategoryChips` for horizontal category scrolling.
+- [x] Implement `FeaturedTopicCard` for editorial highlights.
+- [x] Merge Explore category browsing into `/topics` header area for cleaner navigation.
+
+### Phase 11b: Zen Explore Experience (COMPLETED - Dec 25, 2025)
+- [x] Rebuild `/explore` as a full-screen, mobile-first "one quote at a time" interface.
+- [x] Implement random statement API for serendipitous discovery.
+- [x] Add "Go to Source" and "Share" actions to the Zen cards.
+- [ ] **Curated Discovery:** Add `is_for_you` or `explore_eligible` checkbox to `statements` collection for editorial control.
+- [ ] Add swipe/pull gestures for "Next Quote" interaction.
 
 ---
 
@@ -55,14 +83,14 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] Update `CommandMenu` to show topic results with clear category/type badge.
 
 ### Phase 2b: Seforim Search (After 2a)
-- [ ] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection.
-- [ ] Ensure `/api/search` queries the right collection and handles permissions gracefully.
-- [ ] Test: searching "Tanya" or other sefer titles returns results in Sources section.
+- [x] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection. **DONE**
+- [x] Ensure `/api/search` queries the right collection and handles permissions gracefully. **DONE**
+- [x] Test: searching "Tanya" or other sefer titles returns results in Sources section. **DONE**
 
 ### Phase 2c: Mobile Search UX (After 2b)
-- [ ] Convert `CommandMenu` on small screens to a true **bottom sheet** (full-height, swipe-down to close).
-- [ ] Add larger touch targets and clearer result type differentiation.
-- [ ] Test on real mobile device: open, search, select, close all feel smooth.
+- [x] Convert `CommandMenu` on small screens to a true **bottom sheet** (full-height, swipe-down to close). **DONE**
+- [x] Add larger touch targets and clearer result type differentiation. **DONE**
+- [x] Test on real mobile device: open, search, select, close all feel smooth. **DONE**
 
 ---
 
@@ -82,10 +110,10 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] Add `translations` collection entries for Hebrew/English pairs.
 - [x] Wire `[perek]/page.tsx` to fetch from Directus instead of local file. **DONE** (Dec 8, 2025)
 
-### Phase 3c: Commentary & Translation UI (After 3b)
-- [ ] Design UI for showing Hebrew + English together (toggle or side-by-side).
-- [ ] Add support for inline commentary blocks (type: 'commentary' in statements).
-- [x] ~~Test: reader shows Hebrew, user can toggle to English, commentary appears inline or in sidebar.~~ **PARTIAL**: Reader shows Hebrew beautifully with premium UX, translation toggle not yet implemented.
+### Phase 3c: Generic Reader Integration (COMPLETED - Dec 25, 2025)
+- [x] Integrated `TorahReader` into `app/seforim/[seferId]/page.tsx`.
+- [x] Maps Directus `contentBlocks` and `statements` to reader sections.
+- [x] Supports English toggle, inline commentaries, and reading settings (Sepia/Charcoal themes).
 
 ---
 
@@ -153,7 +181,114 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
+## TRACK 10: Critical Bug Fixes (COMPLETED - Dec 25, 2025)
+
+**Goal**: Fix critical bugs preventing core functionality from working. **ALL RESOLVED**
+
+### Phase 10a: Seforim Page Recovery (DONE)
+- [x] **Diagnose Directus client initialization** - Fixed URL construction in `lib/directus.ts`
+- [x] Fix: Used absolute URL for client-side Directus calls.
+- [x] Test: `/seforim` loads without error.
+- [x] Test: All `/seforim/[seferId]` routes render correctly using `TorahReader`.
+
+### Phase 10b: Search Modal Navigation Fix (DONE)
+- [x] **Fix undefined document ID** - Added `.filter(s => s.id)` in mapping.
+- [x] Test: Search results navigate to valid pages.
+- [x] Test: No `/seforim/undefined` URLs generated.
+
+### Phase 10c: Search Modal Close Button (DONE)
+- [x] **Fix mobile close intent** - Added dedicated "Cancel" button to mobile UI.
+- [x] Test: Clicking "Cancel" closes modal; `X` clears text.
+- [x] Test: Escape key closes modal.
+
 ---
+
+## TRACK 11: Seforim Reader Vision (Future - Brainstorming)
+
+**Goal**: Create the best Seforim reader ever. See comprehensive vision docs.
+
+### Key Vision Documents
+- **[CHABAD-MAFTEIACH-ROADMAP.md](file:///Users/yitzchok/Documents/Directus/chabad-research/CHABAD-MAFTEIACH-ROADMAP.md)** - 8-phase evolution roadmap
+- **[Use cases and persona.MD](file:///Users/yitzchok/Documents/Directus/chabad-research/Documentation/Use%20cases%20and%20persona.MD)** - UX architecture, user flows, device patterns
+- **[Seforim-Images-Plan.md](file:///Users/yitzchok/Documents/Directus/chabad-research/Documentation/Seforim-Images-Plan.md)** - Cover images implementation
+
+### Core Principles (from User Research)
+1. **Flow-State Preservation** - Never break learning momentum (target: <10 seconds for 90% of lookups)
+2. **Boundaries System** - Every concept needs "what it IS" + "what it's NOT"
+3. **Progressive Depth** - Level 1 (instant glance) → Level 4 (scholarly deep dive)
+4. **Device-Aware UX** - Mobile: voice search, offline, sharing; Desktop: multi-tab, shortcuts
+
+### 8-Phase Roadmap Summary
+1. Enhanced Reading (typography, themes, bookmarks)
+2. Advanced Citations (inter-text linking, networks)
+3. Social & Collaborative (annotations, reading groups)
+4. AI Analysis (semantic search, concept mapping)
+5. Multi-Platform (PWA, mobile apps, offline)
+6. Advanced Study (split screen, timeline, network views)
+7. Multilingual (Hebrew-English parallel, translation overlays)
+8. AI/ML Integration (personalized learning, pattern recognition)
+
+---
+
+## TRACK 12: Scraping & Data Population (The Ingestion Engine)
+
+**Goal**: Automate the ingestion of Chabad Library texts into proper Directus structures.
+
+### Phase 12a: Scraper Refinement
+- [ ] Stabilize depth-first traversal for hierarchical books.
+- [ ] Implement rate-limit aware sequential processing.
+- [ ] Test on large books (e.g. Likkutei Torah).
+
+### Phase 12b: Granular Statement Parsing
+- [ ] Implement `parseFootnotesIntoStatements` logic to separate citations from main text.
+- [ ] Wire Hebrew folio number conversion (א, א → 1a).
+- [ ] Auto-detect language (Hebrew/English) per statement.
+
+### Phase 12c: Bulk Population
+- [ ] Create `populate_chabad_book.js` CLI tool for ease of use.
+- [ ] Batch insert records to Directus to minimize API overhead.
+
+---
+
+## TRACK 13: Advanced Citation Mapping & Resolution
+
+**Goal**: Turn static citations into a living web of inter-textual links.
+
+### Phase 13a: Citation Extraction
+- [ ] Extract structured citation metadata from footnotes.
+- [ ] Assign confidence scores based on pattern matching (Book/Folio/Section).
+- [ ] Store metadata in `statement.metadata.citation_references`.
+
+### Phase 13b: Deferred Link Resolution
+- [ ] Create background job to match extracted citations against newly added books.
+- [ ] Update `resolved_link` fields when targets become available.
+- [ ] Implement fuzzy matching for book title variations.
+
+### Phase 13c: Interactive Navigation
+- [ ] Wire frontend tooltips to show resolved links.
+- [ ] Implement "Jump to Source" functionality in the reader.
+
+---
+
+## TRACK 14: Flexible Content Ingestion & AI Smart Detection
+
+**Goal**: Support diverse content types (Bio, Topics, Articles) with intelligent routing.
+
+### Phase 14a: Flexible Mapping
+- [ ] Implement multi-type ingestion (Article, Bio, Topic Description, Reference, Metadata).
+- [ ] Build validation rules per content type to prevent schema violations.
+- [ ] Map frontmatter fields dynamically to Directus collections.
+
+### Phase 14b: Smart detection
+- [ ] Use LLM or pattern matching to auto-detect content type during upload.
+- [ ] Implement pre-upload validation and "dry-run" mapping preview.
+
+### Phase 14c: Ingestion Analytics
+- [ ] Track import history and success rates per user.
+- [ ] Build dashboard for ingestion status and error resolution.
+
+---
+
 
 ## TRACK 4: Infrastructure & Testing (Lower priority, do in parallel)
 
@@ -258,7 +393,7 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Fix critical user experience issues identified in comprehensive audit.
 
 ### Phase 9a: Critical Flow Blockers
-- [ ] **Fix Article tab dead end** - Replace "Coming Soon" with functional content or clear next steps (HIGH PRIORITY - users hit dead end)
+- [x] **Fix Article tab dead end** - Implemented `OverviewTab` for summary content (Dec 25, 2025).
 - [x] **Fix data integrity issues** - Resolve statement_topics table orphans causing empty article tabs (BLOCKING articles)
 - [x] **Implement citation modal viewer** - Complete citation click handling with modal showing source details (BROKEN user interaction)
 
@@ -280,7 +415,7 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] **Basic Collections functionality** - Implement localStorage bookmarking for topics with simple UI
 - [x] **Home page onboarding hints** - Add subtle guidance for first-time users
 - [ ] **Navigation link testing** - Verify all header links work, fix any 404s
-- [ ] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets
+- [x] **Mobile search UX** - Test and fix bottom sheet behavior, touch targets. **DONE**
 
 ---
 

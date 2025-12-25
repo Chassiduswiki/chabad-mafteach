@@ -56,7 +56,7 @@ const validateMode = (mode: string | null): string | null => {
 };
 
 const validateCategory = (category: string | null): string | null => {
-    const validCategories = ['avodah', 'emunah', 'theology', 'kabbalah', 'halacha', 'people', 'places', 'events'];
+    const validCategories = ['person', 'concept', 'place', 'event', 'mitzvah', 'sefirah'];
     return category && validCategories.includes(category) ? category : null;
 };
 
