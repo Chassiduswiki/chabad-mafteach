@@ -5,6 +5,8 @@ import { TopicHeader } from '@/components/topics/TopicHeader';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { ActionButtons } from '@/components/shared/ActionButtons';
 import { TopicTracker } from '@/components/shared/TopicTracker';
+import { PersonalCollections } from '@/components/collections/PersonalCollections';
+import { TopicRecommendations } from '@/components/topics/TopicRecommendations';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
     return (
         <div className="min-h-screen bg-background pb-20">
             {/* Track last visited topic for Continue Learning */}
-            <TopicTracker slug={topic.slug} name={topic.name || topic.canonical_title} />
+            <TopicTracker slug={topic.slug} name={topic.name || topic.canonical_title} topicId={topic.id} />
 
             <TopicHeader topic={topic} />
 
@@ -43,7 +45,17 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                 </div>
 
                 <div className="w-full">
-                    <TopicTabs topic={topic} relatedTopics={relatedTopics} citations={citations} />
+                    <TopicTabs topic={topic} relatedTopics={relatedTopics} sources={sources} citations={citations} />
+
+                    {/* Personal Collections */}
+                    <div className="mt-8 pt-8 border-t border-border">
+                        <PersonalCollections currentTopicId={topic.id} />
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="mt-8 pt-8 border-t border-border">
+                        <TopicRecommendations topicId={topic.id} />
+                    </div>
                 </div>
             </main>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Hash, Brain, Hand, Sparkles, BookText } from 'lucide-react';
+import { Hash, Brain, Hand, Sparkles, BookText, FileText, Layers, TrendingUp, SortAsc } from 'lucide-react';
 import type { Topic } from '@/lib/types';
 import { ViewToggle } from '@/components/layout/ViewToggle';
 import Pagination from './Pagination';
@@ -12,6 +12,15 @@ interface TopicsListProps {
     currentPage: number;
     totalPages: number;
     totalCount: number;
+}
+
+interface TopicContentCount {
+    id: number;
+    statementCount: number;
+    documentCount: number;
+    status: 'comprehensive' | 'partial' | 'minimal';
+    statusLabel?: string;
+    badgeColor?: string;
 }
 
 const categoryIcons = {
@@ -33,6 +42,46 @@ const categoryColors = {
 export function TopicsList({ topics, currentPage, totalPages, totalCount }: TopicsListProps) {
     const [view, setView] = useState<'grid' | 'list'>('grid');
     const [isMobile, setIsMobile] = useState(false);
+    const [contentCounts, setContentCounts] = useState<Record<number, TopicContentCount>>({});
+    const [hoveredTopic, setHoveredTopic] = useState<number | null>(null);
+    const [topicPreviews, setTopicPreviews] = useState<Record<number, any>>({});
+    const [sortBy, setSortBy] = useState<'name' | 'category' | 'popularity'>('name');
+    const [topicAnalytics, setTopicAnalytics] = useState<Record<number, any>>({});
+
+    // Fetch topic analytics data for popularity sorting
+    const fetchTopicAnalytics = async () => {
+        try {
+            const response = await fetch('/api/analytics');
+            const data = await response.json();
+            const analyticsMap: Record<number, any> = {};
+            data.topics.forEach((topic: any) => {
+                analyticsMap[topic.id] = topic;
+            });
+            setTopicAnalytics(analyticsMap);
+        } catch (error) {
+            console.error('Failed to fetch topic analytics:', error);
+        }
+    };
+
+    // Fetch topic preview data
+    const fetchTopicPreview = async (topicId: number) => {
+        if (topicPreviews[topicId]) return; // Already fetched
+
+        try {
+            const response = await fetch(`/api/topic-preview/${topicId}`);
+            const data = await response.json();
+            setTopicPreviews(prev => ({ ...prev, [topicId]: data }));
+        } catch (error) {
+            console.error('Failed to fetch topic preview:', error);
+        }
+    };
+
+    // Fetch analytics data when sortBy changes to popularity
+    useEffect(() => {
+        if (sortBy === 'popularity') {
+            fetchTopicAnalytics();
+        }
+    }, [sortBy]);
 
     // Detect mobile screen size
     useEffect(() => {
@@ -69,16 +118,48 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         return acc;
     }, {});
 
+    // Sort topics within each category
+    const sortedGrouped = Object.entries(grouped).reduce((acc, [category, items]) => {
+        acc[category] = [...items].sort((a, b) => {
+            switch (sortBy) {
+                case 'name':
+                    return (a.canonical_title || a.name || '').localeCompare(b.canonical_title || b.name || '');
+                case 'category':
+                    return (a.topic_type || '').localeCompare(b.topic_type || '');
+                case 'popularity':
+                    const aViews = topicAnalytics[a.id]?.views || 0;
+                    const bViews = topicAnalytics[b.id]?.views || 0;
+                    return bViews - aViews; // Descending: most viewed first
+                default:
+                    return 0;
+            }
+        });
+        return acc;
+    }, {} as Record<string, Topic[]>);
+
     return (
         <div className="space-y-8">
             {/* Controls */}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <SortAsc className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Sort by:</span>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'name' | 'category' | 'popularity')}
+                        className="text-sm bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                        <option value="name">Name</option>
+                        <option value="category">Category</option>
+                        <option value="popularity">Popularity</option>
+                    </select>
+                </div>
                 <ViewToggle view={view} onViewChange={handleViewChange} />
             </div>
 
             {/* Content */}
             <div className="space-y-16">
-                {Object.entries(grouped).map(([category, items]) => {
+                {Object.entries(sortedGrouped).map(([category, items]) => {
                     const Icon = categoryIcons[category as keyof typeof categoryIcons] || Hash;
                     const colorClass = categoryColors[category as keyof typeof categoryColors] || categoryColors.other;
 
@@ -98,15 +179,34 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                                     : "space-y-3"
                             }>
                                 {items.map((topic) => (
-                                    <Link
+                                    <div
                                         key={topic.id}
-                                        href={`/topics/${topic.slug}`}
-                                        className={
-                                            view === 'grid'
-                                                ? `group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`
-                                                : `group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/50`
-                                        }
+                                        className="relative"
+                                        onMouseEnter={() => {
+                                            if (!isMobile) {
+                                                setHoveredTopic(topic.id);
+                                                fetchTopicPreview(topic.id);
+                                            }
+                                        }}
+                                        onMouseLeave={() => !isMobile && setHoveredTopic(null)}
+                                        onClick={() => {
+                                            if (isMobile) {
+                                                const newHovered = hoveredTopic === topic.id ? null : topic.id;
+                                                setHoveredTopic(newHovered);
+                                                if (newHovered) {
+                                                    fetchTopicPreview(topic.id);
+                                                }
+                                            }
+                                        }}
                                     >
+                                        <Link
+                                            href={`/topics/${topic.slug}`}
+                                            className={
+                                                view === 'grid'
+                                                    ? `group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`
+                                                    : `group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/50`
+                                            }
+                                        >
                                         {view === 'grid' ? (
                                             <>
                                                 {/* Subtle gold gradient overlay on hover */}
@@ -160,6 +260,51 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                                             </>
                                         )}
                                     </Link>
+                                    {/* Source Preview */}
+                                    {hoveredTopic === topic.id && (
+                                        <div className="absolute top-full left-0 right-0 z-50 mt-2 p-4 bg-popover border border-border rounded-lg shadow-lg max-w-sm">
+                                            <div className="space-y-3">
+                                                <h4 className="text-sm font-semibold text-popover-foreground">Source Preview</h4>
+                                                <div className="space-y-2">
+                                                    {(() => {
+                                                        const preview = topicPreviews[topic.id];
+                                                        if (!preview) {
+                                                            return (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    <p>Loading source preview...</p>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (preview.excerpts && preview.excerpts.length > 0) {
+                                                            return preview.excerpts.map((excerpt: any, index: number) => (
+                                                                <div key={excerpt.id} className="text-xs text-muted-foreground">
+                                                                    <p className="line-clamp-3 italic">
+                                                                        "{excerpt.text}"
+                                                                    </p>
+                                                                    {index < preview.excerpts.length - 1 && (
+                                                                        <hr className="my-2 border-border/50" />
+                                                                    )}
+                                                                </div>
+                                                            ));
+                                                        }
+
+                                                        return (
+                                                            <div className="text-xs text-muted-foreground">
+                                                                <p>No source excerpts available</p>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="pt-2 border-t border-border">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Click to view full topic details
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    </div>
                                 ))}
                             </div>
                         </div>

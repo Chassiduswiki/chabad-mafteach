@@ -19,12 +19,25 @@ type SearchResult = {
     url: string;
 };
 
-// Gradient mapping for result types - matches premium Explore page
-const typeConfig: Record<string, { gradient: string; icon: any }> = {
-    topic: { gradient: 'from-purple-500 to-indigo-600', icon: Brain },
-    document: { gradient: 'from-blue-500 to-cyan-600', icon: BookOpen },
-    location: { gradient: 'from-amber-500 to-orange-600', icon: Hash },
-    statement: { gradient: 'from-emerald-500 to-teal-600', icon: Sparkles },
+// Category color mapping for badges - matches TopicsList colors
+const categoryColors: Record<string, string> = {
+    concepts: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
+    practices: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+    attributes: 'bg-pink-100 text-pink-700 dark:bg-pink-900/20 dark:text-pink-300',
+    terminology: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    other: 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300',
+    concept: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
+    practice: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+    attribute: 'bg-pink-100 text-pink-700 dark:bg-pink-900/20 dark:text-pink-300',
+    term: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+};
+
+// Type configuration for search result icons and colors
+const typeConfig: Record<string, { icon: typeof Brain; gradient: string }> = {
+    topic: { icon: Brain, gradient: 'from-purple-500 to-indigo-600' },
+    document: { icon: BookOpen, gradient: 'from-amber-500 to-orange-600' },
+    location: { icon: Hash, gradient: 'from-emerald-500 to-teal-600' },
+    statement: { icon: BookOpen, gradient: 'from-blue-500 to-cyan-600' },
 };
 
 export function CommandMenu() {
@@ -65,7 +78,7 @@ export function CommandMenu() {
                     url: `/topics/${t.slug}`
                 }));
 
-                const documentsResults: SearchResult[] = (data.documents || []).filter((s: any) => s.id).map((s: any) => ({
+                const documentsResults: SearchResult[] = ((data.documents || []).concat(data.seforim || [])).filter((s: any) => s.id).map((s: any) => ({
                     id: `document-${s.id}`,
                     title: s.title,
                     type: 'document' as const,
@@ -239,7 +252,7 @@ export function CommandMenu() {
                                                             {item.subtitle || 'Found in the archives'}
                                                         </p>
                                                         {item.category && (
-                                                            <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground uppercase tracking-wider">
+                                                            <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border ${categoryColors[item.category.toLowerCase()] || categoryColors.other} border-current/20`}>
                                                                 {item.category}
                                                             </div>
                                                         )}

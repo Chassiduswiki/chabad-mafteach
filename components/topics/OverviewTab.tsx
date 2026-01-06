@@ -1,13 +1,145 @@
 'use client';
 
-import { Topic } from '@/lib/types';
-import { BookOpen, Target, Lightbulb, Clock, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Topic, ContentBlock, Statement } from '@/lib/types';
+import { BookOpen, Target, Lightbulb, Clock, Info, FileText, Plus, X, MessageSquare } from 'lucide-react';
+import { createClient } from '@/lib/directus';
+import { readItems, createItem } from '@directus/sdk';
+import { ArticleReader } from './ArticleReader';
+
+// Lazy client initialization to avoid client-side URL errors
+let _directus: ReturnType<typeof createClient> | null = null;
+const getDirectus = () => {
+    if (!_directus) {
+        try {
+            _directus = createClient();
+        } catch (e) {
+            console.warn('Failed to create Directus client:', e);
+            return null;
+        }
+    }
+    return _directus;
+};
+
+// Input validation utilities
+const sanitizeText = (text: string): string => {
+    return text
+        .trim()
+        .replace(/[<>]/g, '') // Basic XSS prevention
+        .slice(0, 1000); // Limit length
+};
+
+const validateStatementText = (text: string): boolean => {
+    const sanitized = sanitizeText(text);
+    return sanitized.length >= 3 && sanitized.length <= 1000;
+};
+
+interface StatementWithTopics {
+    id: number;
+    order_key: string;
+    text: string;
+    appended_text?: string; // Citation HTML from API
+    topics: Topic[];
+    sources: { id: number; title: string; external_url?: string | null; relationship_type?: string; page_number?: string; verse_reference?: string }[];
+    document_title?: string;
+}
 
 interface OverviewTabProps {
     topic: Topic;
 }
 
 export default function OverviewTab({ topic }: OverviewTabProps) {
+    const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+    const [statements, setStatements] = useState<Record<number, Statement[]>>({});
+    const [newStatementText, setNewStatementText] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
+    const [loadingStatements, setLoadingStatements] = useState<Set<number>>(new Set());
+    const [selectedContentBlock, setSelectedContentBlock] = useState<ContentBlock | null>(null);
+
+    useEffect(() => {
+        loadContentBlocks();
+    }, [topic.id]);
+
+    const loadContentBlocks = async () => {
+        try {
+            setIsLoading(true);
+            // CORRECT APPROACH: Get documents (articles) linked to this topic
+            const directus = getDirectus();
+            if (!directus) throw new Error('Directus client not available');
+
+            const documents = await directus.request(readItems('documents', {
+                filter: {
+                    topic: { _eq: topic.id },
+                    doc_type: { _eq: 'entry' },
+                    status: { _eq: 'published' }
+                },
+                fields: ['id', 'title'],
+                limit: -1
+            })) as any;
+
+            if (documents.length === 0) {
+                setContentBlocks([]);
+                return;
+            }
+
+            const documentIds = documents.map((doc: any) => doc.id);
+
+            // Get content blocks for these documents
+            const contentBlocksResult = await directus.request(readItems('content_blocks', {
+                filter: { document_id: { _in: documentIds } },
+                fields: ['id', 'order_key', 'content', 'block_type', 'page_number', 'chapter_number', 'halacha_number', 'daf_number', 'section_number', 'citation_refs', 'metadata', 'document_id'],
+                sort: ['order_key']
+            })) as any;
+
+            if (contentBlocksResult.length === 0) {
+                setContentBlocks([]);
+                return;
+            }
+
+            // Get all block IDs to fetch statements
+            const blockIds = contentBlocksResult.map((block: any) => block.id);
+
+            // Get statements for these content blocks - workaround for Directus SDK _in filter issue
+            let statementsData: any[] = [];
+            for (const blockId of blockIds) {
+                try {
+                    const blockStatements = await directus.request(readItems('statements', {
+                        filter: { block_id: { _eq: blockId } },
+                        fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
+                        limit: -1
+                    })) as any;
+                    if (blockStatements && blockStatements.length > 0) {
+                        statementsData.push(...blockStatements);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching statements for block ${blockId}:`, error);
+                }
+            }
+
+            // Group statements by block_id
+            const statementsByBlock = statementsData.reduce((acc: any, stmt: any) => {
+                if (!acc[stmt.block_id]) acc[stmt.block_id] = [];
+                acc[stmt.block_id].push(stmt);
+                return acc;
+            }, {});
+
+            // Attach statements to content blocks
+            const contentBlocksWithStatements = contentBlocksResult.map((block: any) => ({
+                ...block,
+                statements: statementsByBlock[block.id] || []
+            }));
+
+            setContentBlocks(contentBlocksWithStatements);
+        } catch (error) {
+            console.error('Error loading content blocks:', error);
+            setContentBlocks([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fallback to original overview display if no article content
     const hasRichContent = topic.overview || topic.article || topic.practical_takeaways || topic.historical_context;
 
     if (!hasRichContent && !topic.description) {

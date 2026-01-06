@@ -259,8 +259,8 @@ export async function getTopicBySlug(slug: string) {
                             relationships: links.map(link => ({
                                 statement_id: link.statement_id,
                                 relationship_type: link.relationship_type,
-                                page_number: link.page_number,
-                                verse_reference: link.verse_reference
+                                page_number: link.page_number
+                                // verse_reference: link.verse_reference // Temporarily disabled due to permissions
                             }))
                         };
                     });

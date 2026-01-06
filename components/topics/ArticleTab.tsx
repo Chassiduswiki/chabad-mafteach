@@ -110,12 +110,22 @@ export default function ArticleTab({ topic }: ArticleTabProps) {
 
             const statementIds = statementResults.map((st: any) => st.statement_id);
 
-            // Fetch the actual statements
-            const statementsData = await directus.request(readItems('statements', {
-                filter: { id: { _in: statementIds } },
-                fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
-                limit: -1
-            })) as any;
+            // Fetch the actual statements - workaround for Directus SDK _in filter issue
+            let statementsData: any[] = [];
+            for (const statementId of statementIds) {
+                try {
+                    const statement = await directus.request(readItems('statements', {
+                        filter: { id: { _eq: statementId } },
+                        fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
+                        limit: 1
+                    })) as any;
+                    if (statement && statement.length > 0) {
+                        statementsData.push(statement[0]);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching statement ${statementId}:`, error);
+                }
+            }
 
             if (statementsData.length === 0) {
                 setContentBlocks([]);

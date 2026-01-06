@@ -27,12 +27,17 @@ const TopicCategoryChips = Dynamic(() => import('@/components/topics/TopicCatego
     )
 });
 
-const FeaturedTopicCard = Dynamic(() => import('@/components/topics/FeaturedTopicCard').then(mod => ({ default: mod.FeaturedTopicCard })), {
+const FeaturedCollections = Dynamic(() => import('@/components/topics/FeaturedCollections').then(mod => ({ default: mod.FeaturedCollections })), {
     loading: () => (
-        <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-primary/10 p-6 animate-pulse">
-            <div className="h-4 w-24 bg-muted rounded mb-4" />
-            <div className="h-6 w-48 bg-muted rounded mb-2" />
-            <div className="h-4 w-full bg-muted rounded" />
+        <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />
+                ))}
+            </div>
         </div>
     )
 });
@@ -80,10 +85,11 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
 export default async function TopicsPage({
     searchParams
 }: {
-    searchParams: { page?: string; category?: string }
+    searchParams: Promise<{ page?: string; category?: string }>
 }) {
-    const page = Number(searchParams.page) || 1;
-    const category = searchParams.category;
+    const resolvedSearchParams = await searchParams;
+    const page = Number(resolvedSearchParams.page) || 1;
+    const category = resolvedSearchParams.category;
     const limit = 50;
     const offset = (page - 1) * limit;
 
@@ -133,20 +139,23 @@ export default async function TopicsPage({
                     </div>
                 )}
 
+                {/* Featured Collections (only on first page, no category filter) */}
+                {page === 1 && !category && (
+                    <FeaturedCollections />
+                )}
+
                 {/* Category Chips */}
                 <div className="mb-8">
                     <TopicCategoryChips />
                 </div>
 
                 {/* Topics List */}
-                <Suspense fallback={<TopicsListSkeleton />}>
-                    <TopicsList
-                        topics={topics}
-                        currentPage={page}
-                        totalPages={totalPages}
-                        totalCount={totalCount}
-                    />
-                </Suspense>
+                <TopicsList
+                    topics={topics}
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                />
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 // Optional: configure or set up a testing framework before each test.
 // If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
 
-// Temporarily disabled jest-dom for deployment
-// import '@testing-library/jest-dom'
+// Enable jest-dom matchers for testing-library
+import '@testing-library/jest-dom';

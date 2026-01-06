@@ -203,6 +203,13 @@ export interface Topic {
     view_count?: number;
     is_published?: boolean;
     meta_description?: string;
+
+    // CMS Content Status fields (for topic-content-counts API)
+    content_status?: 'comprehensive' | 'partial' | 'minimal';
+    status_label?: string;
+    badge_color?: string;
+    sources_count?: number;
+    documents_count?: number;
 }
 
 export interface Citation {
