@@ -447,12 +447,12 @@ The frontend TypeScript types now match the new Directus schema:
 
 **Goal**: Transform topics page from static wiki into dynamic knowledge discovery platform with intelligent content access.
 
-### Phase 15a: Content Status & Data Integrity (IMMEDIATE - 1-2 weeks)
-- [ ] **Fix Data Integrity Issues** - Resolve orphaned statement_topics records causing "Article Coming Soon" messages
-- [ ] **Content Status Badges** - Add visual indicators showing content richness (comprehensive/partial/stub)
-- [ ] **Source Count Display** - Show number of available sources per topic in grid/list view
-- [ ] **Enhanced Empty Category Filtering** - Extend existing TopicCategoryChips to hide categories with no valid content
-- [ ] **Content Quality Indicators** - Add visual cues for topics with rich content vs. minimal entries
+### Phase 15a: Content Status & Data Integrity (COMPLETED - Dec 29, 2025)
+- [x] **Fix Data Integrity Issues** - Verified no orphaned statement_topics; implemented content-aware filtering for topics list.
+- [x] **Content Status Badges** - Added dynamic indicators (comprehensive/partial/minimal) based on real-time source counts.
+- [x] **Source Count Display** - Show number of available sources per topic in grid/list view.
+- [x] **Enhanced Empty Category Filtering** - Updated api/categories to hide categories and topics with no valid content.
+- [x] **Content Quality Indicators** - Visual cues implemented in TopicsList card designs.
 
 ### Phase 15b: Quick View & Progressive Disclosure (SHORT-TERM - 1-2 months)
 - [ ] **Quick View Mode** - Implement expandable source previews on hover/tap for instant information access
@@ -462,11 +462,11 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Content Preview API** - Create endpoint for fetching topic summaries and key sources
 
 ### Phase 15c: Smart Filtering & Discovery (SHORT-TERM - 1-2 months) ✅ COMPLETED - Dec 29, 2025
-- [x] **Trending Topics** - Add usage-based sorting for most viewed/popular topics
-- [x] **Usage Analytics** - Implement tracking for topic views and engagement patterns
-- [ ] **Seasonal Context** - Integrate Jewish calendar for contextual topic filtering
-- [ ] **Smart Context Filters** - Adaptive filters based on current date, events, or user patterns
-- [ ] **Enhanced Search Integration** - Improve contextual search with better topic recommendations
+- [x] **Trending Topics** - Add usage-based sorting for most viewed/popular topics.
+- [x] **Usage Analytics** - Fixed path mismatch in TopicTracker to correctly record views in Directus.
+- [ ] **Seasonal Context** - Integrate Jewish calendar for contextual topic filtering.
+- [ ] **Smart Context Filters** - Adaptive filters based on current date, events, or user patterns.
+- [x] **Enhanced Search Integration** - Improve contextual search with better topic recommendations.
 
 ### Phase 15d: Topic Collections & Curation (MEDIUM-TERM - 2-3 months) ✅ COMPLETED - Dec 29, 2025
 - [x] **Topic Collections Entity** - Create database structure for curated topic bundles
