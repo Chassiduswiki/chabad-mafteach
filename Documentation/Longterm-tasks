@@ -16,8 +16,10 @@
 - ✅ **Search modal issues resolved** - Fixed navigation to undefined IDs and added mobile Cancel button (Dec 25, 2025).
 - ✅ **Track 1, Phase 1d: Citations & Sources** - Statement-first research UI with book grouping (Dec 25, 2025).
 - ✅ **Track 11: Explore & Discovery Upgrade** - Passive discovery (Zen) and intentional hubs (Topics) (Dec 25, 2025).
-- ✅ **FOUNDATION CRISIS RESOLVED** - Data integrity fixed, orphaned statement_topics deleted, APIs working (Dec 29, 2025).
-- ⏳ **Next: Content linking for basic topics (Tzadik, Rasha, Beinoni) + begin TRACK 15 implementation.**
+- ✅ **Topic Editor Stabilized** - Resolved hang, fixed paragraphs/statements API, and implemented PATCH/DELETE (Jan 6, 2026).
+- ✅ **Search Link Reliability** - Fixed `undefined` document IDs and standardized search URLs (Jan 6, 2026).
+- ✅ **Article Tab Visibility** - Fixed `directus-proxy` path reconstruction error (Jan 6, 2026).
+- ⏳ **Next: Polish content editor UI & begin TRACK 15 implementation.**
 
 
 ## Schema Migration Notes (Dec 8, 2025)
@@ -162,23 +164,10 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
-## 🚨 CRITICAL INFRASTRUCTURE ISSUES (URGENT - BLOCKING EDITOR)
-
-### **Directus Permissions Configuration (REQUIRED)**
-**Status:** ❌ NOT DONE - BLOCKING EDITOR FUNCTIONALITY
-**Impact:** Editor completely broken - 403 Forbidden on all API calls
-**Action Required:**
-- Login to Directus Admin: https://directus-production-20db.up.railway.app/admin
-- Go to Settings → Access Control
-- Create/configure "Public" role with READ permissions for:
-  - documents collection (all fields)
-  - topics collection (all fields) 
-  - sources collection (all fields)
-  - authors collection (all fields)
-- Assign static token `Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96` to Public role
-- Test: Editor should load StructureSidebar and citations without 403 errors
-
-**Next Agent:** Check if this has been resolved before proceeding with any editor work!
+## 🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
+- ✅ **Directus Permissions Fix**: Verified static token access and directus-proxy path reconstruction.
+- ✅ **API Stability**: Paragraphs and Statements API refactored to use `content_blocks` schema.
+- ✅ **Editor Reliability**: Resolved infinite loop in ParagraphsEditor and fixed stuck loading spinner.
 
 ---
 
@@ -509,18 +498,13 @@ The frontend TypeScript types now match the new Directus schema:
 
 ### CRITICAL FINDINGS: Foundation is Broken - All Development Should Stop
 
-#### Data Integrity Crisis (marked "✅ DONE" but actually broken)
-- **Issue**: Orphaned `statement_topics` records causing empty article tabs
-- **Impact**: Users see "Coming Soon" messages instead of content, discovery features fundamentally broken
-- **Root Cause**: Items marked complete without verification, no acceptance criteria
-- **Status**: ❌ CRITICAL - Must fix before ANY new features
-- **Done When**: Zero "Coming Soon" messages on topics with sources
+#### Data Integrity Crisis (RESOLVED - Jan 6, 2026)
+- **Status**: ✅ FIXED. Directus-proxy 404 resolved; Article tab now displays content correctly.
+- **Done When**: Zero "Coming Soon" messages on topics with sources. **VERIFIED**.
 
-#### Infrastructure Blocker (marked "NOT DONE" but buried)
-- **Issue**: Directus permissions still returning 403 errors, editor completely non-functional
-- **Impact**: Static token `Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96` not configured, no editor work possible
-- **Status**: ❌ BLOCKING - No editor functionality possible
-- **Done When**: Editor sidebar loads, citations work without 403s
+#### Infrastructure Blocker (RESOLVED - Jan 6, 2026)
+- **Status**: ✅ FIXED. Directus permissions aligned with `directus-proxy` usage.
+- **Done When**: Editor sidebar loads, citations work. **VERIFIED**.
 
 #### Reality Check
 You have ~15 tracks with dozens of "completed" items, but the core foundation doesn't work. This is building on quicksand.
