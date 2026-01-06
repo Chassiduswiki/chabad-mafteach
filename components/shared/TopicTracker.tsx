@@ -38,7 +38,7 @@ export function TopicTracker({ slug, name, topicId }: TopicTrackerProps) {
                 localStorage.setItem('chabad-mafteach:session', sessionId);
 
                 // Send tracking data to analytics API
-                fetch('/api/analytics/track-view', {
+                fetch('/api/analytics', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
