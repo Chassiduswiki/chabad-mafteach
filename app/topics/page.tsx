@@ -8,6 +8,7 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 import Dynamic from 'next/dynamic';
+import { FeaturedTopicCard } from '@/components/topics/FeaturedTopicCard';
 
 // Force dynamic rendering for real-time data
 export const dynamic = 'force-dynamic';
@@ -44,11 +45,28 @@ const FeaturedCollections = Dynamic(() => import('@/components/topics/FeaturedCo
 
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
-        const filter: any = {};
+        // 1. Get all topic IDs that have associated statements
+        const statementTopics = await directus.request(readItems('statement_topics' as any, {
+            fields: ['topic_id'],
+            limit: -1
+        })) as any[];
+
+        const topicsWithContent = Array.from(new Set(statementTopics.map(st => st.topic_id)));
+
+        if (topicsWithContent.length === 0) {
+            return { topics: [], totalCount: 0 };
+        }
+
+        // 2. Build filter for topics
+        const filter: any = {
+            id: { _in: topicsWithContent }
+        };
+
         if (category) {
             filter.topic_type = { _eq: category };
         }
 
+        // 3. Fetch filtered topics
         const rawTopics = await directus.request(readItems('topics', {
             sort: ['canonical_title'],
             fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],

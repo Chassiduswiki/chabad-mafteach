@@ -96,6 +96,7 @@ export default function TopicTabs({ topic, relatedTopics, sources, citations }: 
                         </p>
                     </div>
                 );
+            case 'boundaries':
                 return hasBoundaries ? (
                     <BoundariesTab topic={topic} />
                 ) : (
