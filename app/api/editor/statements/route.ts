@@ -4,7 +4,7 @@ import { readItems, createItem, updateItem, deleteItem } from '@directus/sdk';
 
 /**
  * GET /api/editor/statements
- * Get all statements for a paragraph
+ * Get all statements for a content block
  */
 export async function GET(request: NextRequest) {
     try {
@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
 
         const filter: any = {};
         if (paragraphId) {
-            filter.paragraph_id = { _eq: parseInt(paragraphId) };
+            filter.block_id = { _eq: parseInt(paragraphId) };
         }
 
         const statements = await directus.request(readItems('statements', {
             filter,
-            fields: ['*', { paragraph_id: ['text'], document_id: ['title'] }],
+            fields: ['*', { block_id: ['content'], document_id: ['title', 'slug' as any] }],
             sort: ['order_key'],
             limit: 200
         })) as any[];
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         if (!paragraph_id || !text) {
             return NextResponse.json(
-                { error: 'Paragraph ID and text are required' },
+                { error: 'Block ID and text are required' },
                 { status: 400 }
             );
         }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                paragraph_id: parseInt(paragraph_id),
+                block_id: parseInt(paragraph_id),
                 text,
                 order_key: finalOrderKey,
                 appended_text: appended_text || null,
@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
             const data = await response.json();
             return NextResponse.json({ statement: data.data, success: true });
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
     } catch (error) {
         console.error('Statement creation error:', error);
@@ -86,13 +87,13 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Helper function to get next order key for a paragraph
+ * Helper function to get next order key for a block
  */
 async function getNextOrderKey(paragraphId: number): Promise<number> {
     const directus = createClient();
-    
+
     const existingStatements = await directus.request(readItems('statements', {
-        filter: { paragraph_id: { _eq: paragraphId } } as any,
+        filter: { block_id: { _eq: paragraphId } } as any,
         fields: ['order_key'],
         sort: ['-order_key'],
         limit: 1

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 
 export interface Paragraph {
     id: number;
-    text: string;
+    content: string; // Changed from text
+    text?: string;    // Keep text for compatibility during migration if needed
     order_key: number;
     topic_id: number;
     document_id?: number;
@@ -51,6 +52,7 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
             }
 
             const data = await response.json();
+            // API now provides 'text' mapped from 'content' for us
             setParagraphs(data.paragraphs || []);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to load paragraphs';
@@ -68,13 +70,14 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     topic_id: topicId,
-                    text: 'New paragraph content...',
+                    text: 'New paragraph content...', // Sent as text, API maps to content
                     metadata: { auto_generated: false }
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to create paragraph: ${response.status}`);
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to create paragraph: ${response.status}`);
             }
 
             const data = await response.json();
@@ -91,7 +94,7 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
             const response = await fetch(`/api/editor/paragraphs/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text })
+                body: JSON.stringify({ text }) // API maps to content
             });
 
             if (!response.ok) {
@@ -99,7 +102,7 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
             }
 
             setParagraphs(prev => prev.map(p =>
-                p.id === id ? { ...p, text } : p
+                p.id === id ? { ...p, text, content: text } : p
             ));
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to update paragraph';
@@ -131,9 +134,6 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
     }, []);
 
     const reorderParagraphs = useCallback(async (startIndex: number, endIndex: number) => {
-        // Implementation for reordering paragraphs
-        // This would involve updating order_key values in the database
-        // For now, just update local state optimistically
         const newParagraphs = [...paragraphs];
         const [movedParagraph] = newParagraphs.splice(startIndex, 1);
         newParagraphs.splice(endIndex, 0, movedParagraph);
@@ -145,7 +145,6 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
 
         setParagraphs(newParagraphs);
 
-        // TODO: Persist to database
         try {
             // Update order keys in database
             await Promise.all(newParagraphs.map((paragraph, index) =>
@@ -157,7 +156,6 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
             ));
         } catch (error) {
             console.error('Failed to reorder paragraphs:', error);
-            // Reload paragraphs to revert optimistic update
             loadParagraphs();
         }
     }, [paragraphs, loadParagraphs]);

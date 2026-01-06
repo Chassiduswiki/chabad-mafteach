@@ -10,19 +10,19 @@ import { validateParagraph } from '@/utils/editorBusinessLogic';
 
 // Lazy load heavy components
 const StatementsEditor = dynamic(() => import('@/components/editor/StatementsEditor').then(mod => ({ default: mod.StatementsEditor })), {
-  loading: () => (
-    <div className="flex items-center justify-center p-4">
-      <div className="text-sm text-muted-foreground">Loading statements editor...</div>
-    </div>
-  ),
+    loading: () => (
+        <div className="flex items-center justify-center p-4">
+            <div className="text-sm text-muted-foreground">Loading statements editor...</div>
+        </div>
+    ),
 });
 
 const TranslationInterface = dynamic(() => import('@/components/editor/TranslationInterface').then(mod => ({ default: mod.TranslationInterface })), {
-  loading: () => (
-    <div className="flex items-center justify-center p-4">
-      <div className="text-sm text-muted-foreground">Loading translation interface...</div>
-    </div>
-  ),
+    loading: () => (
+        <div className="flex items-center justify-center p-4">
+            <div className="text-sm text-muted-foreground">Loading translation interface...</div>
+        </div>
+    ),
 });
 
 interface ParagraphsEditorProps {
@@ -133,6 +133,13 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
+                                    onClick={() => setEditingId(editingId === paragraph.id ? null : paragraph.id)}
+                                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                    title="Edit paragraph"
+                                >
+                                    <Edit className="w-4 h-4" />
+                                </button>
+                                <button
                                     onClick={() => setShowTranslationsId(showTranslationsId === paragraph.id ? null : paragraph.id)}
                                     className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
                                 >
@@ -163,14 +170,11 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                             // Set up content change listener
                                             editor.on('update', ({ editor }: any) => {
                                                 const content = editor.getHTML();
-                                                // Validate content before saving
-                                                const validation = validateParagraph(content);
-                                                if (!validation.isValid) {
-                                                    console.warn('Paragraph validation failed:', validation.errors);
-                                                    // Could show validation errors to user
-                                                }
-                                                setEditingId(null);
                                                 updateParagraph(paragraph.id, content);
+                                            });
+
+                                            editor.on('blur', () => {
+                                                setEditingId(null);
                                             });
                                         }}
                                         onBreakStatements={async () => {
@@ -179,9 +183,9 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                     />
                                 </div>
                             ) : (
-                                <div 
+                                <div
                                     className="prose prose-sm max-w-none text-foreground"
-                                    dangerouslySetInnerHTML={{ __html: paragraph.text }}
+                                    dangerouslySetInnerHTML={{ __html: paragraph.text || paragraph.content }}
                                 />
                             )}
                         </div>
@@ -192,7 +196,7 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                 <div className="p-4">
                                     <TranslationInterface
                                         paragraphId={paragraph.id}
-                                        originalText={paragraph.text}
+                                        originalText={paragraph.text || paragraph.content}
                                         onTranslationUpdate={(translation) => {
                                             // Handle translation updates if needed
                                             console.log('Translation updated:', translation);

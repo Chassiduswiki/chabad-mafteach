@@ -231,6 +231,7 @@ export async function GET(request: NextRequest) {
             title: d.title as string,
             display_name: d.title as string,
             content_preview: d.content_preview as string,
+            url: d.url,
             page_number: d.page_number as string,
             chapter_number: d.chapter_number as number,
             halacha_number: d.halacha_number as number,
@@ -241,6 +242,7 @@ export async function GET(request: NextRequest) {
             id: d.id,
             title: d.title as string,
             content_preview: d.content_preview as string,
+            url: d.url,
             block_id: d.block_id as number,
         }));
 
@@ -251,6 +253,7 @@ export async function GET(request: NextRequest) {
             slug: t.slug,
             category: t.topic_type,
             definition_short: t.description,
+            url: `/topics/${t.slug}`,
         }));
 
         // **[NEW]** Format seforim results
@@ -262,7 +265,8 @@ export async function GET(request: NextRequest) {
             doc_type: s.doc_type,
             language: s.language,
             publish_year: s.publish_year,
-            slug: s.slug,
+            slug: s.id.toString(), // Documents don't have slugs currently, fallback to ID
+            url: `/seforim/${s.id}`,
         }));
 
         const result = { documents, locations, topics, statements, seforim };

@@ -86,20 +86,20 @@ export function CommandMenu() {
                     url: `/seforim/${s.id}`
                 }));
 
-                const locationResults: SearchResult[] = (data.locations || []).filter((l: any) => l.id && (l.sefer || l.document_id)).map((l: any) => ({
+                const locationResults: SearchResult[] = (data.locations || []).map((l: any) => ({
                     id: `loc-${l.id}`,
                     title: l.display_name || l.title,
                     type: 'location' as const,
                     subtitle: l.content_preview,
-                    url: `/seforim/${l.sefer || l.document_id}`
+                    url: l.url || `/seforim/${l.sefer || l.document_id}`
                 }));
 
-                const statementResults: SearchResult[] = (data.statements || []).filter((s: any) => s.id && s.document_id).map((s: any) => ({
+                const statementResults: SearchResult[] = (data.statements || []).map((s: any) => ({
                     id: `stmt-${s.id}`,
                     title: s.title,
                     type: 'statement' as const,
                     subtitle: s.content_preview,
-                    url: `/seforim/${s.document_id}?para=${s.paragraph_id}`
+                    url: s.url || `/seforim/${s.document_id || s.block_id || s.paragraph_id}`
                 }));
 
                 const allResults = [...topicResults, ...documentsResults, ...locationResults, ...statementResults];

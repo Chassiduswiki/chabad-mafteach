@@ -9,7 +9,7 @@ export async function GET(
   const { params } = await context;
   console.log('=== CATCH-ALL ROUTE CALLED ===');
   console.log('Full URL:', request.url);
-  
+
   try {
     const directusUrl = process.env.DIRECTUS_URL;
 
@@ -23,13 +23,13 @@ export async function GET(
     const slugArray = resolvedParams.slug || [];
     console.log('Slug array:', slugArray);
     const slugPath = slugArray.join('/');
-    const path = slugPath ? `/api/${slugPath}` : '/api';
+    const path = slugPath ? `/${slugPath}` : '';
     const queryString = request.url.split('?')[1] ? '?' + request.url.split('?')[1] : '';
-    
+
     const fullUrl = `${directusUrl}${path}${queryString}`;
 
     console.log('Proxying GET to Directus URL:', fullUrl);
-    
+
     const directusResponse = await fetch(fullUrl, {
       method: 'GET',
       headers: {
@@ -55,7 +55,7 @@ export async function GET(
     // Handle the response - it might not be JSON
     const contentType = directusResponse.headers.get('content-type');
     console.log('Directus response content-type:', contentType);
-    
+
     let data;
     if (contentType && contentType.includes('application/json')) {
       data = await directusResponse.json();
@@ -73,7 +73,7 @@ export async function GET(
         }, { status: 500 });
       }
     }
-    
+
     return NextResponse.json(data);
   } catch (error) {
     console.error('Directus proxy error:', error);
@@ -96,9 +96,9 @@ export async function POST(
     // Reconstruct the path from the slug array
     const resolvedParams = await params;
     const slugPath = (resolvedParams.slug || []).join('/');
-    const path = slugPath ? `/api/${slugPath}` : '/api';
+    const path = slugPath ? `/${slugPath}` : '';
     const queryString = request.url.split('?')[1] ? '?' + request.url.split('?')[1] : '';
-    
+
     const fullUrl = `${directusUrl}${path}${queryString}`;
 
     // Get request body
