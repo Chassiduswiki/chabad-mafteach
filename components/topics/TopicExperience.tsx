@@ -120,7 +120,10 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             // Combine short description and detailed definition
             content: highlightTerms(`
                 <div class="space-y-4">
-                    ${topic.definition_positive ? `<div class="prose-content">${topic.definition_positive}</div>` : ''}
+                    ${topic.definition_positive
+                    ? `<div class="prose-content">${topic.definition_positive}</div>`
+                    : (topic.description ? `<p class="text-lg leading-relaxed font-medium">${topic.description}</p>` : '')
+                }
                     ${topic.definition_negative ? `
                         <div class="pl-4 border-l-2 border-red-200 dark:border-red-900 mt-4">
                             <h4 class="text-sm font-semibold text-muted-foreground uppercase mb-1">What it is NOT</h4>
@@ -352,36 +355,72 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                 </div>
 
                                 <div className="space-y-4 pl-2">
-                                    {/* Minimal Source List */}
-                                    {sources.map((source, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="group flex items-baseline gap-3"
-                                        >
-                                            <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-foreground">{source.title}</span>
-                                                    {source.external_url && (
-                                                        <a
-                                                            href={source.external_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
-                                                            title="Read Source"
-                                                        >
-                                                            <ExternalLink className="w-3 h-3" />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                                {(source.author || source.publication_year) && (
-                                                    <p className="text-sm text-muted-foreground mt-0.5">
-                                                        {source.author} {source.author && source.publication_year && '•'} {source.publication_year}
-                                                    </p>
-                                                )}
+                                    {/* Primary Sources from metadata */}
+                                    {(() => {
+                                        const metadataSources = topic.metadata?.sources;
+                                        const hasSources = metadataSources && Array.isArray(metadataSources) && metadataSources.length > 0;
+                                        
+                                        if (!hasSources) return null;
+                                        
+                                        return (
+                                            <div className="space-y-3 mb-6">
+                                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Primary Sources</h4>
+                                                {(metadataSources as string[]).map((sourceText: string, idx: number) => (
+                                                    <div
+                                                        key={`meta-${idx}`}
+                                                        className="group flex items-start gap-3 pl-2"
+                                                    >
+                                                        <span className="text-muted-foreground text-sm font-mono opacity-50 mt-0.5">{idx + 1}.</span>
+                                                        <div className="flex-1">
+                                                            <span className="font-medium text-foreground leading-relaxed">{sourceText}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })()}
+
+                                    {/* Database Sources */}
+                                    {sources.length > 0 && (
+                                        <>
+                                            {(() => {
+                                                const metadataSources = topic.metadata?.sources;
+                                                const hasSources = metadataSources && Array.isArray(metadataSources) && metadataSources.length > 0;
+                                                return hasSources ? (
+                                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 mt-6">Additional References</h4>
+                                                ) : null;
+                                            })()}
+                                            {sources.map((source, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="group flex items-baseline gap-3"
+                                                >
+                                                    <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-foreground">{source.title}</span>
+                                                            {source.external_url && (
+                                                                <a
+                                                                    href={source.external_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
+                                                                    title="Read Source"
+                                                                >
+                                                                    <ExternalLink className="w-3 h-3" />
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                        {(source.author || source.publication_year) && (
+                                                            <p className="text-sm text-muted-foreground mt-0.5">
+                                                                {source.author} {source.author && source.publication_year && '•'} {source.publication_year}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
 
                                     {/* Fallback for Citations if no primary sources */}
                                     {sources.length === 0 && citations.length > 0 && (
@@ -397,11 +436,17 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                         </div>
                                     )}
 
-                                    {sources.length === 0 && citations.length === 0 && (
-                                        <div className="text-muted-foreground text-sm italic">
-                                            No explicit sources listed for this entry.
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const metadataSources = topic.metadata?.sources;
+                                        const hasMetadataSources = metadataSources && Array.isArray(metadataSources) && metadataSources.length > 0;
+                                        const hasNoSources = sources.length === 0 && citations.length === 0 && !hasMetadataSources;
+                                        
+                                        return hasNoSources ? (
+                                            <div className="text-muted-foreground text-sm italic">
+                                                No explicit sources listed for this entry.
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                             </section>
                         );
