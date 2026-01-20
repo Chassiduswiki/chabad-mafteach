@@ -11,19 +11,32 @@ import { handleApiError } from '@/lib/utils/api-errors';
  */
 export async function GET() {
     try {
-        // Fetch all topics to count by type
-        const topics = await directus.request(
-            readItems('topics', {
-                fields: ['topic_type'],
-                limit: -1, // Get all
+        // 1. Get all statement_topics to see which topics actually have content
+        const statementTopics = await directus.request(
+            readItems('statement_topics' as any, {
+                fields: ['topic_id'],
+                limit: -1,
             })
         ) as any[];
 
-        // Count topics by type
+        const topicsWithContent = new Set(statementTopics.map(st => st.topic_id));
+
+        // 2. Fetch all topics to count by type
+        const topics = await directus.request(
+            readItems('topics', {
+                fields: ['id', 'topic_type'],
+                limit: -1,
+            })
+        ) as any[];
+
+        // 3. Count topics by type, only if they have content
         const topicCounts: Record<string, number> = {};
+        let validTopicCount = 0;
+
         topics.forEach((topic) => {
-            if (topic.topic_type) {
+            if (topic.topic_type && topicsWithContent.has(topic.id)) {
                 topicCounts[topic.topic_type] = (topicCounts[topic.topic_type] || 0) + 1;
+                validTopicCount++;
             }
         });
 
@@ -58,7 +71,7 @@ export async function GET() {
             topics: topicCounts,
             documents: documentCounts,
             docTypes: docTypeCounts,
-            totalTopics: topics.length,
+            totalTopics: validTopicCount,
             totalDocuments: documents.length,
         });
     } catch (error) {

@@ -6,6 +6,10 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen } from 'lucide-react';
 import { Topic } from '@/lib/types';
 import { TipTapEditor } from '@/components/editor/TipTapEditor';
+import { ParagraphsEditor } from '@/components/editor/ParagraphsEditor';
+import { ImportExport } from '@/components/editor/ImportExport';
+import { TranslationReview } from '@/components/editor/TranslationReview';
+import { TranslationPreview } from '@/components/editor/TranslationPreview';
 
 export default function TopicEditorPage() {
   const router = useRouter();
@@ -21,11 +25,17 @@ export default function TopicEditorPage() {
     article: any;
     practical_takeaways: any;
     historical_context: any;
+    description: any;
+    definition_positive: any;
+    definition_negative: any;
   }>({
     overview: null,
     article: null,
     practical_takeaways: null,
     historical_context: null,
+    description: null,
+    definition_positive: null,
+    definition_negative: null,
   });
   const [formData, setFormData] = useState({
     canonical_title: '',
@@ -88,12 +98,15 @@ export default function TopicEditorPage() {
     setSaveStatus('idle');
 
     try {
-      // Collect rich text content from editors
+      // Extract rich text content from editors
       const richTextData = {
         overview: editors.overview?.getHTML() || formData.overview,
         article: editors.article?.getHTML() || formData.article,
         practical_takeaways: editors.practical_takeaways?.getHTML() || formData.practical_takeaways,
         historical_context: editors.historical_context?.getHTML() || formData.historical_context,
+        description: editors.description?.getHTML() || formData.description,
+        definition_positive: editors.definition_positive?.getHTML() || formData.definition_positive,
+        definition_negative: editors.definition_negative?.getHTML() || formData.definition_negative,
       };
 
       // Combine form data with rich text data
@@ -281,15 +294,23 @@ export default function TopicEditorPage() {
                 <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
                   Short Description *
                 </label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-vertical"
-                  placeholder="Brief description of the topic..."
-                  required
-                />
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current description content
+                      if (formData.description && editor) {
+                        editor.commands.setContent(formData.description);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, description: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -304,14 +325,23 @@ export default function TopicEditorPage() {
                 <label htmlFor="definition_positive" className="block text-sm font-medium text-foreground mb-2">
                   What it IS (Definition)
                 </label>
-                <textarea
-                  id="definition_positive"
-                  value={formData.definition_positive}
-                  onChange={(e) => setFormData(prev => ({ ...prev, definition_positive: e.target.value }))}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-vertical font-serif"
-                  placeholder="Describe what this concept truly means, with examples and context..."
-                />
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current definition_positive content
+                      if (formData.definition_positive && editor) {
+                        editor.commands.setContent(formData.definition_positive);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, definition_positive: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
               </div>
 
               {/* What it's NOT */}
@@ -319,14 +349,23 @@ export default function TopicEditorPage() {
                 <label htmlFor="definition_negative" className="block text-sm font-medium text-foreground mb-2">
                   What it's NOT (Boundaries)
                 </label>
-                <textarea
-                  id="definition_negative"
-                  value={formData.definition_negative}
-                  onChange={(e) => setFormData(prev => ({ ...prev, definition_negative: e.target.value }))}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-vertical font-serif"
-                  placeholder="Clarify common misconceptions and set clear boundaries..."
-                />
+                <div className="border border-border rounded-md">
+                  <TipTapEditor
+                    docId={null}
+                    className=""
+                    onEditorReady={(editor) => {
+                      // Initialize with current definition_negative content
+                      if (formData.definition_negative && editor) {
+                        editor.commands.setContent(formData.definition_negative);
+                      }
+                      // Register editor in state
+                      setEditors(prev => ({ ...prev, definition_negative: editor }));
+                    }}
+                    onBreakStatements={async () => {
+                      // Not applicable for topic content
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -384,6 +423,12 @@ export default function TopicEditorPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Paragraphs Editor */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Paragraphs & Statements</h2>
+            <ParagraphsEditor topicId={topic.id} />
           </div>
 
           {/* Advanced Content */}
@@ -791,6 +836,24 @@ export default function TopicEditorPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Translation Preview */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Content Preview</h2>
+            <TranslationPreview topicId={topic.id} />
+          </div>
+
+          {/* Translation Review */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Translation Review</h2>
+            <TranslationReview />
+          </div>
+
+          {/* Import/Export Tools */}
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-6">Import/Export</h2>
+            <ImportExport topicId={topic.id} />
           </div>
 
           {/* Save Actions */}

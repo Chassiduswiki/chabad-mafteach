@@ -1,4 +1,4 @@
-const { createDirectus, rest, authentication, readItems, deleteItems } = require('@directus/sdk');
+const { createDirectus, rest, staticToken, readItems, deleteItems } = require('@directus/sdk');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -6,19 +6,16 @@ dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
 
 // Directus client configuration
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
-const directusToken = process.env.NEXT_PUBLIC_DIRECTUS_TOKEN || process.env.DIRECTUS_STATIC_TOKEN;
+const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL;
+const directusToken = process.env.DIRECTUS_STATIC_TOKEN || 'Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96';
 
-if (!directusUrl || !directusToken) {
-    throw new Error('DIRECTUS_URL or DIRECTUS_STATIC_TOKEN environment variable is not set. Please configure .env file.');
+if (!directusUrl) {
+    throw new Error('DIRECTUS_URL environment variable is not set. Please configure .env file.');
 }
 
 const directus = createDirectus(directusUrl)
-    .with(authentication())
+    .with(staticToken(directusToken))
     .with(rest());
-
-// Set the user token
-directus.setToken(directusToken);
 
 /**
  * Data Integrity Cleanup Script
@@ -38,16 +35,23 @@ async function cleanupOrphanedStatementTopics() {
 
         // Get all valid statement IDs
         const statements = await directus.request(readItems('statements', {
-            fields: ['id'],
+            fields: ['*'],
             limit: -1
         }));
 
         const validStatementIds = new Set(statements.map(s => s.id));
 
+        console.log(`Debug: Total statementTopics: ${statementTopics.length}`);
+        console.log(`Debug: Total validStatementIds: ${validStatementIds.size}`);
+        if (statementTopics.length > 0) console.log(`Debug: First statementTopic statement_id: ${statementTopics[0].statement_id}`);
+        if (statements.length > 0) console.log(`Debug: First valid statement id: ${statements[0].id}`);
+
         // Find orphaned records
-        const orphanedRecords = statementTopics.filter(st =>
-            !validStatementIds.has(st.statement_id)
-        );
+        const orphanedRecords = statementTopics.filter(st => {
+            const exists = validStatementIds.has(st.statement_id);
+            if (!exists) console.log(`Debug: Found orphan statement_id: ${st.statement_id}`);
+            return !exists;
+        });
 
         if (orphanedRecords.length === 0) {
             console.log('✅ No orphaned records found.');
@@ -87,7 +91,8 @@ async function validateDataIntegrity() {
         }));
 
         const statements = await directus.request(readItems('statements', {
-            fields: ['id']
+            fields: ['*'],
+            limit: -1
         }));
 
         const validTopicIds = new Set(topics.map(t => t.id));
@@ -106,6 +111,9 @@ async function validateDataIntegrity() {
         const invalidStatementRefs = statementTopics.filter(st => !validStatementIds.has(st.statement_id));
         if (invalidStatementRefs.length > 0) {
             console.log(`🚨 Found ${invalidStatementRefs.length} statement_topics with invalid statement_id references`);
+            if (invalidStatementRefs.length > 0) {
+                console.log(`Debug: First few invalid statement_ids: ${invalidStatementRefs.slice(0, 3).map(r => r.statement_id).join(', ')}`);
+            }
             issues++;
         }
 
