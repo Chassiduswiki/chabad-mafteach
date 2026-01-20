@@ -85,12 +85,22 @@ export function FeaturedTopicCard() {
                     </p>
                 )}
 
-                {/* Description */}
-                {topic.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                        {topic.description}
-                    </p>
-                )}
+                {/* Definitions */}
+                {topic.description && (() => {
+                    const cleanText = topic.description.replace(/<[^>]*>/g, '');
+                    const definitions = cleanText.match(/\d+\..+?(?=\d+\.|$)/g) || [];
+                    
+                    return (
+                        <div className="space-y-2 mb-4">
+                            {definitions.slice(0, 3).map((def, idx) => (
+                                <div key={idx} className="flex gap-3 text-sm">
+                                    <span className="font-semibold text-primary flex-shrink-0">{idx + 1}.</span>
+                                    <p className="text-muted-foreground leading-relaxed">{def.replace(/^\d+\.\s*/, '').trim()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
 
                 {/* CTA */}
                 <div className="mt-auto flex items-center gap-2 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">

@@ -76,9 +76,11 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
                 filter,
                 meta: 'total_count' as any,
             })
-        )) as unknown as { meta: { total_count: number } };
+        )) as unknown as { total_count: number };
 
-        const totalCount = meta.meta.total_count || 0;
+        console.log('Directus meta response:', JSON.stringify(meta, null, 2));
+
+        const totalCount = meta.total_count || 0;
 
         return { topics, totalCount };
     } catch (error) {
