@@ -4,13 +4,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import Link from 'next/link';
 
-interface SearchResult {
+interface SearchResultItem {
     id: string;
     name: string;
-    name_hebrew?: string;
     slug: string;
     category?: string;
     definition_short?: string;
+}
+
+interface SearchResult {
+    topics: SearchResultItem[];
+    documents: SearchResultItem[];
+    seforim: SearchResultItem[];
+    // Add other types as needed
 }
 
 interface ContextualSearchProps {
@@ -25,7 +31,7 @@ interface ContextualSearchProps {
  */
 export default function ContextualSearch({ placeholder = "Search topics...", searchType = 'topics' }: ContextualSearchProps) {
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<SearchResult[]>([]);
+    const [results, setResults] = useState<SearchResult>({ topics: [], documents: [], seforim: [] });
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +51,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
     // Debounced search
     const search = useCallback(async (searchQuery: string) => {
         if (!searchQuery.trim()) {
-            setResults([]);
+            setResults({ topics: [], documents: [], seforim: [] });
             setIsOpen(false);
             return;
         }
@@ -55,15 +61,11 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
             const data = await response.json();
 
-            if (searchType === 'topics') {
-                setResults(data.topics || []);
-            } else {
-                setResults(data.documents || []);
-            }
+            setResults(data);
             setIsOpen(true);
         } catch (error) {
             console.error('Search failed:', error);
-            setResults([]);
+            setResults({ topics: [], documents: [], seforim: [] });
         } finally {
             setLoading(false);
         }
@@ -78,7 +80,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
 
     const handleClear = () => {
         setQuery('');
-        setResults([]);
+        setResults({ topics: [], documents: [], seforim: [] });
         setIsOpen(false);
         inputRef.current?.focus();
     };
@@ -112,30 +114,45 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
                         <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                             Searching...
                         </div>
-                    ) : results.length === 0 ? (
+                    ) : (results.topics.length === 0 && results.seforim.length === 0) ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
-                            No {searchType} found for "{query}"
+                            No results found for "{query}"
                         </div>
                     ) : (
-                        <ul className="divide-y divide-border">
-                            {results.slice(0, 8).map((result) => (
-                                <li key={result.id}>
-                                    <Link
-                                        href={searchType === 'topics' ? `/topics/${result.slug}` : `/documents/${result.id}`}
-                                        onClick={() => setIsOpen(false)}
-                                        className="flex flex-col gap-1 px-4 py-3 hover:bg-muted/50 transition-colors"
-                                    >
-                                        <span className="font-medium text-foreground">{result.name}</span>
-                                        {result.name_hebrew && (
-                                            <span className="text-sm text-muted-foreground font-hebrew">{result.name_hebrew}</span>
-                                        )}
-                                        {result.category && (
-                                            <span className="text-xs text-primary">{result.category}</span>
-                                        )}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                        <div>
+                            {results.topics.length > 0 && (
+                                <div className="border-b border-border">
+                                    <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">Topics</h4>
+                                    <ul>
+                                        {results.topics.slice(0, 5).map((result) => (
+                                            <li key={`topic-${result.id}`}>
+                                                <Link href={`/topics/${result.slug}`} onClick={() => setIsOpen(false)} className="block p-3 hover:bg-muted/50 transition-colors">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-semibold text-foreground">{result.name}</span>
+                                                        {result.category && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{result.category}</span>}
+                                                    </div>
+                                                    {result.definition_short && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{result.definition_short.replace(/<[^>]*>/g, '')}</p>}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {results.seforim.length > 0 && (
+                                <div>
+                                    <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">Seforim</h4>
+                                    <ul>
+                                        {results.seforim.slice(0, 3).map((result) => (
+                                            <li key={`sefer-${result.id}`}>
+                                                <Link href={`/seforim/${result.slug}`} onClick={() => setIsOpen(false)} className="block p-3 hover:bg-muted/50 transition-colors">
+                                                    <span className="font-semibold text-foreground">{result.name}</span>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             )}

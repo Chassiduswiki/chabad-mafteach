@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark } from 'lucide-react';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
@@ -9,6 +9,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Topic, Source } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
+import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
+import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
+import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
 
 // Types
 type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'sources';
@@ -76,6 +79,17 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     const [focusMode, setFocusMode] = useState(false);
     const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+
+    const handleTutorialClose = () => {
+        setIsTutorialOpen(false);
+        localStorage.setItem('hasSeenFocusModeTutorial', 'true');
+    };
+
+    const handleSourceClick = (source: Source) => {
+        setSelectedSource(source);
+    };
 
     const sectionRefs = useRef<Record<SectionType, HTMLElement | null>>({
         definition: null,
@@ -89,6 +103,10 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     // Simulate loading for smooth transition
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 500);
+        const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
+        if (!hasSeenTutorial) {
+            setIsTutorialOpen(true);
+        }
         return () => clearTimeout(timer);
     }, []);
 
@@ -106,8 +124,8 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             // Simple negative lookahead to avoid replacing inside existing tags is hard with regex alone
             // We'll trust the content for this demo or use a simple boundary
             // This regex matches the word NOT inside a tag (roughly)
-            const regex = new RegExp(`(?<!<[^>]*)(\\b${concept}\\b)`, 'gi');
-            enhanced = enhanced.replace(regex, `<span class="interactive-term text-primary font-medium cursor-pointer border-b border-primary/30 hover:bg-primary/10 transition-colors" data-term="${concept}">$1</span>`);
+            const regex = new RegExp(`(?<!<[^>]*)(\b${concept}\b)`, 'gi');
+            enhanced = enhanced.replace(regex, `<span role="button" tabindex="0" class="interactive-term font-medium" data-term="${concept}">$1</span>`);
         });
         return enhanced;
     };
@@ -158,34 +176,44 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     ];
 
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
+        const handleContentInteraction = (term: string) => {
+        const conceptData = topic.key_concepts?.find(c => c.concept.toLowerCase() === term.toLowerCase());
+        if (conceptData) {
+            setSheetContent({
+                title: conceptData.concept,
+                content: (
+                    <div className="space-y-4">
+                        <p className="text-lg leading-relaxed">{conceptData.explanation}</p>
+                        {conceptData.link && (
+                            <a href={conceptData.link} className="inline-flex items-center text-primary hover:underline">
+                                Learn more <ExternalLink className="w-4 h-4 ml-1" />
+                            </a>
+                        )}
+                    </div>
+                )
+            });
+        } else {
+            console.warn('No definition found for:', term);
+        }
+    };
+
     const handleContentClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
-        // Check for specific class or data attribute
-        if (target.classList.contains('interactive-term') || target.closest('.interactive-term')) {
-            const el = target.classList.contains('interactive-term') ? target : target.closest('.interactive-term') as HTMLElement;
-            const term = el?.getAttribute('data-term');
+        const termEl = target.closest('.interactive-term');
+        if (termEl) {
+            const term = termEl.getAttribute('data-term');
+            if (term) handleContentInteraction(term);
+        }
+    };
 
-            if (term) {
-                const conceptData = topic.key_concepts?.find(c => c.concept.toLowerCase() === term.toLowerCase());
-
-                if (conceptData) {
-                    setSheetContent({
-                        title: conceptData.concept,
-                        content: (
-                            <div className="space-y-4">
-                                <p className="text-lg leading-relaxed">{conceptData.explanation}</p>
-                                {conceptData.link && (
-                                    <a href={conceptData.link} className="inline-flex items-center text-primary hover:underline">
-                                        Learn more <ExternalLink className="w-4 h-4 ml-1" />
-                                    </a>
-                                )}
-                            </div>
-                        )
-                    });
-                } else {
-                    // Fallback if no definition found (shouldn't happen if sourced from key_concepts)
-                    console.warn('No definition found for:', term);
-                }
+    const handleContentKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            const target = e.target as HTMLElement;
+            const termEl = target.closest('.interactive-term');
+            if (termEl) {
+                e.preventDefault();
+                const term = termEl.getAttribute('data-term');
+                if (term) handleContentInteraction(term);
             }
         }
     };
@@ -291,6 +319,8 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
 
     return (
         <div className="min-h-screen bg-background relative">
+            <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
+            <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
             {/* New Immersive Hero */}
             <ImmersiveHero
                 title={topic.canonical_title}
@@ -300,11 +330,13 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             />
 
             {/* Sticky Tab Navigation */}
-            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
+            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm hidden sm:block">
                 <div className="max-w-4xl mx-auto">
                     <div
                         ref={tabsRef}
                         className="flex overflow-x-auto scrollbar-hide -mx-1 px-4 sm:px-6"
+                        role="tablist"
+                        aria-label="Topic Sections"
                     >
                         {sections.map((section) => {
                             const config = sectionConfig[section.type];
@@ -314,7 +346,10 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                             return (
                                 <button
                                     key={section.type}
-                                    data-section={section.type}
+                                    id={`tab-${section.type}`}
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    aria-controls={`panel-${section.type}`}
                                     onClick={() => scrollToSection(section.type)}
                                     className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-all whitespace-nowrap ${isActive
                                         ? `border-primary ${config.color}`
@@ -343,8 +378,10 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                         return (
                             <section
                                 key={section.type}
+                                id={`panel-${section.type}`}
+                                role="tabpanel"
+                                aria-labelledby={`tab-${section.type}`}
                                 ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
-                                id={section.type}
                                 className="scroll-mt-36"
                             >
                                 <div className="flex items-center gap-3 mb-6">
@@ -393,7 +430,8 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                             {sources.map((source, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className="group flex items-baseline gap-3"
+                                                    className="group flex items-baseline gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg"
+                                                    onClick={() => handleSourceClick(source)}
                                                 >
                                                     <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
                                                     <div className="flex-1">
@@ -415,6 +453,19 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                                             <p className="text-sm text-muted-foreground mt-0.5">
                                                                 {source.author} {source.author && source.publication_year && '•'} {source.publication_year}
                                                             </p>
+                                                        )}
+                                                        {/* Display Source Relationships (Page/Verse) */}
+                                                        {source.relationships && source.relationships.length > 0 && (
+                                                            <div className="mt-1.5 flex flex-wrap gap-2">
+                                                                {source.relationships.map((rel: any, rIdx: number) => (
+                                                                    (rel.page_number || rel.verse_reference) && (
+                                                                        <span key={rIdx} className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
+                                                                            {rel.page_number && <span className="mr-1">p. {rel.page_number}</span>}
+                                                                            {rel.verse_reference && <span>{rel.verse_reference}</span>}
+                                                                        </span>
+                                                                    )
+                                                                ))}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -456,84 +507,40 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                         <section
                             key={section.type}
                             ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
-                            id={section.type}
+                            id={`panel-${section.type}`}
+                            role="tabpanel"
+                            aria-labelledby={`tab-${section.type}`}
                             className={`scroll-mt-36 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
                             onClick={handleContentClick}
                             onDoubleClick={() => toggleFocusMode(section.type)}
+                            onKeyDown={handleContentKeyDown}
                         >
                             <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
-                                {/* Section Header */}
-                                <div className="flex items-center justify-between mb-5 select-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg bg-background ${config.color}`}>
-                                            <Icon className="w-5 h-5" />
-                                        </div>
-                                        <h2 className="text-xl font-semibold text-foreground">{config.title}</h2>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground opacity-50 uppercase tracking-widest hidden sm:block">Double tap to focus</span>
-                                </div>
-
-                                {/* Section Content - Smart Rendering */}
-                                {(() => {
-                                    // Try parsing as glossary if it's text-heavy sections
-                                    // Pass current topic name/hebrew as fallback defaults for "single term" lists
-                                    const textContent = section.content.replace(/<[^>]*>/g, ' ');
-                                    const defaultTerm = topic.canonical_title;
-                                    const defaultHebrew = topic.name_hebrew;
-
-                                    const glossaryItems = (section.type === 'definition' || section.type === 'mashal' || section.type === 'personal_nimshal' || section.type === 'global_nimshal')
-                                        ? parseGlossaryContent(textContent, defaultTerm, defaultHebrew)
-                                        : null;
-
-                                    if (glossaryItems && glossaryItems.length > 0) {
-                                        return <GlossaryGrid items={glossaryItems} />;
-                                    }
-
-                                    return (
-                                        <div
-                                            className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-muted-foreground cursor-auto"
-                                            dangerouslySetInnerHTML={{ __html: section.content }}
-                                        />
-                                    );
-                                })()}
+                               <ArticleSectionContent section={section} topic={topic} />
                             </div>
                         </section>
                     );
                 })}
 
-                {/* Smart Pathways & Constellation */}
-                <div className="pt-8 border-t border-border space-y-8">
-                    {/* Visual Graph */}
-                    <div>
-                        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-purple-500" />
-                            Concept Constellation
-                        </h3>
-                        <div className="flex justify-center">
-                            <ConceptConstellation
-                                centerConcept={graphData.centerConcept}
-                                relatedConcepts={graphData.relatedConcepts}
-                                onNodeClick={handleGraphClick}
-                            />
-                        </div>
+            {/* Smart Pathways & Constellation */}
+            <div className="pt-8 border-t border-border space-y-8">
+                {/* Visual Graph */}
+                <div>
+                    <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-500" />
+                        Concept Constellation
+                    </h3>
+                    <div className="flex justify-center">
+                        <ConceptConstellation
+                            centerConcept={graphData.centerConcept}
+                            relatedConcepts={graphData.relatedConcepts}
+                            onNodeClick={handleGraphClick}
+                        />
                     </div>
                 </div>
-            </main>
-
-            {/* Action Sticky Footer */}
-            <div className={`fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-background via-background to-transparent z-40 transition-transform duration-300 ${focusMode ? 'translate-y-full' : 'translate-y-0'}`}>
-                <div className="max-w-md mx-auto bg-foreground text-background dark:bg-zinc-800 dark:text-white backdrop-blur-md shadow-2xl rounded-full px-6 py-3 flex items-center justify-between border border-white/10">
-                    <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                        <Bookmark className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Save</span>
-                    </button>
-                    <div className="w-px h-8 bg-white/20" />
-                    <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                        <Share2 className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Share</span>
-                    </button>
-                </div>
             </div>
+        </main>
+
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet

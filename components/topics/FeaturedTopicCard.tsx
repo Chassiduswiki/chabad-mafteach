@@ -85,12 +85,40 @@ export function FeaturedTopicCard() {
                     </p>
                 )}
 
-                {/* Description */}
-                {topic.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                        {topic.description}
-                    </p>
-                )}
+                {/* Definitions */}
+                {topic.description && (() => {
+                    const content = topic.description;
+                    let definitions: string[] = [];
+
+                    // Check for <ul> tag for list format
+                    if (content.includes('<ul>')) {
+                        const items = content.match(/<li>(.*?)<\/li>/g) || [];
+                        definitions = items.map(item => item.replace(/<[^>]*>/g, '').trim());
+                    } 
+                    // Check for numbered list format (e.g., "1. ... 2. ...")
+                    else if (content.match(/\d\.\s/)) {
+                        definitions = content.replace(/<[^>]*>/g, '').match(/\d+\..+?(?=\d+\.|$)/g) || [];
+                    } 
+                    // Fallback for plain text or other formats
+                    else {
+                        definitions = [content.replace(/<[^>]*>/g, '').trim()];
+                    }
+
+                    if (definitions.length === 0 || (definitions.length === 1 && !definitions[0])) {
+                        return <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{content.replace(/<[^>]*>/g, '')}</p>;
+                    }
+
+                    return (
+                        <div className="space-y-3 mb-4">
+                            {definitions.slice(0, 3).map((def, idx) => (
+                                <div key={idx} className="flex items-start gap-3 text-sm">
+                                    <span className="font-semibold text-primary flex-shrink-0 pt-0.5">{idx + 1}.</span>
+                                    <p className="text-muted-foreground leading-relaxed">{def.replace(/^\d+\.\s*/, '').trim()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
 
                 {/* CTA */}
                 <div className="mt-auto flex items-center gap-2 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
