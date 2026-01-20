@@ -96,7 +96,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
             )}
 
             {/* Recent Sources */}
-            {(data.recentSources || []).length > 0 && (
+            {/* {(data.recentSources || []).length > 0 && (
                 <div className="rounded-2xl border border-border bg-background/40 p-6">
                     <div className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                         <BookOpen className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
                         ))}
                     </ul>
                 </div>
-            )}
+            )} */}
 
             {/* Recently Updated */}
             <div className="rounded-2xl border border-border bg-background/40 p-6">

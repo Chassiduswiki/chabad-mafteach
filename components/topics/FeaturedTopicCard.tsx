@@ -22,7 +22,7 @@ export function FeaturedTopicCard() {
         fetch('/api/topics?mode=discovery')
             .then(res => res.json())
             .then(data => {
-                if (data.featuredTopic) {
+                if (data && data.featuredTopic) {
                     setTopic({
                         id: data.featuredTopic.id,
                         slug: data.featuredTopic.slug,
@@ -33,7 +33,10 @@ export function FeaturedTopicCard() {
                     });
                 }
             })
-            .catch(console.error)
+            .catch(err => {
+                console.error('Error fetching featured topic:', err);
+                // Optionally set an error state here if needed
+            })
             .finally(() => setLoading(false));
     }, []);
 

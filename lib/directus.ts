@@ -85,4 +85,4 @@ export const getAllTopics = async (): Promise<Topic[]> => {
     );
 };
 
-export { createClient };
+export { createClient, getDirectusSingleton as getDirectus };

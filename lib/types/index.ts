@@ -139,6 +139,7 @@ export interface Source {
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
     document_id?: number | Document; // Direct link to associated document
+    author?: string; // Mapped from author_id.canonical_name
 }
 
 export interface SourceLink {
@@ -203,6 +204,13 @@ export interface Topic {
     view_count?: number;
     is_published?: boolean;
     meta_description?: string;
+
+    // CMS Content Status fields (for topic-content-counts API)
+    content_status?: 'comprehensive' | 'partial' | 'minimal';
+    status_label?: string;
+    badge_color?: string;
+    sources_count?: number;
+    documents_count?: number;
 }
 
 export interface Citation {

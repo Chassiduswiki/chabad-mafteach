@@ -246,7 +246,7 @@ export async function getTopicBySlug(slug: string) {
                     console.log('Fetching sources data...');
                     const sourcesData = await directus.request(readItems('sources', {
                         filter: { id: { _in: sourceIds } } as any,
-                        fields: ['id', 'title', 'external_url']
+                        fields: ['id', 'title', 'external_url', 'publication_year', { author_id: ['canonical_name'] }]
                     })) as any[];
 
                     console.log('Found', sourcesData.length, 'sources');
@@ -256,11 +256,12 @@ export async function getTopicBySlug(slug: string) {
                         const links = sourceLinks.filter(sl => sl.source_id === source.id);
                         return {
                             ...source,
+                            author: source.author_id?.canonical_name,
                             relationships: links.map(link => ({
                                 statement_id: link.statement_id,
                                 relationship_type: link.relationship_type,
-                                page_number: link.page_number,
-                                verse_reference: link.verse_reference
+                                page_number: link.page_number
+                                // verse_reference: link.verse_reference // Temporarily disabled due to permissions
                             }))
                         };
                     });

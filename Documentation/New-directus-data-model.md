@@ -130,30 +130,29 @@ Add custom fields:
 
 ---
 
-### **4. Paragraphs Collection**
+### **4. Content Blocks Collection**
 
-**Create Collection:** `paragraphs`
+**Create Collection:** `content_blocks`
 
 **Add Fields:**
 
 | Field Name | Type | Interface | Options |
 |------------|------|-----------|---------|
+| `document_id` | M2O | Select Dropdown | Related: `documents` |
+| `block_type` | Dropdown | Dropdown | `heading`, `subheading`, `paragraph`, `section break` |
 | `order_key` | String | Input | Required, Max: 50 |
-| `original_lang` | Dropdown | Dropdown | ISO codes |
-| `text` | Text | Textarea (WYSIWYG) | Required |
-| `status` | Dropdown | Dropdown | `draft`, `reviewed`, `published` |
-| `page_number` | Integer | Input | Optional |
-| `column_number` | Integer | Input | Optional |
+| `content` | Text | Textarea (WYSIWYG) | Required |
 | `metadata` | JSON | JSON | Optional |
+| `order_position` | Integer | Input | Optional |
 
 **Relationships:**
-1. Field: `doc_id`
+1. Field: `document_id`
    - Type: **Many to One (M2O)**
    - Related Collection: `documents`
    - Display: `{{title}}`
    - On Delete: **CASCADE**
 
-**Display Template:** `Paragraph {{order_key}} in {{doc_id.title}}`
+**Display Template:** `{{block_type}}: {{content}}`
 
 ---
 
@@ -177,9 +176,9 @@ Add custom fields:
 | `deleted_at` | DateTime | Datetime | Optional |
 
 **Relationships:**
-1. Field: `paragraph_id`
+1. Field: `block_id`
    - Type: **M2O**
-   - Related: `paragraphs`
+   - Related: `content_blocks`
    - On Delete: **CASCADE**
 
 2. Field: `deleted_by`
@@ -273,7 +272,24 @@ Add custom fields:
 | `slug` | String | Input (Slug) | Required, Unique, Max: 500 |
 | `topic_type` | Dropdown | Dropdown | `person`, `concept`, `place`, `event`, `mitzvah`, `sefirah` |
 | `description` | Text | Textarea (WYSIWYG) | Optional |
+| `canonical_title_en` | String | Input | Optional - English translation of canonical title |
+| `canonical_title_transliteration` | String | Input | Optional - Transliteration of canonical title |
+| `description_en` | Text | Textarea (WYSIWYG) | Optional - English translation of description |
+| `practical_takeaways` | Text | Textarea (WYSIWYG) | Optional - Practical applications and takeaways |
+| `historical_context` | Text | Textarea (WYSIWYG) | Optional - Historical background and context |
+| `content_status` | Dropdown | Dropdown | `minimal`, `partial`, `comprehensive` |
+| `status_label` | String | Input | Optional - Custom label for content status badge |
+| `badge_color` | Dropdown | Dropdown | `gray`, `blue`, `green`, `purple`, `orange` |
+| `sources_count` | Integer | Input | Optional - Manual override for source count (0 = auto-calculate) |
+| `documents_count` | Integer | Input | Optional - Manual override for document count (0 = auto-calculate) |
 | `metadata` | JSON | JSON | Optional |
+
+**Relationships:**
+1. Field: `topic`
+   - Type: **Many to One (M2O)**
+   - Related Collection: `documents`
+   - Display template: `{{title}}`
+   - On Delete: **SET NULL**
 
 **Display Template:** `{{canonical_title}}`
 
@@ -487,8 +503,8 @@ Directus automatically creates reverse relationships (O2M - One to Many). Config
 7. Interface: **List (with inline editing)**
 
 Repeat for:
-- `documents` → `paragraphs` (O2M)
-- `paragraphs` → `statements` (O2M)
+- `documents` → `content_blocks` (O2M)
+- `content_blocks` → `statements` (O2M)
 - `statements` → `source_links` (O2M)
 - `statements` → `statement_topics` (O2M)
 - `topics` → `statement_topics` (O2M)
@@ -783,6 +799,52 @@ const document = await client.request(
 ### **Issue 2: LexoRank Generation**
 **Solution:** Use a custom interface extension or generate in application code before sending to Directus.
 
+### **Issue 3: Data Source for Interactive Topic Graphs**
+**Solution:** See the mapping below for how the "Concept Constellation" visualization is derived from existing relationships.
+
+---
+
+## Phase 8: Data Mapping for New Topic Experience (Jan 2026)
+
+The "Interactive Topics" redesign relies on specific data mappings from the `topics` and `topic_relationships` collections.
+
+### **1. Immersive Hero & "DNA"**
+The top section of the page pulls directly from the `topics` record.
+
+| UI Component | Data Source | Field Path | Notes |
+|---|---|---|---|
+| **Big Hebrew Title** | `topics` | `canonical_title` | The main display title. |
+| **English Title** | `topics` | `canonical_title_en` | If missing, falls back to transliteration. |
+| **Category Badge** | `topics` | `topic_type` | Mapped to frontend color/icon map. |
+| **Short Definition** | `topics` | `description` | First paragraph only (plaintext). |
+| **Difficulty Level** | `topics` | `metadata.difficulty` | New metadata field needed (Beginner/Advanced). |
+
+### **2. Structured Article Sections**
+The tabbed structure (Definition, Mashal, Application) comes from parsing the `topics.article` field (HTML) or future structured fields.
+
+| UI Tab | Data Source | Logic |
+|---|---|---|
+| **Definition** | `topics` | `definition_positive` + `definition_negative` | Combined into one readable section. |
+| **Analogy (Mashal)** | `topics` | `metadata.mashal` | Optional JSON field or dedicated text field. |
+| **Application (Avodah)** | `topics` | `practical_takeaways` | Existing WYSIWYG field. |
+| **Universal Meaning** | `topics` | `historical_context` | Existing WYSIWYG field. |
+
+### **3. Concept Constellation (Interactive Graph)**
+The 3D-style graph is populated by the `topic_relationships` collection, querying where `parent_topic_id` OR `child_topic_id` matches the current topic.
+
+| Node Type | Source Relationship | Filter Logic |
+|---|---|---|
+| **Parent Node** | `topic_relationships` | `child_topic_id = current.id` AND `relation_type = 'conceptual_parent'` |
+| **Opposite Node** | `topic_relationships` | `relation_type = 'opposite'` |
+| **Component Node** | `topic_relationships` | `parent_topic_id = current.id` AND `relation_type = 'subcategory/part_of'` |
+
+### **4. "Next Step" Recommendation**
+The "Smart Pathing" card at the bottom of the article.
+
+*   **Primary Source:** `topic_relationships` (where `relation_type = 'chronological_next'`).
+*   **Fallback:** First "Component" or "Subcategory" topic that the user hasn't visited yet (requires user history tracking).
+
+
 ### **Issue 3: Circular Topic Hierarchy**
 **Solution:** Implement validation in a Flow that checks for cycles before allowing relationship creation.
 
@@ -796,17 +858,17 @@ const document = await client.request(
 
 ## Final Checklist
 
-- [ ] All collections created
-- [ ] All fields added with correct types
-- [ ] All relationships configured (M2O and O2M)
-- [ ] Permissions set for all roles
+- [x] All collections created (documents, content_blocks, statements, sources, source_links, topics, topic_relationships, statement_topics)
+- [x] All fields added with correct types (including practical_takeaways, historical_context, content_status in topics)
+- [x] All relationships configured (M2O and O2M) - content_blocks instead of paragraphs
+- [ ] Permissions set for all roles (pending)
 - [ ] Display templates configured
 - [ ] Validation rules set
 - [ ] Search fields configured
 - [ ] Indexes created (via SQL)
 - [ ] Flows for auto-versioning created
-- [ ] Test data loaded
-- [ ] Frontend SDK integration tested
+- [x] Test data loaded (v1.md entries ingested)
+- [x] Frontend SDK integration tested (ArticleWithStructure component)
 - [ ] Performance validated
 
 ---
