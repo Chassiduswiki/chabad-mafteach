@@ -45,28 +45,12 @@ const FeaturedCollections = Dynamic(() => import('@/components/topics/FeaturedCo
 
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
-        // 1. Get all topic IDs that have associated statements
-        const statementTopics = await directus.request(readItems('statement_topics' as any, {
-            fields: ['topic_id'],
-            limit: -1
-        })) as any[];
-
-        const topicsWithContent = Array.from(new Set(statementTopics.map(st => st.topic_id)));
-
-        if (topicsWithContent.length === 0) {
-            return { topics: [], totalCount: 0 };
-        }
-
-        // 2. Build filter for topics
-        const filter: any = {
-            id: { _in: topicsWithContent }
-        };
+        const filter: any = {};
 
         if (category) {
             filter.topic_type = { _eq: category };
         }
 
-        // 3. Fetch filtered topics
         const rawTopics = await directus.request(readItems('topics', {
             sort: ['canonical_title'],
             fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
@@ -86,12 +70,15 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
             definition_short: t.description,
         }));
 
-        const allTopics = await directus.request(readItems('topics', {
-            fields: ['id'],
-            filter,
-        }));
+        // To get the total count, we need to make a separate request without limit/offset
+        const meta = (await directus.request(
+            readItems('topics', {
+                filter,
+                meta: 'total_count' as any,
+            })
+        )) as unknown as { meta: { total_count: number } };
 
-        const totalCount = Array.isArray(allTopics) ? allTopics.length : 0;
+        const totalCount = meta.meta.total_count || 0;
 
         return { topics, totalCount };
     } catch (error) {

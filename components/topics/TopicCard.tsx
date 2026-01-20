@@ -44,42 +44,31 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
 
     if (view === 'list') {
         return (
-            <div className="group relative">
-                <Link
-                    href={`/topics/${topic.slug}`}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/50"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className={`h-2 w-2 rounded-full bg-gradient-to-br ${colorClass.split(' ')[0].replace('from-', 'bg-')}`} />
-                        <div>
-                            <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+            <div className="group relative border-b border-border last:border-b-0">
+                <Link href={`/topics/${topic.slug}`} className="block p-4 transition-colors hover:bg-accent/50">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                                 {topic.name || topic.canonical_title}
-                            </span>
+                            </h3>
                             {topic.definition_short && (
-                                <span className="ml-3 text-sm text-muted-foreground line-clamp-1 hidden sm:inline">
-                                    — {topic.definition_short}
-                                </span>
+                                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                                    {topic.definition_short.replace(/<[^>]*>/g, '')}
+                                </p>
                             )}
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {contentCount && (
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-md">
-                                    <FileText className="h-3.5 w-3.5" />
-                                    <span>{contentCount.statementCount} sources</span>
+                        <div className="flex items-center gap-4 pl-4">
+                            {contentCount && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <div className={`h-2 w-2 rounded-full ${contentCount.status === 'comprehensive' ? 'bg-emerald-500' : contentCount.status === 'partial' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                                    <span className="hidden sm:inline">{contentCount.status}</span>
+                                    <span className="font-mono">({contentCount.statementCount})</span>
                                 </div>
-                                <div className={`h-2 w-2 rounded-full ${contentCount.status === 'comprehensive' ? 'bg-emerald-500' :
-                                        contentCount.status === 'partial' ? 'bg-amber-500' : 'bg-slate-300'
-                                    }`} />
-                            </div>
-                        )}
-                        <button
-                            onClick={toggleExpand}
-                            className="p-1 hover:bg-muted rounded text-muted-foreground"
-                        >
-                            <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                        </button>
+                            )}
+                            <button onClick={toggleExpand} className="p-1 hover:bg-muted rounded text-muted-foreground">
+                                <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                            </button>
+                        </div>
                     </div>
                 </Link>
 
@@ -89,17 +78,17 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden px-4"
+                            className="overflow-hidden px-4 bg-accent/30"
                         >
-                            <div className="py-3 border-x border-b border-border bg-muted/10 rounded-b-xl space-y-3">
+                            <div className="py-4 space-y-3">
                                 {preview?.excerpts && preview.excerpts.length > 0 ? (
                                     preview.excerpts.map((excerpt) => (
-                                        <div key={excerpt.id} className="text-xs text-muted-foreground px-4 py-2 border-l-2 border-primary/20 ml-2">
-                                            <p className="italic">"{excerpt.text}"</p>
+                                        <div key={excerpt.id} className="text-xs text-muted-foreground pl-4 py-2 border-l-2 border-primary/30">
+                                            <p className="italic">"{excerpt.text.replace(/<[^>]*>/g, '')}"</p>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="px-8 py-2 text-xs text-muted-foreground italic">
+                                    <div className="px-4 py-2 text-xs text-muted-foreground italic">
                                         {preview ? "No excerpts available" : "Loading previews..."}
                                     </div>
                                 )}
@@ -112,93 +101,59 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
     }
 
     return (
-        <div
-            className="group relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-        >
-            <Link
-                href={`/topics/${topic.slug}`}
-                className={`relative flex flex-col h-full overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-5 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl group-hover:shadow-primary/5`}
-            >
-                {/* Subtle gold gradient overlay on hover */}
-                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#D4AF37]/0 via-[#D4AF37]/5 to-[#D4AF37]/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-
-                <div className="flex flex-col gap-3">
+        <div className="group relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+            <Link href={`/topics/${topic.slug}`} className={`relative flex flex-col h-full overflow-hidden rounded-xl border bg-card p-5 transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5`}>
+                <div className="flex flex-col gap-3 flex-1">
                     <div className="flex justify-between items-start">
-                        <div>
-                            <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                                {topic.name || topic.canonical_title}
-                            </h3>
-                            {topic.name_hebrew && (
-                                <p className="mt-1 text-sm text-muted-foreground font-hebrew dir-rtl">
-                                    {topic.name_hebrew}
-                                </p>
-                            )}
-                        </div>
-                        <button
-                            onClick={toggleExpand}
-                            className="p-1.5 bg-background/50 hover:bg-primary/10 hover:text-primary rounded-xl border border-border/50 transition-colors shadow-sm"
-                            title="Quick View"
-                        >
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {topic.name || topic.canonical_title}
+                        </h3>
+                        <button onClick={toggleExpand} className="p-1.5 bg-background/50 hover:bg-primary/10 hover:text-primary rounded-lg border border-transparent hover:border-primary/20 transition-colors shadow-sm">
                             <Eye className="h-4 w-4" />
                         </button>
                     </div>
 
                     {topic.definition_short && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                            {topic.definition_short}
+                            {topic.definition_short.replace(/<[^>]*>/g, '')}
                         </p>
                     )}
 
-                    {/* Inline Source Snippets (Dynamic) */}
                     <AnimatePresence>
                         {(isExpanded || (isHovered && !isExpanded)) && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                            >
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                                 <div className="mt-2 space-y-2 pt-2 border-t border-border/50">
                                     {preview?.excerpts && preview.excerpts.length > 0 ? (
                                         preview.excerpts.slice(0, isExpanded ? 3 : 1).map((excerpt) => (
                                             <div key={excerpt.id} className="text-[11px] text-muted-foreground/80 italic pl-2 border-l border-primary/20 bg-background/30 py-1 rounded-r-md">
-                                                "{excerpt.text}"
+                                                "{excerpt.text.replace(/<[^>]*>/g, '')}"
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-[10px] text-muted-foreground animate-pulse">
-                                            Loading deep insights...
-                                        </div>
+                                        <div className="text-[10px] text-muted-foreground animate-pulse">Loading deep insights...</div>
                                     )}
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
+                </div>
 
-                    {/* Status Badges & Counts */}
-                    <div className="mt-auto pt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            {contentCount && (
-                                <>
-                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${contentCount.status === 'comprehensive' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                                            contentCount.status === 'partial' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                                                'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                                        }`}>
-                                        {contentCount.status}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <FileText className="h-3 w-3" />
-                                        <span>{contentCount.statementCount}</span>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-background/50 opacity-0 ring-1 ring-border transition-all group-hover:opacity-100 group-hover:translate-x-1 outline-none">
-                            <ChevronRight className="h-4 w-4 text-primary" />
-                        </div>
+                <div className="mt-auto pt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        {contentCount && (
+                            <>
+                                <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${contentCount.status === 'comprehensive' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : contentCount.status === 'partial' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                                    {contentCount.status}
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <FileText className="h-3 w-3" />
+                                    <span>{contentCount.statementCount}</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-background/50 opacity-0 ring-1 ring-border transition-all group-hover:opacity-100 group-hover:translate-x-1 outline-none">
+                        <ChevronRight className="h-4 w-4 text-primary" />
                     </div>
                 </div>
             </Link>

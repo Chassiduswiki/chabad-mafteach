@@ -44,21 +44,17 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
     const [view, setView] = useState<'grid' | 'list'>('grid');
     const [isMobile, setIsMobile] = useState(false);
     const [contentCounts, setContentCounts] = useState<Record<number, TopicContentCount>>({});
-    const [hoveredTopic, setHoveredTopic] = useState<number | null>(null);
     const [topicPreviews, setTopicPreviews] = useState<Record<number, any>>({});
     const [sortBy, setSortBy] = useState<'name' | 'category' | 'popularity'>('name');
     const [topicAnalytics, setTopicAnalytics] = useState<Record<number, any>>({});
 
-    // Fetch topic analytics data for popularity sorting
     const fetchTopicAnalytics = async () => {
         try {
             const response = await fetch('/api/analytics');
             const data = await response.json();
             const analyticsMap: Record<number, any> = {};
             if (data.topics) {
-                data.topics.forEach((topic: any) => {
-                    analyticsMap[topic.id] = topic;
-                });
+                data.topics.forEach((topic: any) => { analyticsMap[topic.id] = topic; });
             }
             setTopicAnalytics(analyticsMap);
         } catch (error) {
@@ -66,7 +62,6 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         }
     };
 
-    // Fetch topic stats (counts and status)
     const fetchTopicStats = async (topicIds: number[]) => {
         if (topicIds.length === 0) return;
         try {
@@ -80,10 +75,8 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         }
     };
 
-    // Fetch topic preview data
     const fetchTopicPreview = async (topicId: number) => {
-        if (topicPreviews[topicId]) return; // Already fetched
-
+        if (topicPreviews[topicId]) return;
         try {
             const response = await fetch(`/api/topic-preview/${topicId}`);
             const data = await response.json();
@@ -93,35 +86,26 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         }
     };
 
-    // Fetch analytics data and counts when topics list changes
     useEffect(() => {
         if (topics.length > 0) {
             const topicIds = topics.map(t => t.id);
             fetchTopicStats(topicIds);
-            if (sortBy === 'popularity') {
-                fetchTopicAnalytics();
-            }
+            if (sortBy === 'popularity') fetchTopicAnalytics();
         }
     }, [topics, sortBy]);
 
-    // Detect mobile screen size
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 640);
-        };
-
+        const checkMobile = () => setIsMobile(window.innerWidth < 640);
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Load preference from localStorage on mount, default to list on mobile
     useEffect(() => {
         const savedView = localStorage.getItem('topicsView');
         if (savedView === 'grid' || savedView === 'list') {
             setView(savedView);
         } else if (isMobile) {
-            // Default to list view on mobile if no saved preference
             setView('list');
         }
     }, [isMobile]);
@@ -131,7 +115,6 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         localStorage.setItem('topicsView', newView);
     };
 
-    // Group by category
     const grouped = topics.reduce((acc: Record<string, Topic[]>, topic: Topic) => {
         const cat = topic.category || 'other';
         if (!acc[cat]) acc[cat] = [];
@@ -139,36 +122,31 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
         return acc;
     }, {});
 
-    // Sort topics within each category
     const sortedGrouped = Object.entries(grouped).reduce((acc, [category, items]) => {
         acc[category] = [...items].sort((a, b) => {
-            switch (sortBy) {
-                case 'name':
-                    return (a.canonical_title || a.name || '').localeCompare(b.canonical_title || b.name || '');
-                case 'category':
-                    return (a.topic_type || '').localeCompare(b.topic_type || '');
-                case 'popularity':
-                    const aViews = topicAnalytics[a.id]?.views || 0;
-                    const bViews = topicAnalytics[b.id]?.views || 0;
-                    return bViews - aViews; // Descending: most viewed first
-                default:
-                    return 0;
+            if (sortBy === 'name') return (a.canonical_title || a.name || '').localeCompare(b.canonical_title || b.name || '');
+            if (sortBy === 'category') return (a.topic_type || '').localeCompare(b.topic_type || '');
+            if (sortBy === 'popularity') {
+                const aViews = topicAnalytics[a.id]?.views || 0;
+                const bViews = topicAnalytics[b.id]?.views || 0;
+                return bViews - aViews;
             }
+            return 0;
         });
         return acc;
     }, {} as Record<string, Topic[]>);
 
     return (
-        <div className="space-y-8">
-            {/* Controls */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+        <div className="space-y-12">
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-sm">
                     <SortAsc className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Sort by:</span>
+                    <label htmlFor="sort-by" className="text-muted-foreground">Sort by:</label>
                     <select
+                        id="sort-by"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as 'name' | 'category' | 'popularity')}
-                        className="text-sm bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="bg-background border-none rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                     >
                         <option value="name">Name</option>
                         <option value="category">Category</option>
@@ -178,7 +156,6 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                 <ViewToggle view={view} onViewChange={handleViewChange} />
             </div>
 
-            {/* Content */}
             <div className="space-y-16">
                 {Object.entries(sortedGrouped).map(([category, items]) => {
                     const Icon = categoryIcons[category as keyof typeof categoryIcons] || Hash;
@@ -187,18 +164,13 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                     return (
                         <div key={category}>
                             <div className="mb-6 flex items-center gap-3">
-                                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${colorClass}`}>
-                                    <Icon className="h-5 w-5" />
+                                <div className={`inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${colorClass}`}>
+                                    <Icon className="h-4 w-4" />
                                 </div>
-                                <h2 className="text-2xl font-semibold capitalize">{category}</h2>
-                                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent"></div>
+                                <h2 className="text-xl font-semibold capitalize tracking-tight">{category}</h2>
                             </div>
 
-                            <div className={
-                                view === 'grid'
-                                    ? "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                                    : "space-y-3"
-                            }>
+                            <div className={view === 'grid' ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" : "border-t border-border"}>
                                 {items.map((topic) => (
                                     <TopicCard
                                         key={topic.id}
@@ -216,16 +188,12 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                 })}
             </div>
 
-            {/* Pagination info and controls */}
             {topics.length > 0 && (
-                <div className="mt-12">
+                <div className="mt-16">
                     <p className="text-center text-sm text-muted-foreground mb-4">
                         Showing {((currentPage - 1) * 50) + 1}–{Math.min(currentPage * 50, totalCount)} of {totalCount} topics
                     </p>
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                    />
+                    <Pagination currentPage={currentPage} totalPages={totalPages} />
                 </div>
             )}
 

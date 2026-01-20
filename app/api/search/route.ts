@@ -83,24 +83,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(cachedResult);
     }
 
-    // Generate variants for better discovery (Hebrew <-> English)
-    const variants = [normalizedQuery];
-
-    // For each collection, we'll build a filter that matches ANY of the variants
-    const buildVariantFilter = (fields: string[]) => {
-        const queryVariants = [normalizedQuery];
-        // Add basic transliterations if not Hebrew
-        if (!isHebrew(normalizedQuery)) {
-            if (normalizedQuery === 'tanya') queryVariants.push('ליקוטי אמרים', 'תניא');
-            if (normalizedQuery === 'perek') queryVariants.push('פרק');
-        }
-
-        return {
-            _or: queryVariants.flatMap(v =>
-                fields.map(f => ({ [f]: { _icontains: v } }))
-            )
-        };
-    };
 
     try {
         let docs: any[] = [];
@@ -109,47 +91,20 @@ export async function GET(request: NextRequest) {
         // Limit search to prevent performance issues
         const MAX_RESULTS_PER_TYPE = 15;
 
-        // Use Promise.all for all searches
         const searchPromise = (async () => {
-            const variantFilter = buildVariantFilter(['content']);
-
             const [contentBlocksResult, statementsResult] = await Promise.allSettled([
-                // Content blocks search
                 directus.request(
                     readItems('content_blocks', {
-                        filter: {
-                            _and: [
-                                {
-                                    _or: [
-                                        variantFilter,
-                                        ...(isNumericQuery(normalizedQuery) ? [
-                                            { page_number: { _eq: normalizedQuery as any } },
-                                            { chapter_number: { _eq: parseInt(normalizedQuery) as any } },
-                                            { halacha_number: { _eq: parseInt(normalizedQuery) as any } }
-                                        ] : [])
-                                    ]
-                                }
-                            ]
-                        } as any,
+                        search: normalizedQuery,
                         fields: ['id', 'order_key', 'content', 'page_number', 'chapter_number', 'halacha_number', 'document_id'],
                         limit: MAX_RESULTS_PER_TYPE,
-                        sort: ['order_key']
                     })
                 ),
-
-                // Statements search
                 directus.request(
                     readItems('statements', {
-                        filter: {
-                            _and: [
-                                { _or: [{ status: { _eq: 'published' } }, { status: { _eq: 'draft' } }] },
-                                { is_deleted: { _neq: true } },
-                                buildVariantFilter(['text'])
-                            ]
-                        } as any,
+                        search: normalizedQuery,
                         fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
                         limit: MAX_RESULTS_PER_TYPE,
-                        sort: ['order_key']
                     })
                 )
             ]);
@@ -187,11 +142,10 @@ export async function GET(request: NextRequest) {
 
         const topicsPromise = (async () => {
             if (normalizedQuery.length > 1) {
-                const topicFilter = buildVariantFilter(['canonical_title', 'slug', 'description', 'topic_type']);
                 topicsRaw = await directus.request(
                     readItems('topics', {
+                        search: normalizedQuery,
                         fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                        filter: topicFilter as any,
                         limit: 20,
                     })
                 ) as any[];
@@ -199,19 +153,11 @@ export async function GET(request: NextRequest) {
         })();
 
         const seforimPromise = (async () => {
-            const seferFilter = {
-                _and: [
-                    { _or: [{ status: { _eq: 'published' } }, { status: { _eq: 'draft' } }] },
-                    buildVariantFilter(['title', 'doc_type', 'original_lang'])
-                ]
-            };
-
             return await directus.request(
                 readItems('documents', {
+                    search: normalizedQuery,
                     fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category'],
-                    filter: seferFilter as any,
                     limit: 15,
-                    sort: ['title']
                 })
             ) as any[];
         })();
@@ -282,6 +228,3 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to check if query looks numeric
-function isNumericQuery(query: string): boolean {
-    return /^\d+$/.test(query.trim());
-}
