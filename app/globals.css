@@ -705,3 +705,14 @@ html {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+.interactive-term {
+  cursor: pointer;
+  border-bottom: 1px dotted var(--primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.interactive-term:hover {
+  background-color: var(--primary-foreground);
+  color: var(--primary);
+}

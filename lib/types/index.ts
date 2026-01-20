@@ -140,6 +140,7 @@ export interface Source {
     author_id?: number | Author;
     document_id?: number | Document; // Direct link to associated document
     author?: string; // Mapped from author_id.canonical_name
+    relationships?: any[]; // Array of relationship details (page numbers, verses)
 }
 
 export interface SourceLink {
