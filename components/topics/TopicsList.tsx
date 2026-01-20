@@ -6,6 +6,7 @@ import { Hash, Brain, Hand, Sparkles, BookText, FileText, Layers, TrendingUp, So
 import type { Topic } from '@/lib/types';
 import { ViewToggle } from '@/components/layout/ViewToggle';
 import Pagination from './Pagination';
+import { TopicCard } from './TopicCard';
 
 interface TopicsListProps {
     topics: Topic[];
@@ -199,180 +200,15 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                                     : "space-y-3"
                             }>
                                 {items.map((topic) => (
-                                    <div
+                                    <TopicCard
                                         key={topic.id}
-                                        className="relative"
-                                        onMouseEnter={() => {
-                                            if (!isMobile) {
-                                                setHoveredTopic(topic.id);
-                                                fetchTopicPreview(topic.id);
-                                            }
-                                        }}
-                                        onMouseLeave={() => !isMobile && setHoveredTopic(null)}
-                                        onClick={() => {
-                                            if (isMobile) {
-                                                const newHovered = hoveredTopic === topic.id ? null : topic.id;
-                                                setHoveredTopic(newHovered);
-                                                if (newHovered) {
-                                                    fetchTopicPreview(topic.id);
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <Link
-                                            href={`/topics/${topic.slug}`}
-                                            className={
-                                                view === 'grid'
-                                                    ? `group relative overflow-hidden rounded-2xl border bg-gradient-to-br ${colorClass} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5`
-                                                    : `group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent/50`
-                                            }
-                                        >
-                                            {view === 'grid' ? (
-                                                <>
-                                                    {/* Subtle gold gradient overlay on hover */}
-                                                    <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#D4AF37]/0 via-[#D4AF37]/5 to-[#D4AF37]/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-
-                                                    <div className="flex flex-col gap-3">
-                                                        <div>
-                                                            <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                                                                {topic.name}
-                                                            </h3>
-                                                            {topic.name_hebrew && (
-                                                                <p className="mt-1 text-sm text-muted-foreground font-hebrew dir-rtl">
-                                                                    {topic.name_hebrew}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        {topic.definition_short && (
-                                                            <p className="text-sm text-muted-foreground line-clamp-2">
-                                                                {topic.definition_short}
-                                                            </p>
-                                                        )}
-
-                                                        {/* Inline Source Snippets (NEW) */}
-                                                        {topicPreviews[topic.id]?.excerpts?.length > 0 && (
-                                                            <div className="mt-2 space-y-2">
-                                                                <div className="h-px bg-border/50 w-full" />
-                                                                {topicPreviews[topic.id].excerpts.slice(0, 1).map((excerpt: any) => (
-                                                                    <p key={excerpt.id} className="text-[11px] text-muted-foreground/80 italic line-clamp-2 pl-2 border-l border-primary/20">
-                                                                        "{excerpt.text}"
-                                                                    </p>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        {/* Status Badges & Counts */}
-                                                        <div className="mt-auto pt-2 flex items-center gap-3">
-                                                            {contentCounts[topic.id] && (
-                                                                <>
-                                                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${contentCounts[topic.id].status === 'comprehensive'
-                                                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                                                                        : contentCounts[topic.id].status === 'partial'
-                                                                            ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                                                                            : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                                                                        }`}>
-                                                                        {contentCounts[topic.id].status}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                                        <FileText className="h-3 w-3" />
-                                                                        <span>{contentCounts[topic.id].statementCount} sources</span>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-background/50 opacity-0 ring-1 ring-border transition-all group-hover:opacity-100 group-hover:translate-x-1">
-                                                        <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                        </svg>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {/* List Item Content */}
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`h-2 w-2 rounded-full bg-gradient-to-br ${colorClass.split(' ')[0].replace('from-', 'bg-')}`} />
-                                                        <div>
-                                                            <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                                                                {topic.name}
-                                                            </span>
-                                                            {topic.definition_short && (
-                                                                <span className="ml-3 text-sm text-muted-foreground line-clamp-1 hidden sm:inline">
-                                                                    — {topic.definition_short}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        {contentCounts[topic.id] && (
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-md">
-                                                                    <FileText className="h-3.5 w-3.5" />
-                                                                    <span>{contentCounts[topic.id].statementCount} sources</span>
-                                                                </div>
-                                                                <div className={`h-2 w-2 rounded-full cursor-help ${contentCounts[topic.id].status === 'comprehensive'
-                                                                    ? 'bg-emerald-500'
-                                                                    : contentCounts[topic.id].status === 'partial'
-                                                                        ? 'bg-amber-500'
-                                                                        : 'bg-slate-300'
-                                                                    }`} title={contentCounts[topic.id].status} />
-                                                            </div>
-                                                        )}
-                                                        {topic.name_hebrew && (
-                                                            <span className="text-sm text-muted-foreground font-hebrew">
-                                                                {topic.name_hebrew}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </Link>
-                                        {/* Source Preview */}
-                                        {hoveredTopic === topic.id && (
-                                            <div className="absolute top-full left-0 right-0 z-50 mt-2 p-4 bg-popover border border-border rounded-lg shadow-lg max-w-sm">
-                                                <div className="space-y-3">
-                                                    <h4 className="text-sm font-semibold text-popover-foreground">Source Preview</h4>
-                                                    <div className="space-y-2">
-                                                        {(() => {
-                                                            const preview = topicPreviews[topic.id];
-                                                            if (!preview) {
-                                                                return (
-                                                                    <div className="text-xs text-muted-foreground">
-                                                                        <p>Loading source preview...</p>
-                                                                    </div>
-                                                                );
-                                                            }
-
-                                                            if (preview.excerpts && preview.excerpts.length > 0) {
-                                                                return preview.excerpts.map((excerpt: any, index: number) => (
-                                                                    <div key={excerpt.id} className="text-xs text-muted-foreground">
-                                                                        <p className="line-clamp-3 italic">
-                                                                            "{excerpt.text}"
-                                                                        </p>
-                                                                        {index < preview.excerpts.length - 1 && (
-                                                                            <hr className="my-2 border-border/50" />
-                                                                        )}
-                                                                    </div>
-                                                                ));
-                                                            }
-
-                                                            return (
-                                                                <div className="text-xs text-muted-foreground">
-                                                                    <p>No source excerpts available</p>
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                    <div className="pt-2 border-t border-border">
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Click to view full topic details
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                        topic={topic}
+                                        view={view}
+                                        contentCount={contentCounts[topic.id]}
+                                        colorClass={colorClass}
+                                        preview={topicPreviews[topic.id]}
+                                        onPreviewRequest={fetchTopicPreview}
+                                    />
                                 ))}
                             </div>
                         </div>

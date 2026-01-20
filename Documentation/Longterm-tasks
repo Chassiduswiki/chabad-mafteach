@@ -1,5 +1,14 @@
 # Chabad Mafteach Frontend Roadmap
 
+## 🎯 JANUARY 2026 PIVOT: Focus on Digital Chassidus Encyclopedia
+**Goal**: Temporarily hide the "sources" (Seforim/Torah Reader) side of the platform to focus on the core "Digital Chassidus Encyclopedia" (Topics). This ensures a high-quality, focused experience before re-introducing source deep-diving.
+
+### Immediate Actions
+- [x] Hide `/seforim` (Sources) and `/explore` from main navigation and homepage.
+- [x] Remove "Citations" (Sources) tab from Topic detail pages.
+- [ ] Focus content editor and ingestion on Topic definitions and team-written entries.
+- [ ] Incorporate team-written encyclopedia entries into the site.
+
 ## Current Status
 - ✅ Topics pages simplified to use minimal Directus fields (canonical_title, topic_type, description).
 - ✅ **TypeScript schema aligned with new Directus data model** (Dec 8, 2025).
@@ -19,7 +28,7 @@
 - ✅ **Topic Editor Stabilized** - Resolved hang, fixed paragraphs/statements API, and implemented PATCH/DELETE (Jan 6, 2026).
 - ✅ **Search Link Reliability** - Fixed `undefined` document IDs and standardized search URLs (Jan 6, 2026).
 - ✅ **Article Tab Visibility** - Fixed `directus-proxy` path reconstruction error (Jan 6, 2026).
-- ⏳ **Next: Polish content editor UI & begin TRACK 15 implementation.**
+- ⏳ **Next: Hide source-related UI and focus on encyclopedia content integration.**
 
 
 ## Schema Migration Notes (Dec 8, 2025)

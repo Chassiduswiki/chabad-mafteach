@@ -1,11 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, Search, Bookmark, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSearch } from '@/lib/search-context';
+
+// Lazy load icons to prevent HMR issues
+const Home = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Home })));
+const Compass = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Compass })));
+const Search = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Search })));
+const Bookmark = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Bookmark })));
+const Hash = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Hash })));
+
+// Icon wrapper component
+function IconWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="w-5 h-5" />}>
+      {children}
+    </Suspense>
+  );
+}
 
 export function MobileNav() {
     const pathname = usePathname();
@@ -23,7 +38,9 @@ export function MobileNav() {
                         isActive('/') ? "text-primary" : "text-muted-foreground"
                     )}
                 >
-                    <Home size={20} />
+                    <IconWrapper>
+                        <Home size={20} />
+                    </IconWrapper>
                     <span className="text-[10px] font-medium">Home</span>
                 </Link>
 
@@ -34,20 +51,24 @@ export function MobileNav() {
                         isActive('/topics') ? "text-primary" : "text-muted-foreground"
                     )}
                 >
-                    <Hash size={20} />
+                    <IconWrapper>
+                        <Hash size={20} />
+                    </IconWrapper>
                     <span className="text-[10px] font-medium">Topics</span>
                 </Link>
 
-                <Link
+                {/* <Link
                     href="/explore"
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors min-w-[44px]",
                         isActive('/explore') ? "text-primary" : "text-muted-foreground"
                     )}
                 >
-                    <Compass size={20} />
+                    <IconWrapper>
+                        <Compass size={20} />
+                    </IconWrapper>
                     <span className="text-[10px] font-medium">Explore</span>
-                </Link>
+                </Link> */}
 
                 <button
                     onClick={() => setOpen(true)}
@@ -55,11 +76,13 @@ export function MobileNav() {
                         "flex flex-col items-center gap-1 transition-colors text-muted-foreground min-w-[44px]"
                     )}
                 >
-                    <Search size={20} />
+                    <IconWrapper>
+                        <Search size={20} />
+                    </IconWrapper>
                     <span className="text-[10px] font-medium">Search</span>
                 </button>
 
-                <Link
+                {/* <Link
                     href="/collections"
                     className={cn(
                         "flex flex-col items-center gap-1 transition-colors min-w-[44px]",
@@ -68,7 +91,7 @@ export function MobileNav() {
                 >
                     <Bookmark size={20} />
                     <span className="text-[10px] font-medium">Saved</span>
-                </Link>
+                </Link> */}
             </div>
         </nav>
     );

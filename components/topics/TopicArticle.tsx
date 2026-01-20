@@ -1,22 +1,19 @@
 import type { Topic } from '@/lib/types';
-import { MarkdownContent } from '@/components/shared/MarkdownContent';
+import { ArticleWithStructure } from './ArticleWithStructure';
 
 interface TopicArticleProps {
     topic: Topic;
 }
 
 export function TopicArticle({ topic }: TopicArticleProps) {
-    if (!topic.overview) {
-        return (
-            <div className="text-center py-12 text-muted-foreground">
-                <p>No article content available for this topic.</p>
-            </div>
-        );
+    // Check if this topic has a document (entry article)
+    if (topic.id) {
+        return <ArticleWithStructure topicId={topic.id} topicTitle={topic.canonical_title} />;
     }
 
     return (
-        <section className="space-y-6">
-            <MarkdownContent content={topic.overview} />
-        </section>
+        <div className="text-center py-12 text-muted-foreground">
+            <p>No article content available for this topic.</p>
+        </div>
     );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, GripVertical, Edit, Trash2, Eye, Tag, Hash } from 'lucide-react';
+import { Plus, GripVertical, Edit, Trash2, Eye, Tag, Hash, Loader2, X, Search } from 'lucide-react';
 import { TipTapEditor } from '@/components/editor/TipTapEditor';
 import { TranslationInterface } from '@/components/editor/TranslationInterface';
 
@@ -91,7 +91,7 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
             });
 
             if (response.ok) {
-                setStatements(prev => prev.map(s => 
+                setStatements(prev => prev.map(s =>
                     s.id === id ? { ...s, text } : s
                 ));
             }
@@ -151,25 +151,17 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
         // TODO: Update order in backend
     };
 
-    const addTopicTag = async (statementId: number, topicId: number) => {
+    const removeTopicTag = async (id: number) => {
         try {
-            const response = await fetch('/api/statement-topics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    statement_id: statementId,
-                    topic_id: topicId,
-                    relevance_score: 1.0,
-                    is_primary: false
-                })
+            const response = await fetch(`/api/directus-proxy/items/statement_topics/${id}`, {
+                method: 'DELETE'
             });
 
             if (response.ok) {
-                // Refresh statements to show updated topic tags
                 loadStatements();
             }
         } catch (error) {
-            console.error('Failed to add topic tag:', error);
+            console.error('Failed to remove topic tag:', error);
         }
     };
 
@@ -200,13 +192,13 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
                 {statements.map((statement) => (
                     <div
                         key={statement.id}
+                        id={`statement-${statement.id}`}
                         draggable
                         onDragStart={() => handleDragStart(statement.id)}
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, statement.id)}
-                        className={`border border-border rounded-lg overflow-hidden transition-all ${
-                            draggedStatement === statement.id ? 'opacity-50' : ''
-                        } ${editingStatement === statement.id ? 'ring-2 ring-primary' : ''}`}
+                        className={`border border-border rounded-lg overflow-hidden transition-all ${draggedStatement === statement.id ? 'opacity-50' : ''
+                            } ${editingStatement === statement.id ? 'ring-2 ring-primary shadow-md scale-[1.01]' : 'shadow-sm'}`}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-3 bg-muted/30 border-b border-border">
@@ -226,7 +218,7 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setEditingStatement(editingStatement === statement.id ? null : statement.id)}
-                                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
                                     title="Edit statement"
                                 >
                                     <Edit className="w-4 h-4" />
@@ -264,7 +256,7 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
                                     />
                                 </div>
                             ) : (
-                                <div 
+                                <div
                                     className="prose prose-sm max-w-none text-foreground"
                                     dangerouslySetInnerHTML={{ __html: statement.text }}
                                 />
@@ -277,12 +269,49 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
                                         <Hash className="w-4 h-4 text-orange-600" />
                                         <span className="text-sm font-medium text-orange-800 dark:text-orange-200">Appended Content</span>
                                     </div>
-                                    <div 
+                                    <div
                                         className="prose prose-xs max-w-none text-orange-800 dark:text-orange-200"
                                         dangerouslySetInnerHTML={{ __html: statement.appended_text }}
                                     />
                                 </div>
                             )}
+
+                            {/* Topic Tags */}
+                            <div className="mt-4 flex flex-wrap gap-2 items-center">
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1 mr-1">
+                                    <Tag className="w-3 h-3" />
+                                    Tags
+                                </div>
+                                {(statement as any).statement_topics?.map((tag: any) => (
+                                    <span
+                                        key={tag.id}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent text-accent-foreground text-xs rounded-full border border-border group/tag"
+                                    >
+                                        {tag.topic_id?.canonical_title || 'Unknown Topic'}
+                                        <button
+                                            onClick={() => removeTopicTag(tag.id)}
+                                            className="hover:text-destructive transition-colors pl-1 border-l border-border/50 ml-1"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                <TopicPicker onSelect={(topicId) => {
+                                    const addTag = async () => {
+                                        await fetch('/api/directus-proxy/items/statement_topics', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                statement_id: statement.id,
+                                                topic_id: topicId,
+                                                relevance_score: 1.0
+                                            })
+                                        });
+                                        loadStatements();
+                                    };
+                                    addTag();
+                                }} />
+                            </div>
                         </div>
 
                         {/* Translations */}
@@ -317,6 +346,81 @@ export function StatementsEditor({ paragraphId }: StatementsEditorProps) {
                     >
                         Add First Statement
                     </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function TopicPicker({ onSelect }: { onSelect: (id: number) => void }) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const [topics, setTopics] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            loadTopics();
+        }
+    }, [open]);
+
+    const loadTopics = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/topics');
+            const data = await response.json();
+            setTopics(data.topics || []);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredTopics = topics.filter(t =>
+        t.name.toLowerCase().includes(search.toLowerCase()) ||
+        t.name_hebrew?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen(!open)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed border-primary/30 text-primary text-xs rounded-full hover:bg-primary/5 transition-colors"
+            >
+                <Plus className="w-3 h-3" />
+                Add Tag
+            </button>
+            {open && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-popover border border-border rounded-lg shadow-xl z-50 p-2">
+                    <div className="relative mb-2">
+                        <Search className="absolute left-2 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                        <input
+                            autoFocus
+                            className="w-full bg-muted/50 border-none rounded-md py-1.5 pl-7 pr-3 text-xs focus:ring-1 focus:ring-primary outline-none"
+                            placeholder="Search topics..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                        {loading && <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></div>}
+                        {filteredTopics.slice(0, 10).map(topic => (
+                            <button
+                                key={topic.id}
+                                onClick={() => {
+                                    onSelect(topic.id);
+                                    setOpen(false);
+                                    setSearch('');
+                                }}
+                                className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors flex justify-between items-center"
+                            >
+                                <span>{topic.name}</span>
+                                <span className="text-[10px] text-muted-foreground font-hebrew">{topic.name_hebrew}</span>
+                            </button>
+                        ))}
+                        {filteredTopics.length === 0 && !loading && (
+                            <div className="p-2 text-center text-[10px] text-muted-foreground">No topics found</div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

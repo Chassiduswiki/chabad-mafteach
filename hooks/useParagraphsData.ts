@@ -27,7 +27,7 @@ export interface UseParagraphsDataReturn {
     loading: boolean;
     error: string | null;
     loadParagraphs: () => Promise<void>;
-    createParagraph: () => Promise<void>;
+    createParagraph: () => Promise<Paragraph | null>;
     updateParagraph: (id: number, text: string) => Promise<void>;
     deleteParagraph: (id: number) => Promise<void>;
     reorderParagraphs: (startIndex: number, endIndex: number) => Promise<void>;
@@ -82,10 +82,12 @@ export function useParagraphsData(topicId: number): UseParagraphsDataReturn {
 
             const data = await response.json();
             setParagraphs(prev => [...prev, data.paragraph]);
+            return data.paragraph as Paragraph;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to create paragraph';
             console.error('Failed to create paragraph:', error);
             setError(errorMessage);
+            return null;
         }
     }, [topicId]);
 

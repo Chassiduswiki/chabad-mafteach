@@ -19,7 +19,11 @@ export async function GET(request: NextRequest) {
 
         const statements = await directus.request(readItems('statements', {
             filter,
-            fields: ['*', { block_id: ['content'], document_id: ['title', 'slug' as any] }],
+            fields: ['*', {
+                block_id: ['id'],
+                document_id: ['id', 'title', 'slug' as any],
+                statement_topics: ['id', 'relevance_score', 'is_primary', { topic_id: ['id', 'canonical_title', 'slug'] }]
+            }],
             sort: ['order_key'],
             limit: 200
         })) as any[];

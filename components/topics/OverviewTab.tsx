@@ -5,6 +5,7 @@ import { Topic, ContentBlock, Statement } from '@/lib/types';
 import { BookOpen, Target, Lightbulb, Clock, Info, FileText, Plus, X, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/directus';
 import { readItems, createItem } from '@directus/sdk';
+import { safeDirectusCall, directusPool } from '@/lib/integration-hardening';
 import { ArticleReader } from './ArticleReader';
 
 // Lazy client initialization to avoid client-side URL errors
@@ -68,17 +69,28 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
             const directus = getDirectus();
             if (!directus) throw new Error('Directus client not available');
 
-            const documents = await directus.request(readItems('documents', {
-                filter: {
-                    topic: { _eq: topic.id },
-                    doc_type: { _eq: 'entry' },
-                    status: { _eq: 'published' }
-                },
-                fields: ['id', 'title'],
-                limit: -1
-            })) as any;
+            const documents = await safeDirectusCall(
+                () => directusPool.acquire(() =>
+                    directus.request(readItems('documents', {
+                        filter: {
+                            topic: { _eq: topic.id },
+                            doc_type: { _eq: 'entry' },
+                            status: { _eq: 'published' }
+                        },
+                        fields: ['id', 'title'],
+                        limit: -1
+                    })) as Promise<{ id: number; title: string }[]>
+                ),
+                {
+                    retries: 3,
+                    timeout: 10000,
+                    fallback: []
+                }
+            ) as { id: number; title: string }[];
 
-            if (documents.length === 0) {
+            // Add null check for documents response
+            if (!documents || !Array.isArray(documents) || documents.length === 0) {
+                console.log(`No documents found for topic ${topic.id}`);
                 setContentBlocks([]);
                 return;
             }
@@ -86,13 +98,24 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
             const documentIds = documents.map((doc: any) => doc.id);
 
             // Get content blocks for these documents
-            const contentBlocksResult = await directus.request(readItems('content_blocks', {
-                filter: { document_id: { _in: documentIds } },
-                fields: ['id', 'order_key', 'content', 'block_type', 'page_number', 'chapter_number', 'halacha_number', 'daf_number', 'section_number', 'citation_refs', 'metadata', 'document_id'],
-                sort: ['order_key']
-            })) as any;
+            const contentBlocksResult = await safeDirectusCall(
+                () => directusPool.acquire(() =>
+                    directus.request(readItems('content_blocks', {
+                        filter: { document_id: { _in: documentIds } },
+                        fields: ['id', 'order_key', 'content', 'block_type', 'page_number', 'chapter_number', 'halacha_number', 'daf_number', 'section_number', 'citation_refs', 'metadata', 'document_id'],
+                        sort: ['order_key']
+                    })) as Promise<any[]>
+                ),
+                {
+                    retries: 3,
+                    timeout: 10000,
+                    fallback: []
+                }
+            ) as any[];
 
-            if (contentBlocksResult.length === 0) {
+            // Add null check for content blocks response
+            if (!contentBlocksResult || !Array.isArray(contentBlocksResult) || contentBlocksResult.length === 0) {
+                console.log(`No content blocks found for documents: ${documentIds.join(', ')}`);
                 setContentBlocks([]);
                 return;
             }
@@ -104,16 +127,27 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
             let statementsData: any[] = [];
             for (const blockId of blockIds) {
                 try {
-                    const blockStatements = await directus.request(readItems('statements', {
-                        filter: { block_id: { _eq: blockId } },
-                        fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
-                        limit: -1
-                    })) as any;
-                    if (blockStatements && blockStatements.length > 0) {
+                    const blockStatements = await safeDirectusCall(
+                        () => directusPool.acquire(() =>
+                            directus.request(readItems('statements', {
+                                filter: { block_id: { _eq: blockId } },
+                                fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
+                                limit: -1
+                            })) as Promise<any[]>
+                        ),
+                        {
+                            retries: 2, // Fewer retries for individual statements
+                            timeout: 5000,
+                            fallback: []
+                        }
+                    ) as any[];
+
+                    if (blockStatements && Array.isArray(blockStatements) && blockStatements.length > 0) {
                         statementsData.push(...blockStatements);
                     }
                 } catch (error) {
                     console.error(`Error fetching statements for block ${blockId}:`, error);
+                    // Continue with other blocks instead of failing completely
                 }
             }
 
@@ -132,7 +166,29 @@ export default function OverviewTab({ topic }: OverviewTabProps) {
 
             setContentBlocks(contentBlocksWithStatements);
         } catch (error) {
-            console.error('Error loading content blocks:', error);
+            // Improved error handling with meaningful messages
+            let errorMessage = 'Unknown error occurred';
+            let errorDetails = '';
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+                errorDetails = error.stack || '';
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error && typeof error === 'object') {
+                try {
+                    errorMessage = JSON.stringify(error);
+                } catch {
+                    errorMessage = String(error);
+                }
+            }
+
+            console.error('Error loading content blocks:', {
+                message: errorMessage,
+                details: errorDetails,
+                topicId: topic.id,
+                error
+            });
             setContentBlocks([]);
         } finally {
             setIsLoading(false);

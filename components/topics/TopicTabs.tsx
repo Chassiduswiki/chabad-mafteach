@@ -23,7 +23,7 @@ const tabs: { id: TabType; label: string; icon: React.ComponentType<any>; descri
     { id: 'practical', label: 'Practical', icon: Lightbulb, description: 'Practical applications and takeaways', comingSoon: true },
     { id: 'historical', label: 'Historical', icon: Clock, description: 'Historical context and background', comingSoon: true },
     { id: 'boundaries', label: 'Boundaries', icon: Target, description: 'What it is and what it\'s not', comingSoon: true },
-    { id: 'sources', label: 'Citations', icon: BookOpen, description: 'References and direct quotes' },
+    // { id: 'sources', label: 'Citations', icon: BookOpen, description: 'References and direct quotes' },
     { id: 'related', label: 'Related', icon: Sparkles, description: 'Connected concepts', comingSoon: true },
 ];
 

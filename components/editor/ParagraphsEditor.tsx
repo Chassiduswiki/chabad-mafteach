@@ -7,6 +7,7 @@ import { TipTapEditor } from '@/components/editor/TipTapEditor';
 import { useEditorState } from '@/hooks/useEditorState';
 import { useParagraphsData } from '@/hooks/useParagraphsData';
 import { validateParagraph } from '@/utils/editorBusinessLogic';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 // Lazy load heavy components
 const StatementsEditor = dynamic(() => import('@/components/editor/StatementsEditor').then(mod => ({ default: mod.StatementsEditor })), {
@@ -69,6 +70,27 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
         setDraggedId(null);
     };
 
+    const [savingId, setSavingId] = useState<number | null>(null);
+
+    const handleCreateParagraph = async () => {
+        const newParagraph = await createParagraph();
+        if (newParagraph) {
+            setEditingId(newParagraph.id);
+            // Small delay to ensure the DOM is updated before scrolling
+            setTimeout(() => {
+                const element = document.getElementById(`paragraph-${newParagraph.id}`);
+                element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    };
+
+    const handleUpdateParagraph = async (id: number, text: string) => {
+        setSavingId(id);
+        await updateParagraph(id, text);
+        // Artificial delay for visual feedback if it's too fast
+        setTimeout(() => setSavingId(null), 500);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center p-8">
@@ -92,8 +114,8 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">Paragraphs</h3>
                 <button
-                    onClick={createParagraph}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 transition-colors"
+                    onClick={handleCreateParagraph}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
                     Add Paragraph
@@ -104,11 +126,12 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                 {paragraphs.map((paragraph) => (
                     <div
                         key={paragraph.id}
+                        id={`paragraph-${paragraph.id}`}
                         draggable
                         onDragStart={() => handleDragStart(paragraph.id)}
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, paragraph.id)}
-                        className={`border border-border rounded-lg overflow-hidden transition-all ${draggedId === paragraph.id ? 'opacity-50' : ''} ${editingId === paragraph.id ? 'ring-2 ring-primary' : ''}`}
+                        className={`border border-border rounded-lg overflow-hidden transition-all ${draggedId === paragraph.id ? 'opacity-50' : ''} ${editingId === paragraph.id ? 'ring-2 ring-primary shadow-lg scale-[1.01]' : 'shadow-sm'}`}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 bg-muted/30 border-b border-border">
@@ -129,6 +152,18 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                         )}
                                         {paragraph.statements.length} statements
                                     </button>
+                                )}
+                                {savingId === paragraph.id && (
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Saving...
+                                    </div>
+                                )}
+                                {savingId !== paragraph.id && (
+                                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Saved
+                                    </div>
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
@@ -170,7 +205,7 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                             // Set up content change listener
                                             editor.on('update', ({ editor }: any) => {
                                                 const content = editor.getHTML();
-                                                updateParagraph(paragraph.id, content);
+                                                handleUpdateParagraph(paragraph.id, content);
                                             });
 
                                             editor.on('blur', () => {
@@ -189,6 +224,24 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                 />
                             )}
                         </div>
+
+                        {/* Validation Feedback */}
+                        {(() => {
+                            const validation = validateParagraph(paragraph.text || paragraph.content);
+                            if (!validation.isValid) {
+                                return (
+                                    <div className="mx-4 mb-4 p-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2.5">
+                                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                        <div className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                                            {validation.errors.map((error, idx) => (
+                                                <p key={idx}>{error}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
 
                         {/* Translations */}
                         {showTranslationsId === paragraph.id && (

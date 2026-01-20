@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, Check } from 'lucide-react';
 import { useOnboarding, OnboardingStep as OnboardingStepType } from '@/lib/hooks/useOnboarding';
+
+// Lazy load icons to prevent HMR issues
+const X = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.X })));
+const ArrowRight = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.ArrowRight })));
+const Check = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Check })));
+
+// Icon wrapper component
+function IconWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="w-5 h-5" />}>
+      {children}
+    </Suspense>
+  );
+}
 
 /**
  * ONBOARDING STEP COMPONENT
@@ -149,7 +162,9 @@ export function OnboardingStep({ step, onComplete }: OnboardingStepProps) {
                 className="absolute top-3 right-3 p-1 rounded-md hover:bg-accent transition-colors"
                 aria-label="Skip onboarding"
               >
-                <X className="h-4 w-4 text-muted-foreground" />
+                <IconWrapper>
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </IconWrapper>
               </button>
 
               {/* Progress indicator (if multiple steps) */}

@@ -60,7 +60,7 @@ export default function Home() {
             >
               Topics
             </Link>
-            <Link
+            {/* <Link
               href="/seforim"
               className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
             >
@@ -71,7 +71,7 @@ export default function Home() {
               className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
             >
               Explore
-            </Link>
+            </Link> */}
           </div>
 
           {/* Utility links - separated from primary nav */}
