@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowLeft, Share2, Headphones, Bookmark } from 'lucide-react';
+import { ArrowLeft, Share2, Headphones, Bookmark, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 interface ArticleHeroProps {
@@ -19,6 +19,9 @@ export function ImmersiveHero({
     category = "General Concept",
     definitionShort
 }: ArticleHeroProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isTruncated, setIsTruncated] = useState(false);
+    const definitionRef = useRef<HTMLParagraphElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll();
 
@@ -30,6 +33,13 @@ export function ImmersiveHero({
     // Nav Bar State (appears after scroll)
     const navOpacity = useTransform(scrollY, [200, 300], [0, 1]);
     const navY = useTransform(scrollY, [200, 300], [-20, 0]);
+
+    useEffect(() => {
+        if (definitionRef.current) {
+            // Check if the text is overflowing (i.e., it's clamped)
+            setIsTruncated(definitionRef.current.scrollHeight > definitionRef.current.clientHeight);
+        }
+    }, [definitionShort]);
 
     return (
         <>
@@ -96,11 +106,26 @@ export function ImmersiveHero({
                             </div>
 
                             {/* Intro / Short Def */}
-                            {definitionShort && (
-                                <p className="text-lg sm:text-xl leading-relaxed text-muted-foreground max-w-xl">
-                                    {definitionShort}
-                                </p>
-                            )}
+                            {definitionShort && (() => {
+                                const cleanDefinition = definitionShort.replace(/<[^>]*>/g, '');
+                                return (
+                                    <div>
+                                        <p
+                                            ref={definitionRef}
+                                            className={`text-lg sm:text-xl leading-relaxed text-muted-foreground max-w-xl transition-all duration-300 ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                                            {cleanDefinition}
+                                        </p>
+                                        {isTruncated && (
+                                            <button
+                                                onClick={() => setIsExpanded(!isExpanded)}
+                                                className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline mt-2">
+                                                {isExpanded ? 'See Less' : 'See More'}
+                                                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-3 pt-2">

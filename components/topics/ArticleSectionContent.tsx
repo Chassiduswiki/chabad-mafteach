@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import parse, { DOMNode, Element, domToReact } from 'html-react-parser';
+import DOMPurify from 'dompurify';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
+import { SoulLevelsDisplay } from '@/components/topics/custom-content/SoulLevelsDisplay';
 import { Topic, Source } from '@/lib/types';
 
 // This is a simplified version of the config. In a real app, this would be shared.
@@ -34,8 +37,14 @@ export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentP
     }, [section.type, section.content, topic.canonical_title, topic.name_hebrew]);
 
     const isGlossary = glossaryItems && glossaryItems.length > 0;
+    const isSoulLevelContent = section.content.includes('Nefesh') && section.content.includes('Yechidah');
     const config = sectionConfig[section.type];
     const Icon = config?.icon; // Icon is not used here, but kept for structure consistency
+
+    // Custom renderer for specific content
+    if (isSoulLevelContent) {
+        return <SoulLevelsDisplay content={section.content} />;
+    }
 
     return (
         <>
@@ -53,10 +62,9 @@ export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentP
             {isGlossary ? (
                 <GlossaryGrid items={glossaryItems} />
             ) : (
-                <div
-                    className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline"
-                    dangerouslySetInnerHTML={{ __html: section.content }}
-                />
+                <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline">
+                    {parse(DOMPurify.sanitize(section.content))}
+                </div>
             )}
         </>
     );
