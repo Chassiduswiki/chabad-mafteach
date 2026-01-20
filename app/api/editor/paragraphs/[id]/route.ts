@@ -8,11 +8,12 @@ import { updateItem, deleteItem } from '@directus/sdk';
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const directus = createClient();
-        const id = parseInt(params.id);
+        const { id: idString } = await params;
+        const id = parseInt(idString);
         const body = await request.json();
 
         // Support both 'text' (frontend) and 'content' (DB)
@@ -57,11 +58,12 @@ export async function PATCH(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const directus = createClient();
-        const id = parseInt(params.id);
+        const { id: idString } = await params;
+        const id = parseInt(idString);
 
         const response = await fetch(`${process.env.DIRECTUS_URL}/items/content_blocks/${id}`, {
             method: 'DELETE',

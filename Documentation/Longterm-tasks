@@ -66,6 +66,11 @@ The frontend TypeScript types now match the new Directus schema:
 > [!NOTE]
 > Functional unblocking requires Directus permission update for `statement_topics` collection fields (`statement_id`, `topic_id`).
 
+### Phase 1e: Content Model Clarity (NEW)
+- [ ] **Data Model Definitions**: Define usage of short vs. long descriptions (popups vs. headers).
+- [ ] **Source Linking**: Determine optimal display and linking strategy for sources.
+- [ ] **Smart Glossary Refinement**: Fix parse failures for standalone numbered lists.
+
 ---
 
 ## TRACK 11: Explore & Discovery Upgrade (NEW)
@@ -408,6 +413,13 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Source-First View**: Browse entire works (e.g. Tanya) with overlay annotations.
 - [ ] **Personalized Learning**: Recommendation engine based on user reading history.
 
+### Phase 8c: Unparalleled Learning Experience (Brainstormed Jan 2026)
+- [ ] **Social 'Spark' Sharing** - One-click quote-to-image generator for Instagram/Status sharing.
+- [ ] **Flow State 'Story Mode'** - Linear 'Campaign' mode for topics (e.g., "Roadmap to Joy").
+- [ ] **AI Chavrusa** - 'Devil's Advocate' bot to challenge user understanding.
+- [ ] **Mastery Visualization** - 3D 'Soul Map' or RPG-style stat tracking for spiritual concepts.
+- [ ] **Ambient Immersion** - Live wallpapers/widgets for passive learning.
+
 ---
 
 ## TRACK 9: UX Audit & Fixes (Immediate Priority)
@@ -423,11 +435,13 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] **Audit navigation links** - Ensure all header navigation links are functional (/topics, /seforim, /explore, /collections)
 - [x] **Improve search reliability** - Fix vanishing results, ensure topics/authors/sources discoverable
 - [x] **Add user onboarding flow** - Guide new users from home page to first meaningful interaction
+- [ ] **Fix Back Navigation**: "Back" from Topics page should go to Home/Categories, not Explore (which is "For You").
 
 ### Phase 9c: Visual & Mobile Polish
 - [x] **Fix dark mode styling** - Align book text page gradients/colors with main UI theme in dark mode
 - [x] **Replace Collections placeholder** - Implement functional bookmarks/saved items system
 - [x] **Audit mobile UX** - Test bottom sheets, touch targets, swipe gestures, navigation flow
+- [ ] **Constellation Redesign**: Overhaul visual graph (smaller/dynamic button, colorful/sleek/animated relationships).
 
 ### Phase 9d: System Reliability
 - [x] **Audit editor permissions** - ✅ RESOLVED: APIs working, no 403 errors detected (Dec 29, 2025)
@@ -500,6 +514,43 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Collaborative Annotations** - Enable shared notes and discussions on topics
 - [ ] **Version Control** - Implement system for tracking content changes and contributions
 - [ ] **Quality Assurance** - Build automated and manual content quality checks
+
+### Phase 15i: "Sexy" Visual & Interaction Overhaul (Verified in Demo v2 - Jan 2026)
+> [!IMPORTANT]
+> **Migration Plan:** The demo at `ArticleStructuredView` is a standalone client component. To migrate to production, we must adapt it to accept dynamic data and replace the current `app/topics/[slug]/page.tsx` layout.
+
+#### 1. Component Migration
+- [ ] **Move & Rename Components**:
+    - `components/topics/article-components/ArticleHero.tsx` -> `components/topics/hero/ImmersiveHero.tsx`
+    - `components/topics/article-components/ConceptConstellation.tsx` -> `components/topics/visualization/ConceptConstellation.tsx`
+    - `components/topics/article-components/ArticleLoading.tsx` -> `components/topics/loading/TopicSkeleton.tsx`
+    - `components/ui/BottomSheet.tsx` -> `components/ui/BottomSheet.tsx` (Shared UI)
+- [ ] **Create New Shell Component**:
+    - Create `components/topics/TopicExperience.tsx` (Client Component)
+    - Adapt `ArticleStructuredView` logic into this new component.
+    - Props: `topic: Topic`, `related: Topic[]`, `sources: Source[]` instead of `DEMO_ARTICLE`.
+
+#### 2. Data Wiring
+- [ ] **Map Directus Data to Props**:
+    - Updates `getTopicBySlug` to return data in the shape required by usage.
+    - Map `topic.definition` to the "Definition" section.
+    - Map `topic.article` content (HTML) to appropriate sections.
+    - Map `topic_relationships` to the `ConceptConstellation` graph nodes.
+- [ ] **Dynamic Prerequisite Logic**:
+    - Check `topic.prerequisites` (new field needed?) or infer from parent topics.
+    - Verify "Next Step" suggestion logic based on related topics.
+
+#### 3. Page Replacement
+- [ ] **Update `app/topics/[slug]/page.tsx`**:
+    - Remove `TopicHeader`, `ActionButtons`, `TopicTabs`.
+    - Render `<TopicExperience topic={topicData} />`.
+    - Keep `TopicTracker` for analytics.
+
+#### 4. Visual Cleanup
+- [ ] **Refine Mobile Focus**:
+    - Ensure the "Action Footer" z-index works with the existing bottom nav (if any).
+    - Test "Focus Mode" dimming doesn't break accessibility.
+    - Verify `AnimatePresence` for bottom sheets handles route changes correctly.
 
 ---
 

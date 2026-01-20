@@ -1,12 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTopicBySlug } from '@/lib/api/topics';
-import TopicTabs from '@/components/topics/TopicTabs';
-import { TopicHeader } from '@/components/topics/TopicHeader';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { ActionButtons } from '@/components/shared/ActionButtons';
 import { TopicTracker } from '@/components/shared/TopicTracker';
-import { PersonalCollections } from '@/components/collections/PersonalCollections';
-import { TopicRecommendations } from '@/components/topics/TopicRecommendations';
+import { TopicExperience } from '@/components/topics/TopicExperience';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,37 +22,17 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
     const { topic, relatedTopics, sources, citations } = topicData;
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* Track last visited topic for Continue Learning */}
+        <>
+            {/* Track last visited topic for analytics/history */}
             <TopicTracker slug={topic.slug} name={topic.name || topic.canonical_title} topicId={topic.id} />
 
-            <TopicHeader topic={topic} />
-
-            <main className="mx-auto max-w-5xl px-6 py-8 sm:px-8 lg:px-12">
-                <div className="mb-8 flex items-center justify-between gap-4">
-                    <Breadcrumbs
-                        items={[
-                            { label: 'Topics', href: '/topics' },
-                            { label: topic.name || topic.canonical_title }
-                        ]}
-                    />
-                    <ActionButtons topic={topic} />
-                </div>
-
-                <div className="w-full">
-                    <TopicTabs topic={topic} relatedTopics={relatedTopics} sources={sources} citations={citations} />
-
-                    {/* Personal Collections */}
-                    <div className="mt-8 pt-8 border-t border-border">
-                        <PersonalCollections currentTopicId={topic.id} />
-                    </div>
-
-                    {/* Recommendations */}
-                    <div className="mt-8 pt-8 border-t border-border">
-                        <TopicRecommendations topicId={topic.id} />
-                    </div>
-                </div>
-            </main>
-        </div>
+            {/* Main Interactive Experience */}
+            <TopicExperience
+                topic={topic}
+                relatedTopics={relatedTopics}
+                sources={sources}
+                citations={citations}
+            />
+        </>
     );
 }

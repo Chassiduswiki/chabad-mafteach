@@ -139,6 +139,7 @@ export interface Source {
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
     document_id?: number | Document; // Direct link to associated document
+    author?: string; // Mapped from author_id.canonical_name
 }
 
 export interface SourceLink {

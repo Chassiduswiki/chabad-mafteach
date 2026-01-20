@@ -799,6 +799,52 @@ const document = await client.request(
 ### **Issue 2: LexoRank Generation**
 **Solution:** Use a custom interface extension or generate in application code before sending to Directus.
 
+### **Issue 3: Data Source for Interactive Topic Graphs**
+**Solution:** See the mapping below for how the "Concept Constellation" visualization is derived from existing relationships.
+
+---
+
+## Phase 8: Data Mapping for New Topic Experience (Jan 2026)
+
+The "Interactive Topics" redesign relies on specific data mappings from the `topics` and `topic_relationships` collections.
+
+### **1. Immersive Hero & "DNA"**
+The top section of the page pulls directly from the `topics` record.
+
+| UI Component | Data Source | Field Path | Notes |
+|---|---|---|---|
+| **Big Hebrew Title** | `topics` | `canonical_title` | The main display title. |
+| **English Title** | `topics` | `canonical_title_en` | If missing, falls back to transliteration. |
+| **Category Badge** | `topics` | `topic_type` | Mapped to frontend color/icon map. |
+| **Short Definition** | `topics` | `description` | First paragraph only (plaintext). |
+| **Difficulty Level** | `topics` | `metadata.difficulty` | New metadata field needed (Beginner/Advanced). |
+
+### **2. Structured Article Sections**
+The tabbed structure (Definition, Mashal, Application) comes from parsing the `topics.article` field (HTML) or future structured fields.
+
+| UI Tab | Data Source | Logic |
+|---|---|---|
+| **Definition** | `topics` | `definition_positive` + `definition_negative` | Combined into one readable section. |
+| **Analogy (Mashal)** | `topics` | `metadata.mashal` | Optional JSON field or dedicated text field. |
+| **Application (Avodah)** | `topics` | `practical_takeaways` | Existing WYSIWYG field. |
+| **Universal Meaning** | `topics` | `historical_context` | Existing WYSIWYG field. |
+
+### **3. Concept Constellation (Interactive Graph)**
+The 3D-style graph is populated by the `topic_relationships` collection, querying where `parent_topic_id` OR `child_topic_id` matches the current topic.
+
+| Node Type | Source Relationship | Filter Logic |
+|---|---|---|
+| **Parent Node** | `topic_relationships` | `child_topic_id = current.id` AND `relation_type = 'conceptual_parent'` |
+| **Opposite Node** | `topic_relationships` | `relation_type = 'opposite'` |
+| **Component Node** | `topic_relationships` | `parent_topic_id = current.id` AND `relation_type = 'subcategory/part_of'` |
+
+### **4. "Next Step" Recommendation**
+The "Smart Pathing" card at the bottom of the article.
+
+*   **Primary Source:** `topic_relationships` (where `relation_type = 'chronological_next'`).
+*   **Fallback:** First "Component" or "Subcategory" topic that the user hasn't visited yet (requires user history tracking).
+
+
 ### **Issue 3: Circular Topic Hierarchy**
 **Solution:** Implement validation in a Flow that checks for cycles before allowing relationship creation.
 
