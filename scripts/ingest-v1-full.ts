@@ -20,9 +20,10 @@ interface DirectusTopic {
   canonical_title_transliteration: string;
   canonical_title_en: string;
   slug: string;
+  name_hebrew: string;
   description: string;
-  overview: string;
-  historical_context: string;
+  mashal: string;
+  global_nimshal: string;
   practical_takeaways: string;
   topic_type: string;
   metadata: {
@@ -143,9 +144,10 @@ class V1DictionaryParser {
       canonical_title_transliteration: entry.transliteration,
       canonical_title_en: entry.englishTerm,
       slug,
+      name_hebrew: entry.hebrewTerm,
       description: entry.definition.join(' '),
-      overview: this.formatOverview(entry),
-      historical_context: entry.globalNimshal.join('\n\n'),
+      mashal: entry.mashal.join('\n\n'),
+      global_nimshal: entry.globalNimshal.join('\n\n'),
       practical_takeaways: entry.personalNimshal.join('\n\n'),
       topic_type: 'concept',
       metadata: {
@@ -157,19 +159,6 @@ class V1DictionaryParser {
     };
   }
 
-  private formatOverview(entry: ParsedEntry): string {
-    const sections: string[] = [];
-
-    if (entry.mashal.length > 0) {
-      sections.push(`<h3>Mashal (Parable)</h3><p>${entry.mashal.join('</p><p>')}</p>`);
-    }
-
-    if (entry.personalNimshal.length > 0) {
-      sections.push(`<h3>Personal Application</h3><p>${entry.personalNimshal.join('</p><p>')}</p>`);
-    }
-
-    return sections.join('\n');
-  }
 }
 
 class DirectusIngestionClient {
@@ -188,9 +177,10 @@ class DirectusIngestionClient {
       canonical_title_transliteration: topic.canonical_title_transliteration,
       canonical_title_en: topic.canonical_title_en,
       slug: topic.slug,
+      name_hebrew: topic.name_hebrew,
       description: topic.description,
-      overview: topic.overview,
-      historical_context: topic.historical_context,
+      mashal: topic.mashal,
+      global_nimshal: topic.global_nimshal,
       practical_takeaways: topic.practical_takeaways,
       topic_type: topic.topic_type,
       metadata: topic.metadata,
