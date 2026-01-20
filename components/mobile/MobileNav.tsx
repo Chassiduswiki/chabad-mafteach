@@ -47,7 +47,7 @@ export function MobileNav() {
             "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[99] w-full max-w-md px-4 sm:hidden transition-transform duration-300 ease-in-out",
             !isVisible && "translate-y-[150%]"
         )}>
-            <div className="bg-background/80 backdrop-blur-xl rounded-full px-6 py-3 flex justify-around items-center border border-border shadow-2xl shadow-black/20 dark:shadow-black/60">
+            <div className="bg-background/80 backdrop-blur-xl rounded-full px-6 py-3 flex justify-center items-center gap-8 border border-border shadow-2xl shadow-black/20 dark:shadow-black/60">
                 {isTopicPage ? (
                     <>
                         <button className="flex flex-col items-center gap-1 text-muted-foreground min-w-[44px]">
