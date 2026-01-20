@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark } from 'lucide-react';
+import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart } from 'lucide-react';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
 import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
@@ -14,7 +14,7 @@ import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
 
 // Types
-type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'sources';
+type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'charts' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -63,6 +63,14 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-emerald-500/5',
         borderColor: 'border-emerald-500/20'
     },
+    charts: {
+        title: 'Charts & Tables',
+        shortTitle: 'Charts',
+        icon: BarChart,
+        color: 'text-sky-600 dark:text-sky-400',
+        bgColor: 'bg-sky-500/5',
+        borderColor: 'border-sky-500/20'
+    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -96,6 +104,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
         mashal: null,
         personal_nimshal: null,
         global_nimshal: null,
+        charts: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -152,20 +161,25 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             `)
         },
         // Only include optional sections if content exists
-        ...(topic.article ? [{
+        ...(topic.mashal ? [{
             type: 'mashal' as SectionType,
             order: 2,
-            content: highlightTerms(topic.article) // Using article field for the main content body (Mashal)
+            content: highlightTerms(topic.mashal)
         }] : []),
         ...(topic.practical_takeaways ? [{
             type: 'personal_nimshal' as SectionType,
             order: 3,
             content: highlightTerms(topic.practical_takeaways)
         }] : []),
-        ...(topic.historical_context ? [{ // Using historical_context temporarily for demonstration
+        ...(topic.global_nimshal ? [{
             type: 'global_nimshal' as SectionType,
             order: 4,
-            content: highlightTerms(topic.historical_context)
+            content: highlightTerms(topic.global_nimshal)
+        }] : []),
+        ...(topic.charts ? [{
+            type: 'charts' as SectionType,
+            order: 5,
+            content: highlightTerms(topic.charts)
         }] : []),
         // Always include sources
         {
@@ -330,13 +344,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             />
 
             {/* Sticky Tab Navigation */}
-            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm hidden sm:block">
+            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
                 <div className="max-w-4xl mx-auto">
                     <div
                         ref={tabsRef}
-                        className="flex overflow-x-auto scrollbar-hide -mx-1 px-4 sm:px-6"
+                        className="flex overflow-x-auto overflow-y-hidden scrollbar-hide -mx-1 px-4 sm:px-6 snap-x snap-mandatory touch-pan-x"
                         role="tablist"
                         aria-label="Topic Sections"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
                     >
                         {sections.map((section) => {
                             const config = sectionConfig[section.type];
@@ -351,7 +366,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                     aria-selected={isActive}
                                     aria-controls={`panel-${section.type}`}
                                     onClick={() => scrollToSection(section.type)}
-                                    className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-all whitespace-nowrap ${isActive
+                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 ${isActive
                                         ? `border-primary ${config.color}`
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                         }`}

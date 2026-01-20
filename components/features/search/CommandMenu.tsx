@@ -67,12 +67,18 @@ export function CommandMenu() {
                 const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
 
+                // Helper to strip HTML tags
+                const stripHtml = (html: string | undefined) => {
+                    if (!html) return undefined;
+                    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                };
+
                 // Map raw results to our SearchResult type with ID validation
                 const topicResults: SearchResult[] = (data.topics || []).filter((t: any) => t.slug).map((t: any) => ({
                     id: `topic-${t.id || t.slug}`,
                     title: t.name || t.canonical_title || 'Untitled',
                     type: 'topic' as const,
-                    subtitle: t.description || t.definition_short,
+                    subtitle: stripHtml(t.description || t.definition_short),
                     category: t.category || t.topic_type,
                     slug: t.slug,
                     url: `/topics/${t.slug}`
@@ -90,7 +96,7 @@ export function CommandMenu() {
                     id: `loc-${l.id}`,
                     title: l.display_name || l.title,
                     type: 'location' as const,
-                    subtitle: l.content_preview,
+                    subtitle: stripHtml(l.content_preview),
                     url: l.url || `/seforim/${l.sefer || l.document_id}`
                 }));
 
@@ -98,7 +104,7 @@ export function CommandMenu() {
                     id: `stmt-${s.id}`,
                     title: s.title,
                     type: 'statement' as const,
-                    subtitle: s.content_preview,
+                    subtitle: stripHtml(s.content_preview),
                     url: s.url || `/seforim/${s.document_id || s.block_id || s.paragraph_id}`
                 }));
 
@@ -126,7 +132,7 @@ export function CommandMenu() {
     return (
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center">
+                <div className="fixed inset-0 z-[100] flex items-start justify-center">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -153,7 +159,7 @@ export function CommandMenu() {
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="sm:hidden fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] flex flex-col bg-card/95 backdrop-blur-xl border-t border-border/50 rounded-t-[2.5rem] shadow-2xl overflow-hidden"
+                        className="sm:hidden fixed bottom-0 left-0 right-0 z-[100] max-h-[92vh] flex flex-col bg-background border-t border-border rounded-t-3xl shadow-2xl overflow-hidden"
                     >
                         {/* Drag Handle */}
                         <div className="flex justify-center p-3 sm:p-4 cursor-grab active:cursor-grabbing">
@@ -163,9 +169,8 @@ export function CommandMenu() {
                         <Command className="flex flex-col flex-1 min-h-0 bg-transparent" shouldFilter={false}>
                             {/* Search Input Area */}
                             <div className="px-6 pb-4">
-                                <div className="relative group">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                                    <div className="relative flex items-center bg-background/50 backdrop-blur-sm border border-border/50 rounded-2xl px-4 focus-within:border-primary/50 transition-all">
+                                <div className="relative">
+                                    <div className="relative flex items-center bg-muted/30 border border-border rounded-xl px-4 focus-within:border-primary focus-within:bg-background transition-all">
                                         <Search className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                                         <Command.Input
                                             value={search}
@@ -203,13 +208,11 @@ export function CommandMenu() {
                                 )}
 
                                 {!loading && !search && (
-                                    <div className="py-10 text-center animate-in fade-in slide-in-from-bottom-2">
-                                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Sparkles className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h3 className="text-lg font-bold text-foreground">Discovery</h3>
-                                        <p className="text-sm text-muted-foreground max-w-[200px] mx-auto mt-1">
-                                            Find any topic, concept, or source in Chassidus
+                                    <div className="py-12 text-center">
+                                        <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                                        <h3 className="text-base font-semibold text-foreground">Search the Library</h3>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Topics, sources, and concepts
                                         </p>
                                     </div>
                                 )}
@@ -224,7 +227,7 @@ export function CommandMenu() {
                                     </div>
                                 )}
 
-                                <div className="space-y-3">
+                                <div className="space-y-1.5">
                                     {results.map((item, index) => {
                                         const config = typeConfig[item.type] || typeConfig.topic;
                                         const Icon = config.icon;
@@ -234,29 +237,32 @@ export function CommandMenu() {
                                                 key={item.id}
                                                 value={item.id}
                                                 onSelect={() => handleSelect(item.url)}
-                                                className="group relative rounded-2xl border border-border/40 bg-background/40 p-3.5 transition-all active:scale-[0.97] aria-selected:bg-primary/5 aria-selected:border-primary/20"
+                                                className="group relative rounded-lg border border-transparent bg-muted/20 p-3 transition-all active:scale-[0.98] aria-selected:bg-primary/10 aria-selected:border-primary/30"
                                             >
-                                                <div className="flex items-start gap-4">
-                                                    <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg`}>
-                                                        <Icon className="w-6 h-6 text-white" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                        <Icon className="w-4.5 h-4.5 text-primary" />
                                                     </div>
 
-                                                    <div className="flex-1 min-w-0 py-0.5">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <h4 className="text-base font-bold text-foreground truncate group-aria-selected:text-primary transition-colors">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="text-sm font-semibold text-foreground truncate">
                                                                 {item.title}
                                                             </h4>
-                                                            <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                                                            {item.category && (
+                                                                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                                                    {item.category}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                                            {item.subtitle || 'Found in the archives'}
-                                                        </p>
-                                                        {item.category && (
-                                                            <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border ${categoryColors[item.category.toLowerCase()] || categoryColors.other} border-current/20`}>
-                                                                {item.category}
-                                                            </div>
+                                                        {item.subtitle && (
+                                                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                                                {item.subtitle}
+                                                            </p>
                                                         )}
                                                     </div>
+                                                    
+                                                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 flex-shrink-0 group-aria-selected:text-primary" />
                                                 </div>
                                             </Command.Item>
                                         );
@@ -304,18 +310,16 @@ export function CommandMenu() {
                                 )}
 
                                 {!loading && !search && (
-                                    <div className="py-20 text-center animate-in fade-in duration-500">
-                                        <div className="inline-flex p-5 bg-primary/10 rounded-3xl mb-4">
-                                            <Brain className="w-10 h-10 text-primary" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-foreground">Intelligent Search</h3>
-                                        <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
-                                            Quickly find topics, seforim, and specific locations across the entire library.
+                                    <div className="py-16 text-center">
+                                        <Search className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+                                        <h3 className="text-lg font-semibold text-foreground">Search the Library</h3>
+                                        <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                                            Find topics, sources, and concepts
                                         </p>
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 gap-2">
+                                <div className="grid grid-cols-1 gap-1.5">
                                     {results.map((item) => {
                                         const config = typeConfig[item.type] || typeConfig.topic;
                                         const Icon = config.icon;
@@ -325,21 +329,25 @@ export function CommandMenu() {
                                                 key={item.id}
                                                 value={item.id}
                                                 onSelect={() => handleSelect(item.url)}
-                                                className="group relative flex items-center gap-4 rounded-xl p-3 cursor-pointer transition-all aria-selected:bg-primary/5 hover:bg-muted/30"
+                                                className="group relative flex items-center gap-3 rounded-lg p-3 cursor-pointer transition-all aria-selected:bg-primary/10 hover:bg-muted/50"
                                             >
-                                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-md`}>
-                                                    <Icon className="w-5 h-5 text-white" />
+                                                <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                    <Icon className="w-4.5 h-4.5 text-primary" />
                                                 </div>
 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-foreground truncate group-aria-selected:text-primary">{item.title}</span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground opacity-50 uppercase tracking-widest">{item.type}</span>
+                                                        <span className="font-semibold text-sm text-foreground truncate">{item.title}</span>
+                                                        {item.category && (
+                                                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{item.category}</span>
+                                                        )}
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground line-clamp-1 truncate">{item.subtitle}</p>
+                                                    {item.subtitle && (
+                                                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.subtitle}</p>
+                                                    )}
                                                 </div>
 
-                                                <ArrowRight className="w-4 h-4 text-primary opacity-0 group-aria-selected:opacity-100 group-aria-selected:translate-x-1 transition-all" />
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-aria-selected:text-primary transition-colors" />
                                             </Command.Item>
                                         );
                                     })}

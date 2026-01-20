@@ -169,7 +169,7 @@ export interface Topic {
 
     // Legacy compatibility fields (mapped from new schema)
     name?: string; // Alias for canonical_title
-    name_hebrew?: string; // Can be fetched from translations table if needed
+    name_hebrew?: string;
     name_transliteration?: string;
     alternate_names?: string[];
     category?: string; // Alias for topic_type
@@ -182,6 +182,9 @@ export interface Topic {
     article?: string;
     practical_takeaways?: string; // **[NEW]** Rich text field for practical applications
     historical_context?: string; // **[NEW]** Rich text field for historical background
+    mashal?: string;
+    global_nimshal?: string;
+    charts?: string;
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
 
