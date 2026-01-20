@@ -3,9 +3,12 @@
 import React, { useMemo } from 'react';
 import parse, { DOMNode, Element, domToReact } from 'html-react-parser';
 import DOMPurify from 'dompurify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { SoulLevelsDisplay } from '@/components/topics/custom-content/SoulLevelsDisplay';
+import { TabularDataDisplay } from '@/components/topics/custom-content/TabularDataDisplay';
 import { Topic, Source } from '@/lib/types';
 
 // This is a simplified version of the config. In a real app, this would be shared.
@@ -36,14 +39,31 @@ export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentP
         return null;
     }, [section.type, section.content, topic.canonical_title, topic.name_hebrew]);
 
+    // Detect if content is markdown (contains markdown bullets, tables, or headers)
+    const isMarkdown = useMemo(() => {
+        const markdownPatterns = [
+            /^\s*[•\-\*]\s+/m,           // Bullet points
+            /^\s*\d+\.\s+/m,             // Numbered lists
+            /^\s*#{1,6}\s+/m,            // Headers
+            /^\s*\|.*\|.*\|/m,           // Tables
+            /^\s*[-]{3,}/m               // Horizontal rules
+        ];
+        return markdownPatterns.some(pattern => pattern.test(section.content));
+    }, [section.content]);
+
     const isGlossary = glossaryItems && glossaryItems.length > 0;
     const isSoulLevelContent = section.content.includes('Nefesh') && section.content.includes('Yechidah');
+    const isTabularData = section.content.includes('Reference Chart') || (section.content.includes('\t') && section.content.split('\n').length > 5);
     const config = sectionConfig[section.type];
-    const Icon = config?.icon; // Icon is not used here, but kept for structure consistency
+    const Icon = config?.icon;
 
     // Custom renderer for specific content
     if (isSoulLevelContent) {
         return <SoulLevelsDisplay content={section.content} />;
+    }
+    
+    if (isTabularData) {
+        return <TabularDataDisplay content={section.content} />;
     }
 
     return (
@@ -61,6 +81,12 @@ export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentP
             )}
             {isGlossary ? (
                 <GlossaryGrid items={glossaryItems} />
+            ) : isMarkdown ? (
+                <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline prose-ul:list-disc prose-ul:space-y-2 prose-ol:list-decimal prose-ol:space-y-2 prose-li:ml-4 prose-li:leading-relaxed prose-table:w-full prose-table:border-collapse prose-table:shadow-sm prose-table:rounded-lg prose-table:overflow-hidden prose-thead:bg-gradient-to-r prose-thead:from-muted/80 prose-thead:to-muted/60 prose-th:text-left prose-th:font-semibold prose-th:text-sm prose-th:uppercase prose-th:tracking-wide prose-th:px-6 prose-th:py-4 prose-th:border-b-2 prose-th:border-border/50 prose-td:px-6 prose-td:py-4 prose-td:border-b prose-td:border-border/30 prose-tr:transition-colors hover:prose-tr:bg-muted/20 prose-tbody:divide-y prose-tbody:divide-border/20">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {section.content}
+                    </ReactMarkdown>
+                </div>
             ) : (
                 <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline">
                     {parse(DOMPurify.sanitize(section.content))}
