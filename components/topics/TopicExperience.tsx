@@ -330,7 +330,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             />
 
             {/* Sticky Tab Navigation */}
-            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
+            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm hidden sm:block">
                 <div className="max-w-4xl mx-auto">
                     <div
                         ref={tabsRef}
