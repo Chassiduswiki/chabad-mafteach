@@ -541,20 +541,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             </div>
         </main>
 
-            {/* Action Sticky Footer */}
-            <div className={`fixed bottom-0 left-0 right-0 p-4 pb-8 bg-gradient-to-t from-background via-background to-transparent z-40 transition-transform duration-300 ${focusMode ? 'translate-y-full' : 'translate-y-0'}`}>
-                <div className="max-w-md mx-auto bg-foreground text-background dark:bg-zinc-800 dark:text-white backdrop-blur-md shadow-2xl rounded-full px-6 py-3 flex items-center justify-between border border-white/10">
-                    <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                        <Bookmark className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Save</span>
-                    </button>
-                    <div className="w-px h-8 bg-white/20" />
-                    <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                        <Share2 className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Share</span>
-                    </button>
-                </div>
-            </div>
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet
