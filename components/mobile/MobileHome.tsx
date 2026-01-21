@@ -65,8 +65,8 @@ export function MobileHome() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
                 onClick={() => setOpen(true)}
-                className="mb-8 w-full flex items-center gap-3 rounded-2xl border border-border bg-background/60 backdrop-blur-sm px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-background/80 active:scale-[0.98]"
-                style={{ minHeight: '44px' }}
+                className="mb-8 w-full flex items-center gap-3 rounded-2xl border border-border/50 bg-background/60 backdrop-blur-sm shadow-sm px-4 py-3.5 text-left transition-all duration-200 hover:border-primary/30 hover:bg-background/80 active:scale-[0.98]"
+                style={{ minHeight: '48px' }}
             >
                 <Search className="h-5 w-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Search topics, sources...</span>
@@ -88,7 +88,7 @@ export function MobileHome() {
                     </h2>
                     <Link
                         href={`/topics/${lastTopic.slug}`}
-                        className="group block rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 active:scale-[0.98]"
+                        className="group block rounded-2xl border border-border/50 bg-background/60 p-4 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
                         style={{ minHeight: '60px' }}
                     >
                         <div className="flex items-center justify-between">
@@ -114,24 +114,24 @@ export function MobileHome() {
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="mb-8"
             >
-                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Quick Actions
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Browse Topics Card */}
+                    {/* Browse Topics Card - Larger */}
                     <Link
                         href="/topics"
-                        className="quick-action-card group flex flex-col items-start justify-between rounded-2xl border border-border bg-background/40 p-4 transition-all hover:border-primary/20 hover:bg-background/60 hover:shadow-lg active:scale-[0.98]"
+                        className="quick-action-card group col-span-2 flex items-center gap-4 rounded-2xl border border-border/50 bg-background/60 p-4 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
                         style={{ minHeight: '80px' }}
                     >
-                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
-                            <Hash className="h-5 w-5 text-blue-500" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 flex-shrink-0">
+                            <Hash className="h-6 w-6 text-blue-500" />
                         </div>
-                        <div className="w-full">
-                            <h3 className="text-sm font-semibold text-foreground mb-0.5">Browse Topics</h3>
-                            <p className="text-xs text-muted-foreground">All concepts</p>
+                        <div className="flex-1">
+                            <h3 className="text-base font-semibold text-foreground mb-0.5">Browse All Topics</h3>
+                            <p className="text-xs text-muted-foreground">Explore Chassidic concepts</p>
                         </div>
-                        <ArrowRight className="absolute bottom-4 right-4 h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
+                        <ArrowRight className="h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 flex-shrink-0" />
                     </Link>
 
                     {/* Explore Categories Card */}
@@ -169,17 +169,17 @@ export function MobileHome() {
                     {/* Recent Activity Card */}
                     <Link
                         href="/topics"
-                        className="quick-action-card group flex flex-col items-start justify-between rounded-2xl border border-border bg-background/40 p-4 transition-all hover:border-primary/20 hover:bg-background/60 hover:shadow-lg active:scale-[0.98]"
+                        className="quick-action-card group col-span-2 flex items-center gap-4 rounded-2xl border border-border/50 bg-background/60 p-4 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
                         style={{ minHeight: '80px' }}
                     >
-                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-                            <Clock className="h-5 w-5 text-emerald-500" />
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 flex-shrink-0">
+                            <Clock className="h-6 w-6 text-emerald-500" />
                         </div>
-                        <div className="w-full">
-                            <h3 className="text-sm font-semibold text-foreground mb-0.5">Recent</h3>
-                            <p className="text-xs text-muted-foreground">Updated topics</p>
+                        <div className="flex-1">
+                            <h3 className="text-base font-semibold text-foreground mb-0.5">Recently Updated</h3>
+                            <p className="text-xs text-muted-foreground">Latest topic changes</p>
                         </div>
-                        <ArrowRight className="absolute bottom-4 right-4 h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
+                        <ArrowRight className="h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 flex-shrink-0" />
                     </Link>
                 </div>
             </motion.div>
