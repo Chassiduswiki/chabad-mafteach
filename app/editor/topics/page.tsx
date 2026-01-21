@@ -70,14 +70,18 @@ export default function TopicsEditorPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(topic =>
         topic.canonical_title?.toLowerCase().includes(query) ||
+        topic.name_hebrew?.toLowerCase().includes(query) ||
+        topic.name?.toLowerCase().includes(query) ||
         topic.description?.toLowerCase().includes(query) ||
-        topic.topic_type?.toLowerCase().includes(query)
+        topic.definition_short?.toLowerCase().includes(query) ||
+        topic.topic_type?.toLowerCase().includes(query) ||
+        topic.category?.toLowerCase().includes(query)
       );
     }
 
     // Filter by type
     if (filterType !== 'all') {
-      filtered = filtered.filter(topic => topic.topic_type === filterType);
+      filtered = filtered.filter(topic => (topic.topic_type || topic.category) === filterType);
     }
 
     setFilteredTopics(filtered);
@@ -97,8 +101,53 @@ export default function TopicsEditorPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent"></div>
+      <div className="min-h-screen bg-background">
+        {/* Skeleton Header */}
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-8 bg-muted rounded animate-pulse" />
+                <div>
+                  <div className="w-32 h-5 bg-muted rounded animate-pulse mb-1" />
+                  <div className="w-20 h-4 bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="w-28 h-9 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </header>
+        
+        {/* Skeleton Content */}
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 h-10 bg-muted rounded animate-pulse" />
+            <div className="w-40 h-10 bg-muted rounded animate-pulse" />
+          </div>
+          
+          {/* Skeleton Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="h-5 bg-muted rounded animate-pulse w-3/4 mb-2" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/2 mb-2" />
+                    <div className="h-5 bg-muted rounded animate-pulse w-16" />
+                  </div>
+                </div>
+                <div className="space-y-2 mb-3">
+                  <div className="h-3 bg-muted rounded animate-pulse w-full" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-4/5" />
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <div className="h-3 bg-muted rounded animate-pulse w-20" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-12" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -162,12 +211,12 @@ export default function TopicsEditorPage() {
               className="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
             >
               <option value="all">All Types ({topics.length})</option>
-              <option value="concept">Concepts ({topics.filter(t => t.topic_type === 'concept').length})</option>
-              <option value="person">People ({topics.filter(t => t.topic_type === 'person').length})</option>
-              <option value="place">Places ({topics.filter(t => t.topic_type === 'place').length})</option>
-              <option value="event">Events ({topics.filter(t => t.topic_type === 'event').length})</option>
-              <option value="mitzvah">Mitzvot ({topics.filter(t => t.topic_type === 'mitzvah').length})</option>
-              <option value="sefirah">Sefirot ({topics.filter(t => t.topic_type === 'sefirah').length})</option>
+              <option value="concept">Concepts ({topics.filter(t => (t.topic_type || t.category) === 'concept').length})</option>
+              <option value="person">People ({topics.filter(t => (t.topic_type || t.category) === 'person').length})</option>
+              <option value="place">Places ({topics.filter(t => (t.topic_type || t.category) === 'place').length})</option>
+              <option value="event">Events ({topics.filter(t => (t.topic_type || t.category) === 'event').length})</option>
+              <option value="mitzvah">Mitzvot ({topics.filter(t => (t.topic_type || t.category) === 'mitzvah').length})</option>
+              <option value="sefirah">Sefirot ({topics.filter(t => (t.topic_type || t.category) === 'sefirah').length})</option>
             </select>
           </div>
         </div>
@@ -184,26 +233,26 @@ export default function TopicsEditorPage() {
                 <div className="flex-1">
                   {/* Hebrew Title */}
                   <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 text-lg" dir="rtl">
-                    {topic.canonical_title}
+                    {topic.name_hebrew || topic.canonical_title || topic.name || `Topic ${topic.id}`}
                   </h3>
                   {/* English Title or Transliteration */}
-                  {(topic.canonical_title_en || topic.canonical_title_transliteration) && (
+                  {(topic.name && topic.name !== topic.name_hebrew) && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {topic.canonical_title_en || topic.canonical_title_transliteration}
+                      {topic.name}
                     </p>
                   )}
-                  {topic.topic_type && (
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${getTopicTypeColor(topic.topic_type)}`}>
-                      {topic.topic_type}
+                  {(topic.category || topic.topic_type) && (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${getTopicTypeColor(topic.category || topic.topic_type)}`}>
+                      {topic.category || topic.topic_type}
                     </span>
                   )}
                 </div>
                 <Edit3 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
               </div>
 
-              {topic.description && (
+              {(topic.definition_short || topic.description) && (
                 <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                  {topic.description.replace(/<[^>]*>/g, '').substring(0, 150)}
+                  {(topic.definition_short || topic.description || '').replace(/<[^>]*>/g, '').substring(0, 150)}
                 </p>
               )}
 

@@ -473,6 +473,8 @@ export default function TopicEditorPage() {
                 </div>
                 <div className="space-y-1">
                   <div>⌘/Ctrl + S — Save</div>
+                  <div>/ — Slash commands</div>
+                  <div>? — All shortcuts</div>
                 </div>
               </div>
             </div>

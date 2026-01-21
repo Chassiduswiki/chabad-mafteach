@@ -47,112 +47,125 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
   className
 }) => {
   return (
-    <div className={`flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50 ${className || ''}`}>
+    <div className={`flex items-center justify-between p-3 border-b border-border bg-muted/50 ${className || ''}`}>
       <div className="flex items-center gap-1">
         {/* History Controls */}
-        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
           <button
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
-            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed text-foreground"
             title="Undo"
+            aria-label="Undo"
           >
             <Undo className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
-            className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed text-foreground"
             title="Redo"
+            aria-label="Redo"
           >
             <Redo className="w-4 h-4" />
           </button>
         </div>
 
         {/* Headings */}
-        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
           <button
             onClick={() => editor.chain().focus().setParagraph().run()}
-            className={`p-2 px-3 rounded hover:bg-gray-200 ${editor.isActive('paragraph') ? 'bg-gray-200' : ''}`}
+            className={`p-2 px-3 rounded hover:bg-muted text-foreground ${editor.isActive('paragraph') ? 'bg-muted' : ''}`}
             title="Normal Text"
+            aria-label="Normal Text"
           >
             <span className="text-sm font-medium">P</span>
           </button>
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('heading', { level: 1 }) ? 'bg-muted' : ''}`}
             title="Heading 1"
+            aria-label="Heading 1"
           >
             <Heading1 className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('heading', { level: 2 }) ? 'bg-muted' : ''}`}
             title="Heading 2"
+            aria-label="Heading 2"
           >
             <Heading2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('heading', { level: 3 }) ? 'bg-muted' : ''}`}
             title="Heading 3"
+            aria-label="Heading 3"
           >
             <Heading3 className="w-4 h-4" />
           </button>
         </div>
 
         {/* Text Formatting */}
-        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('bold') ? 'bg-muted' : ''}`}
             title="Bold"
+            aria-label="Bold"
           >
             <Bold className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('italic') ? 'bg-muted' : ''}`}
             title="Italic"
+            aria-label="Italic"
           >
             <Italic className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('code') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('code') ? 'bg-muted' : ''}`}
             title="Code"
+            aria-label="Inline Code"
           >
             <Code className="w-4 h-4" />
           </button>
         </div>
 
         {/* Lists & Blocks */}
-        <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-2">
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
           <button
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('bulletList') ? 'bg-muted' : ''}`}
             title="Bullet List"
+            aria-label="Bullet List"
           >
             <List className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('orderedList') ? 'bg-muted' : ''}`}
             title="Numbered List"
+            aria-label="Numbered List"
           >
             <ListOrdered className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('blockquote') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('blockquote') ? 'bg-muted' : ''}`}
             title="Blockquote"
+            aria-label="Blockquote"
           >
             <Quote className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('codeBlock') ? 'bg-gray-200' : ''}`}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('codeBlock') ? 'bg-muted' : ''}`}
             title="Code Block"
+            aria-label="Code Block"
           >
             <Code2 className="w-4 h-4" />
           </button>
@@ -163,8 +176,9 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           {onGrammarCheck && (
             <button
               onClick={onGrammarCheck}
-              className="p-2 rounded hover:bg-gray-200"
+              className="p-2 rounded hover:bg-muted text-foreground"
               title="Check Grammar & Spelling"
+              aria-label="Check Grammar & Spelling"
             >
               <Check className="w-4 h-4" />
             </button>
@@ -172,8 +186,9 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           {onParaphrase && (
             <button
               onClick={onParaphrase}
-              className="p-2 rounded hover:bg-gray-200"
+              className="p-2 rounded hover:bg-muted text-foreground"
               title="Improve & Paraphrase Text"
+              aria-label="Improve & Paraphrase Text"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -181,8 +196,9 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           {onInsertImage && (
             <button
               onClick={onInsertImage}
-              className="p-2 rounded hover:bg-gray-200"
+              className="p-2 rounded hover:bg-muted text-foreground"
               title="Insert Image (OCR supported)"
+              aria-label="Insert Image"
             >
               <Image className="w-4 h-4" />
             </button>
@@ -190,8 +206,9 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           {onInsertCitation && (
             <button
               onClick={onInsertCitation}
-              className="p-2 rounded hover:bg-gray-200"
+              className="p-2 rounded hover:bg-muted text-foreground"
               title="Insert Citation"
+              aria-label="Insert Citation"
             >
               <BookOpen className="w-4 h-4" />
             </button>

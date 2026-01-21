@@ -4,6 +4,9 @@ import React, { useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { TipTapToolbar } from './TipTapToolbar';
 import { CitationViewerModal } from './CitationViewerModal';
+import { CitationInsertModal } from './CitationInsertModal';
+import { ImageUploadModal } from './ImageUploadModal';
+import { SlashCommandMenu } from './SlashCommandMenu';
 import { useEditorContext } from './EditorProvider';
 
 interface EditorContentProps {
@@ -28,6 +31,12 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
     handleInsertCitation,
     handleInsertImage,
     isEditorReady,
+    showCitationModal,
+    setShowCitationModal,
+    insertCitation,
+    showImageModal,
+    setShowImageModal,
+    insertImage,
   } = useEditorContext();
 
   // Call onEditorReady when editor becomes available
@@ -39,8 +48,26 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
 
   if (!isEditorReady) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">Loading editor...</div>
+      <div className={`relative ${className}`}>
+        {/* Skeleton toolbar */}
+        <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+          <div className="flex items-center gap-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex gap-1 pr-2 mr-2 border-r border-border last:border-r-0">
+                {[...Array(3)].map((_, j) => (
+                  <div key={j} className="w-8 h-8 rounded bg-muted animate-pulse" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Skeleton content */}
+        <div className="p-6 space-y-3">
+          <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+          <div className="h-4 bg-muted rounded animate-pulse w-full" />
+          <div className="h-4 bg-muted rounded animate-pulse w-5/6" />
+          <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
+        </div>
       </div>
     );
   }
@@ -55,18 +82,24 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
         />
       )}
 
-      <div className="border border-border rounded-md overflow-hidden">
-        <EditorContent
+      <EditorContent
+        editor={editor}
+        className="min-h-[200px] focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+      />
+
+      {editor && (
+        <SlashCommandMenu
           editor={editor}
-          className="min-h-[400px] focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+          onInsertCitation={handleInsertCitation}
+          onInsertImage={handleInsertImage}
         />
-      </div>
+      )}
 
       {feedback && (
         <div className={`mt-2 p-2 rounded text-sm ${
           feedback.type === 'success'
-            ? 'bg-green-50 text-green-700 border border-green-200'
-            : 'bg-red-50 text-red-700 border border-red-200'
+            ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20'
+            : 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20'
         }`}>
           {feedback.message}
         </div>
@@ -79,6 +112,18 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
           onClose={() => setActiveCitation(null)}
         />
       )}
+
+      <CitationInsertModal
+        open={showCitationModal}
+        onClose={() => setShowCitationModal(false)}
+        onInsert={insertCitation}
+      />
+
+      <ImageUploadModal
+        open={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        onInsert={insertImage}
+      />
     </div>
   );
 };
