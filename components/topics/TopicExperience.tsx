@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
 import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
@@ -96,6 +96,20 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
     const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
+    const [showStickyTitle, setShowStickyTitle] = useState(false);
+    const heroRef = useRef<HTMLDivElement>(null);
+
+    // Show sticky title when scrolled past hero
+    useEffect(() => {
+        const handleScroll = () => {
+            if (heroRef.current) {
+                const heroBottom = heroRef.current.getBoundingClientRect().bottom;
+                setShowStickyTitle(heroBottom < 56); // 56px = navbar height
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleTutorialClose = () => {
         setIsTutorialOpen(false);
@@ -392,17 +406,30 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             <ScrollProgressIndicator />
             <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
             <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
-            {/* New Immersive Hero */}
-            <ImmersiveHero
-                title={topic.canonical_title}
-                titleHebrew={topic.name_hebrew || ''}
-                category={topic.topic_type || 'Concept'}
-                definitionShort={topic.description}
-                topicSlug={topic.slug}
-            />
+            {/* Immersive Hero */}
+            <div ref={heroRef}>
+                <ImmersiveHero
+                    title={topic.canonical_title}
+                    titleHebrew={topic.name_hebrew || ''}
+                    category={topic.topic_type || 'Concept'}
+                    definitionShort={topic.description}
+                    topicSlug={topic.slug}
+                />
+            </div>
 
-            {/* Sticky Tab Navigation */}
-            <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
+            {/* Sticky Title + Tab Navigation Container */}
+            <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
+                {/* Topic Title - shows when scrolled past hero */}
+                <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3">
+                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            {topic.topic_type || 'Concept'}
+                        </span>
+                        <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                    </div>
+                </div>
+                
+                {/* Tab Navigation */}
                 <div className="max-w-4xl mx-auto">
                     <div
                         ref={tabsRef}
@@ -583,11 +610,20 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                             id={`panel-${section.type}`}
                             role="tabpanel"
                             aria-labelledby={`tab-${section.type}`}
-                            className={`scroll-mt-36 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
+                            className={`scroll-mt-40 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
                             onClick={handleContentClick}
                             onDoubleClick={() => toggleFocusMode(section.type)}
                             onKeyDown={handleContentKeyDown}
                         >
+                            {/* Section Header */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`p-2 rounded-xl ${config.bgColor} border ${config.borderColor}`}>
+                                    <Icon className={`w-5 h-5 ${config.color}`} />
+                                </div>
+                                <h2 className="text-lg font-semibold text-foreground">{config.title}</h2>
+                            </div>
+                            
+                            {/* Section Content */}
                             <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
                                <ArticleSectionContent section={section} topic={topic} />
                             </div>
