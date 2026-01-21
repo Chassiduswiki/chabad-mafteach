@@ -10,7 +10,6 @@ import { useSearch } from '@/lib/search-context';
 const Home = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Home })));
 const Search = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Search })));
 const Hash = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Hash })));
-const BookOpen = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.BookOpen })));
 
 // Icon wrapper component
 function IconWrapper({ children }: { children: React.ReactNode }) {
@@ -37,7 +36,6 @@ export function MobileNav() {
     const navItems = [
         { href: '/', icon: Home, label: 'Home' },
         { href: '/topics', icon: Hash, label: 'Topics' },
-        { href: '/seforim', icon: BookOpen, label: 'Sources' },
     ];
 
     return (

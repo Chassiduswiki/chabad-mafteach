@@ -32,7 +32,6 @@ export function GlobalNav({
 
     const isHome = pathname === '/';
     const isTopics = pathname === '/topics' || pathname.startsWith('/topics/');
-    const isSeforim = pathname.startsWith('/seforim');
 
     return (
         <header 
@@ -85,17 +84,6 @@ export function GlobalNav({
                         )}
                     >
                         Topics
-                    </Link>
-                    <Link
-                        href="/seforim"
-                        className={cn(
-                            "px-4 py-2 text-sm font-medium rounded-full transition-colors",
-                            isSeforim 
-                                ? "bg-primary/10 text-primary" 
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                    >
-                        Sources
                     </Link>
                     <Link
                         href="/about"
