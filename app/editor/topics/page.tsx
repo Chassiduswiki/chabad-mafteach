@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Edit3, ArrowLeft, Plus, Search, Filter } from 'lucide-react';
 import { Topic } from '@/lib/types';
@@ -98,6 +98,28 @@ export default function TopicsEditorPage() {
     };
     return colors[type as keyof typeof colors] || 'bg-gray-500/10 text-gray-600';
   };
+
+  // Memoize type counts to avoid recalculating on every render
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: topics.length,
+      concept: 0,
+      person: 0,
+      place: 0,
+      event: 0,
+      mitzvah: 0,
+      sefirah: 0,
+    };
+    
+    topics.forEach(t => {
+      const type = (t as any).topic_type || (t as any).category;
+      if (type && counts[type] !== undefined) {
+        counts[type]++;
+      }
+    });
+    
+    return counts;
+  }, [topics]);
 
   if (authLoading || isLoading) {
     return (
@@ -210,13 +232,13 @@ export default function TopicsEditorPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
             >
-              <option value="all">All Types ({topics.length})</option>
-              <option value="concept">Concepts ({topics.filter(t => (t.topic_type || t.category) === 'concept').length})</option>
-              <option value="person">People ({topics.filter(t => (t.topic_type || t.category) === 'person').length})</option>
-              <option value="place">Places ({topics.filter(t => (t.topic_type || t.category) === 'place').length})</option>
-              <option value="event">Events ({topics.filter(t => (t.topic_type || t.category) === 'event').length})</option>
-              <option value="mitzvah">Mitzvot ({topics.filter(t => (t.topic_type || t.category) === 'mitzvah').length})</option>
-              <option value="sefirah">Sefirot ({topics.filter(t => (t.topic_type || t.category) === 'sefirah').length})</option>
+              <option value="all">All Types ({typeCounts.all})</option>
+              <option value="concept">Concepts ({typeCounts.concept})</option>
+              <option value="person">People ({typeCounts.person})</option>
+              <option value="place">Places ({typeCounts.place})</option>
+              <option value="event">Events ({typeCounts.event})</option>
+              <option value="mitzvah">Mitzvot ({typeCounts.mitzvah})</option>
+              <option value="sefirah">Sefirot ({typeCounts.sefirah})</option>
             </select>
           </div>
         </div>

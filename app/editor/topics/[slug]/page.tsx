@@ -26,6 +26,7 @@ import {
   SectionConfig,
   DisplayConfig,
 } from '@/components/topic-editor';
+import { SaveStatusToast } from '@/components/ui/SaveStatusToast';
 
 // Content sections configuration
 const CONTENT_SECTIONS: SectionConfig[] = [
@@ -865,6 +866,13 @@ export default function TopicEditorPage() {
           </div>
         </div>
       </main>
+
+      {/* Save Status Toast */}
+      <SaveStatusToast 
+        status={autoSaveStatus}
+        lastSaved={lastSaved}
+        hasUnsavedChanges={hasUnsavedChanges}
+      />
     </div>
   );
 }
