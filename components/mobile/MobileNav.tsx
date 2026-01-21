@@ -23,11 +23,15 @@ function IconWrapper({ children }: { children: React.ReactNode }) {
 
 /**
  * MobileNav - Consistent bottom navigation for mobile
- * ALWAYS shows same 4 items regardless of current page
+ * Shows on all pages EXCEPT homepage (where we want a cleaner app-like experience)
  */
 export function MobileNav() {
     const pathname = usePathname();
     const { setOpen } = useSearch();
+
+    // Hide on homepage - the homepage has its own mobile navigation experience
+    const isHomepage = pathname === '/';
+    if (isHomepage) return null;
 
     const isActive = (path: string) => {
         if (path === '/') return pathname === '/';

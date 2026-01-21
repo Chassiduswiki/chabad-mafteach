@@ -13,25 +13,25 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'doc_id required' }, { status: 400 });
         }
 
-        // Get all paragraphs for this document first
-        const paragraphs = await directus.request(readItems('paragraphs', {
-            filter: { doc_id: { _eq: parseInt(docId) } },
+        // Get all content_blocks for this document first
+        const contentBlocks = await directus.request(readItems('content_blocks', {
+            filter: { document_id: { _eq: parseInt(docId) } },
             fields: ['id'],
             limit: -1
         }));
 
-        const paraIds = (Array.isArray(paragraphs) ? paragraphs : [paragraphs]).map(p => p.id);
+        const blockIds = (Array.isArray(contentBlocks) ? contentBlocks : [contentBlocks]).map(b => b.id);
 
-        if (paraIds.length === 0) {
+        if (blockIds.length === 0) {
             return NextResponse.json({ data: [] });
         }
 
-        // Get all statements for these paragraphs
+        // Get all statements for these content_blocks
         const result = await directus.request(readItems('statements', {
             filter: { 
-                paragraph_id: { _in: paraIds } as any
+                block_id: { _in: blockIds } as any
             } as any,
-            fields: ['id', 'text', 'importance_score', 'paragraph_id', 'metadata', 'status'],
+            fields: ['id', 'text', 'importance_score', 'block_id', 'metadata', 'status'],
             sort: ['-importance_score'],
             limit: -1
         }));

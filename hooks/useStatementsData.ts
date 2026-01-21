@@ -6,7 +6,8 @@ export interface Statement {
     id: number;
     text: string;
     order_key: number;
-    paragraph_id: number;
+    block_id: number;
+    paragraph_id?: number; // Legacy compatibility
     appended_text?: string;
     metadata?: any;
 }
@@ -15,11 +16,11 @@ export interface UseStatementsDataReturn {
     statements: Statement[];
     loading: boolean;
     error: string | null;
-    loadStatements: (paragraphId: number) => Promise<void>;
-    createStatement: (paragraphId: number) => Promise<void>;
+    loadStatements: (blockId: number) => Promise<void>;
+    createStatement: (blockId: number) => Promise<void>;
     updateStatement: (id: number, text: string) => Promise<void>;
     deleteStatement: (id: number) => Promise<void>;
-    reorderStatements: (paragraphId: number, startIndex: number, endIndex: number) => Promise<void>;
+    reorderStatements: (blockId: number, startIndex: number, endIndex: number) => Promise<void>;
 }
 
 /**
@@ -30,11 +31,11 @@ export function useStatementsData(): UseStatementsDataReturn {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadStatements = useCallback(async (paragraphId: number) => {
+    const loadStatements = useCallback(async (blockId: number) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetch(`/api/editor/statements?paragraphId=${paragraphId}`);
+            const response = await fetch(`/api/editor/statements?blockId=${blockId}`);
 
             if (!response.ok) {
                 throw new Error(`Failed to load statements: ${response.status}`);
@@ -51,13 +52,13 @@ export function useStatementsData(): UseStatementsDataReturn {
         }
     }, []);
 
-    const createStatement = useCallback(async (paragraphId: number) => {
+    const createStatement = useCallback(async (blockId: number) => {
         try {
             const response = await fetch('/api/editor/statements', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    paragraph_id: paragraphId,
+                    block_id: blockId,
                     text: 'New statement content...',
                     metadata: { auto_generated: false }
                 })
@@ -120,27 +121,27 @@ export function useStatementsData(): UseStatementsDataReturn {
         }
     }, []);
 
-    const reorderStatements = useCallback(async (paragraphId: number, startIndex: number, endIndex: number) => {
-        // Filter statements for this paragraph
-        const paragraphStatements = statements.filter(s => s.paragraph_id === paragraphId);
-        const otherStatements = statements.filter(s => s.paragraph_id !== paragraphId);
+    const reorderStatements = useCallback(async (blockId: number, startIndex: number, endIndex: number) => {
+        // Filter statements for this content block
+        const blockStatements = statements.filter(s => s.block_id === blockId);
+        const otherStatements = statements.filter(s => s.block_id !== blockId);
 
-        // Reorder paragraph statements
-        const newParagraphStatements = [...paragraphStatements];
-        const [movedStatement] = newParagraphStatements.splice(startIndex, 1);
-        newParagraphStatements.splice(endIndex, 0, movedStatement);
+        // Reorder block statements
+        const newBlockStatements = [...blockStatements];
+        const [movedStatement] = newBlockStatements.splice(startIndex, 1);
+        newBlockStatements.splice(endIndex, 0, movedStatement);
 
         // Update order keys
-        newParagraphStatements.forEach((statement, index) => {
+        newBlockStatements.forEach((statement, index) => {
             statement.order_key = index + 1;
         });
 
         // Update all statements
-        setStatements([...otherStatements, ...newParagraphStatements]);
+        setStatements([...otherStatements, ...newBlockStatements]);
 
-        // TODO: Persist to database
+        // Persist to database
         try {
-            await Promise.all(newParagraphStatements.map((statement, index) =>
+            await Promise.all(newBlockStatements.map((statement, index) =>
                 fetch(`/api/editor/statements/${statement.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -150,7 +151,7 @@ export function useStatementsData(): UseStatementsDataReturn {
         } catch (error) {
             console.error('Failed to reorder statements:', error);
             // Reload statements to revert optimistic update
-            loadStatements(paragraphId);
+            loadStatements(blockId);
         }
     }, [statements, loadStatements]);
 

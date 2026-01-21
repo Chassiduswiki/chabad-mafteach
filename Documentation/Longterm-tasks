@@ -955,6 +955,247 @@ You have an ambitious vision but a broken foundation. The roadmap shows impressi
 
 ---
 
+## TRACK 16: Design Philosophy & Experience Transformation (NEW - Jan 2026)
+
+**Goal**: Transform the app from a reference database into a **Torah thinking environment** by applying Obsidian-inspired design principles. This isn't just visual polish—it's a fundamental shift in how users perceive and interact with the platform.
+
+**Inspiration Source**: Obsidian.md analysis (Jan 2026) - their manifesto principles: Yours, Durable, Private, Malleable, Independent.
+
+### ✅ IMPLEMENTATION STATUS (Updated Jan 21, 2026)
+
+**Completed Foundation Work:**
+- ✅ **Centralized copy system** (`lib/copy.ts`) - Verb-first, action-oriented messaging
+- ✅ **Design tokens** (`lib/design-tokens.ts`) - Typography scale, spacing, colors, components
+- ✅ **Animation presets** (`lib/animations.ts`) - Framer Motion reusable animations
+- ✅ **CSS utilities** (`globals.css`) - Typography hierarchy, hover effects, transitions
+- ✅ **Homepage tagline revision** - "Deepen Your Understanding" with rotating concepts
+- ✅ **Topics page copy** - Action-oriented messaging
+- ✅ **Mobile home copy** - Consistent with desktop
+
+**Completed Features:**
+- ✅ **Graph as centerpiece** - Moved `ConceptConstellation` to prominent position after hero
+- ✅ **Homepage graph preview** (`components/features/home/GraphPreview.tsx`)
+- ✅ **Progressive disclosure system** (`components/ui/ProgressiveDisclosure.tsx`)
+  - 4-level depth: Overview → Deep Dive → Sources → Expert
+  - CollapsibleSection, ComplexityIndicator, NestedEmbed components
+- ✅ **Manifesto About page** - Transformed `/about` with principles (Yours, Connected, Accessible, Durable)
+- ✅ **SerendipityEngine** (`lib/services/serendipity-engine.ts`) - Unexpected connection discovery
+- ✅ **SerendipityCard** (`components/features/SerendipityCard.tsx`) - UI for discoveries
+
+**Navigation Fix:**
+- ✅ Top navbar (GlobalNav) added to homepage with transparent prop
+- ✅ Bottom mobile nav hidden on homepage only (cleaner app-like experience)
+
+---
+
+### Phase 16a: Visual Foundation & Typography (SHORT-TERM - 2-4 weeks)
+
+**Principle**: "Let content breathe; typography carries hierarchy, not color noise."
+
+#### 1. Dark-First, Purposeful Color System
+- [ ] **Audit current color usage** - Document all color decisions across components
+- [ ] **Define semantic color palette** - 3-4 accent colors max (primary action, secondary, success, warning)
+- [ ] **Dark mode as default scholar experience** - Deep, contemplative tones for extended study
+- [ ] **Selective accent application** - Color only for interactive elements and status indicators
+- **Implementation**: Update `globals.css` and Tailwind config with constrained palette
+- **Done When**: No random color usage; every color has documented purpose
+
+#### 2. Typographic Hierarchy Overhaul
+- [ ] **Remove color-based hierarchy** - No "blue for headers, gray for body" patterns
+- [ ] **Weight-based system** - Bold (700) for titles, Medium (500) for section headers, Regular (400) for body
+- [ ] **Size scale refinement** - Establish 6-level type scale with clear purpose per level
+- [ ] **Hebrew typography audit** - Ensure Hebrew fonts have equivalent hierarchy without relying on color
+- **Implementation**: Create `typography.ts` design tokens, apply to `TopicExperience`, `TorahReader`
+- **Done When**: User can understand content structure with page in grayscale
+
+#### 3. Whitespace & Breathing Room
+- [ ] **Component spacing audit** - Document current padding/margins in key components
+- [ ] **Establish spacing scale** - 8px base unit, consistent multipliers (8, 16, 24, 32, 48, 64)
+- [ ] **Section breathing room** - Minimum 48px between major content sections
+- [ ] **Card internal spacing** - Generous padding (24px+) inside topic/source cards
+- **Implementation**: Update `TopicExperience.tsx`, `TopicsList.tsx`, `SourcesTab.tsx`
+- **Done When**: Content feels spacious, not cramped; no "wall of text" feeling
+
+#### 4. Micro-Interactions & Subtle Animation
+- [ ] **Hover state library** - Consistent hover effects for all interactive elements
+- [ ] **Transition timing** - 150-200ms for UI feedback, 300ms for content transitions
+- [ ] **Loading states** - Skeleton loaders that match content shape, not generic spinners
+- [ ] **Focus indicators** - Clear but not jarring keyboard navigation feedback
+- **Implementation**: Create `animations.ts` with Framer Motion presets, apply consistently
+- **Done When**: App feels responsive and alive without being distracting
+
+---
+
+### Phase 16b: Feature Storytelling & Visual Sections (SHORT-TERM - 3-6 weeks)
+
+**Principle**: "Each feature deserves its own visual language and dedicated narrative."
+
+#### 5. Core Feature Visual Identity
+- [ ] **Graph View identity** - Distinct visual treatment (colors, animations, typography)
+- [ ] **Article Editor identity** - Clean, focused writing environment visual language
+- [ ] **Citation System identity** - Reference-style visual treatment (muted, scholarly)
+- [ ] **Discovery/Explore identity** - Serendipitous, surprising visual language
+- **Implementation**: Create feature-specific color schemes and component variants
+- **Done When**: User recognizes which "mode" they're in visually
+
+#### 6. Graph as Visual Centerpiece
+- [ ] **Homepage graph preview** - Interactive mini-graph showing concept connections
+- [ ] **Topic page constellation** - Visual relationship map embedded in topic experience
+- [ ] **"Infinite exploration" framing** - Language and UI suggesting unlimited discovery
+- [ ] **Graph entry points** - Multiple ways to access graph (from topic, from search, dedicated page)
+- **Implementation**: Enhance `ConceptConstellation.tsx`, create `GraphPreview` component
+- **Done When**: Graph feels like core feature, not hidden secondary view
+
+#### 7. Card-Based Concept Organization
+- [ ] **Comparison cards** - Side-by-side concept cards (e.g., "Tzaddik vs Beinoni")
+- [ ] **Source type cards** - Visual differentiation for Primary/Secondary/Commentary sources
+- [ ] **Relationship cards** - Show "This topic relates to X because Y" with visual treatment
+- [ ] **Quick fact cards** - Key definitions, dates, or facts in scannable card format
+- **Implementation**: Create card component library in `components/ui/cards/`
+- **Done When**: Complex concepts can be compared at a glance
+
+---
+
+### Phase 16c: Progressive Disclosure & Mental Models (MEDIUM-TERM - 4-8 weeks)
+
+**Principle**: "Show summary first, reveal depth on demand. Frame the app as infinite thinking space."
+
+#### 8. Progressive Disclosure System
+- [ ] **Level 1: Glance** - Title + 1-sentence definition visible without interaction
+- [ ] **Level 2: Summary** - 2-3 key points, primary sources, related topics (expandable)
+- [ ] **Level 3: Article** - Full article content with sections
+- [ ] **Level 4: Deep Dive** - All sources, scholarly notes, alternative interpretations
+- **Implementation**: Redesign `TopicExperience.tsx` with collapsible depth levels
+- **Done When**: User can get value in 5 seconds OR spend 30 minutes—their choice
+
+#### 9. "Infinite Space" Graph Exploration
+- [ ] **Zoom-based navigation** - Zoom out = see more connections, zoom in = see detail
+- [ ] **No dead ends** - Every topic connects to at least 2 others
+- [ ] **Breadcrumb trail** - Show how user navigated to current concept
+- [ ] **"Explore from here"** - Always visible prompt to continue exploring
+- **Implementation**: Enhance graph component with zoom levels, add exploration prompts
+- **Done When**: User feels they could explore forever; no "I've seen everything" feeling
+
+#### 10. Nested Content Views
+- [ ] **Articles embed mini-topics** - Inline expandable topic definitions within articles
+- [ ] **Topics embed source snippets** - Show key quotes directly in topic view
+- [ ] **Sources link back to topics** - Every source shows which topics reference it
+- [ ] **Recursive exploration** - Can go from topic → source → different topic → source
+- **Implementation**: Create `EmbeddedTopic`, `SourceSnippet` components with lazy loading
+- **Done When**: User can explore deeply without losing context of where they started
+
+---
+
+### Phase 16d: Embed Everything Philosophy (MEDIUM-TERM - 6-10 weeks)
+
+**Principle**: "Support embedding diverse content types for rich learning experiences."
+
+#### 11. Multi-Content Embedding
+- [ ] **Sefaria text embedding** - Inline Torah texts via Sefaria API
+- [ ] **Audio shiurim embedding** - Embedded audio players for related lectures
+- [ ] **PDF manuscript viewing** - In-app PDF viewer for original sources
+- [ ] **YouTube/video embedding** - Video lectures related to topics
+- [ ] **External source previews** - Rich previews for HebrewBooks, Otzar HaChochma links
+- **Implementation**: Create `EmbedContainer` component with content-type detection
+- **Done When**: User doesn't need to leave app for supplementary content
+
+#### 12. "Spark Ideas" Serendipitous Discovery
+- [ ] **"Unexpected Connection" feature** - Surface surprising topic relationships
+- [ ] **Random related quote** - Show quote from different era/source on same concept
+- [ ] **"Did you know?"** - Contextual facts that appear based on what user is reading
+- [ ] **Cross-reference alerts** - Notify when reading something that connects to previous reading
+- **Implementation**: Create `SerendipityEngine` service, integrate into topic views
+- **Done When**: Users regularly discover connections they didn't know existed
+
+---
+
+### Phase 16e: Messaging & Positioning (ONGOING - Parallel track)
+
+**Principle**: "Words matter. How we talk about the app shapes how users think about it."
+
+#### 13. Verb-First, Action-Oriented Messaging
+- [ ] **Tagline revision** - From "Chassidus Research Platform" to action verb
+  - Options: "Deepen your understanding" / "Connect the ideas" / "Discover Chassidus"
+- [ ] **Feature naming audit** - Every feature name should imply action
+  - "Topics" → "Explore Concepts"? "Sources" → "Discover Sources"?
+- [ ] **CTA language** - "Start Exploring" not "View Topics"; "Dive Deeper" not "See More"
+- [ ] **Error/empty state messaging** - Encouraging, action-oriented recovery language
+- **Implementation**: Create `copy.ts` centralized messaging file, audit all user-facing text
+- **Done When**: Every piece of text encourages exploration and action
+
+#### 14. App Manifesto Development
+- [ ] **Core beliefs document** - What do we believe about Torah learning?
+- [ ] **Design principles** - 5-7 principles that guide every decision
+  - Draft: "Depth on Demand" / "Connected, Not Siloed" / "Scholar's Pace" / "Your Torah Journey"
+- [ ] **Public manifesto page** - `/about` page articulating vision and values
+- [ ] **Internal design guide** - How manifesto translates to component decisions
+- **Implementation**: Create `/about` page, add manifesto to design system docs
+- **Done When**: Team can answer "why did you design it this way?" with manifesto reference
+
+#### 15. "Tools Adapt to You" Multiple Entry Points
+- [ ] **Entry point audit** - Document all ways users can start exploring
+- [ ] **Add missing entry points**:
+  - By concept (current)
+  - By source/sefer
+  - By author
+  - By time period
+  - By theme/category
+  - By graph exploration
+  - By random discovery
+- [ ] **Personalized default** - Remember user's preferred entry point
+- [ ] **"Choose your adventure"** - First-time user picks their learning style
+- **Implementation**: Enhance navigation, add preference storage, create onboarding flow
+- **Done When**: 5+ equally valid ways to start exploring; no "right way" to use the app
+
+#### 16. Small Team, Big Mission Story
+- [ ] **About page with team story** - Who's building this and why
+- [ ] **Mission statement** - Clear, inspiring purpose statement
+- [ ] **Community connection** - How users can contribute, give feedback, participate
+- [ ] **Transparency** - Public roadmap, changelog, development blog (optional)
+- **Implementation**: Create `/about` page with team bios, mission, contribution guidelines
+- **Done When**: Users feel connected to people behind the app, not just the product
+
+---
+
+### Phase 16f: Implementation Priorities
+
+**Immediate (Next 4 weeks)**:
+1. Typography & spacing overhaul (16a.2, 16a.3) - Foundation for everything else
+2. Micro-interactions (16a.4) - Low effort, high perceived quality impact
+3. Tagline and CTA language (16e.13) - Zero-code, high impact
+
+**Short-term (4-8 weeks)**:
+4. Graph as centerpiece (16b.6) - Core differentiator visualization
+5. Progressive disclosure (16c.8) - Major UX improvement
+6. Card-based comparisons (16b.7) - Better content organization
+
+**Medium-term (8-16 weeks)**:
+7. Nested content views (16c.10) - Deep exploration capability
+8. Serendipity features (16d.12) - Delight and discovery
+9. Manifesto and about page (16e.14, 16e.16) - Brand and community building
+
+---
+
+### Success Metrics
+
+| Metric | Current | Target | How to Measure |
+|--------|---------|--------|----------------|
+| Time to first meaningful interaction | Unknown | <10 seconds | Analytics: time from landing to topic view |
+| Session depth (topics viewed) | Unknown | 3+ topics/session | Analytics: average topics per session |
+| Return rate (7-day) | Unknown | >40% | Analytics: unique users returning within 7 days |
+| "Discovered something new" (qualitative) | N/A | >60% of surveyed users | User survey |
+| Graph feature usage | Unknown | >25% of sessions | Analytics: graph view opens per session |
+
+---
+
+### Dependencies
+
+- **Requires**: Stable foundation (TRACK 1, data integrity)
+- **Enhances**: TRACK 15 (Topics transformation), TRACK 11 (Explore)
+- **Parallel with**: TRACK 9 (UX fixes), TRACK 5 (Editor—for consistent design language)
+
+---
+
 ## 🚨 ARCHITECTURAL CONCERNS (REQUIRES DISCUSSION)
 
 ### Data Integrity & Statement Synchronization

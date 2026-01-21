@@ -762,24 +762,17 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     );
                 })}
 
-                {/* Smart Pathways & Constellation */}
-            <div className="pt-8 border-t border-border space-y-8">
-                {/* Visual Graph */}
-                <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-foreground flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-purple-500" />
-                            Concept Constellation
-                        </h3>
-                        <button
-                            onClick={() => setIsDeepDiveOpen(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            Deep Dive Mode
-                        </button>
-                    </div>
-                    <div className="flex justify-center">
+                {/* Concept Constellation - Visual Discovery at Bottom */}
+                {relatedTopics.length > 0 && (
+                    <div className="pt-12 mt-8 border-t border-border">
+                        <div className="text-center mb-6">
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-medium mb-3">
+                                <Sparkles className="w-3 h-3" />
+                                See the Connections
+                            </span>
+                            <h2 className="text-lg font-semibold text-foreground">How This Concept Connects</h2>
+                            <p className="text-sm text-muted-foreground mt-1">Now that you&apos;ve learned about {topic.canonical_title}, explore how it connects to other ideas</p>
+                        </div>
                         <ConstellationErrorBoundary>
                             <ConceptConstellation
                                 centerConcept={graphData.centerConcept}
@@ -787,10 +780,38 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                 onNodeClick={handleGraphClick}
                             />
                         </ConstellationErrorBoundary>
+                        <div className="text-center mt-4">
+                            <button
+                                onClick={() => setIsDeepDiveOpen(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all hover-lift"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Open Deep Dive Mode
+                            </button>
+                        </div>
+                        
+                        {/* Quick Links */}
+                        <div className="mt-8 pt-6 border-t border-border/50">
+                            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+                                <GitBranch className="w-4 h-4 text-primary" />
+                                Continue Exploring
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {relatedTopics.slice(0, 5).map((related) => (
+                                    <Link
+                                        key={related.slug}
+                                        href={`/topics/${related.slug}`}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted text-sm rounded-full transition-colors hover-scale"
+                                    >
+                                        <span>{related.canonical_title}</span>
+                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </main>
+                )}
+            </main>
 
 
             {/* Interactive Bottom Sheet */}

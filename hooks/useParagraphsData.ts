@@ -17,7 +17,8 @@ export interface Statement {
     id: number;
     text: string;
     order_key: number;
-    paragraph_id: number;
+    block_id: number;
+    paragraph_id?: number; // Legacy compatibility
     appended_text?: string;
     metadata?: any;
 }

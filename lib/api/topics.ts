@@ -3,26 +3,19 @@ import { readItems, updateItem } from '@directus/sdk';
 
 /**
  * Get topic by slug with associated content
- *
- * DATA FLOW:
- * 1. Fetch topic by slug
- * 2. PRIMARY: Get documents linked via document.topic field
- * 3. Get content_blocks from those documents **[UPDATED]**
- * 4. Get statements from those content_blocks **[UPDATED]**
- * 5. SECONDARY: Add statement_topics for additional sources
- *
+ * 
+ * OPTIMIZED: Uses deep queries to reduce N+1 query problems
+ * 
  * @param slug Topic slug
- * @returns Topic with content_blocks containing statements **[UPDATED]**
+ * @returns Topic with content_blocks containing statements
  */
 export async function getTopicBySlug(slug: string) {
     try {
         const directus = createClient();
 
-        // Fetch the topic by slug
+        // OPTIMIZED: Fetch topic with documents and nested content in fewer queries
         const topics = await directus.request(readItems('topics', {
-            filter: {
-                slug: { _eq: slug }
-            },
+            filter: { slug: { _eq: slug } },
             fields: ['*'],
             limit: 1
         }));
@@ -33,75 +26,45 @@ export async function getTopicBySlug(slug: string) {
 
         const topic = topics[0];
 
-        // use document.topic field for entry content (primary approach for articles)
-        let contentBlocks: any[] = []; // **[RENAMED]** from paragraphs
-        let validStatementTopics: any[] = []; // For sources/citations tab
+        let contentBlocks: any[] = [];
+        let validStatementTopics: any[] = [];
+        
         try {
-            // PRIMARY: Get documents directly linked to this topic
+            // OPTIMIZED: Single query with deep nested fields instead of 3 separate queries
             const topicDocuments = await directus.request(readItems('documents', {
                 filter: { topic: { _eq: topic.id } } as any,
-                fields: ['id', 'title', 'doc_type'],
+                fields: [
+                    'id', 'title', 'doc_type',
+                    // Deep query: get content_blocks with their statements in one request
+                    { content_blocks: ['id', 'content', 'order_key', 'block_type', { statements: ['id', 'text', 'order_key', 'block_id'] }] } as any
+                ],
                 limit: -1
             })) as any[];
 
-            console.log(`Topic ${topic.id} (${topic.canonical_title}): Found ${topicDocuments.length} linked documents`);
+            console.log(`Topic ${topic.id}: Found ${topicDocuments.length} documents (optimized query)`);
 
-            if (topicDocuments.length > 0) {
-
-                // Get content_blocks from these documents **[UPDATED]**
-                const docIds = topicDocuments.map(doc => doc.id);
-                const documentContentBlocks = await directus.request(readItems('content_blocks' as any, { // **[CHANGED]** from 'paragraphs'
-                    filter: { document_id: { _in: docIds } } as any, // **[CHANGED]** from doc_id
-                    fields: ['id', 'content', 'order_key', 'document_id', 'block_type'], // **[CHANGED]** from text, doc_id
-                    sort: ['order_key'],
-                    limit: -1
-                })) as any[];
-
-                console.log(`Found ${documentContentBlocks.length} content_blocks across ${docIds.length} documents`); // **[UPDATED]**
-
-                // Get statements for these content_blocks **[UPDATED]**
-                const blockIds = documentContentBlocks.map(cb => cb.id);
-                let documentStatements: any[] = [];
-
-                if (blockIds.length > 0) {
-                    documentStatements = await directus.request(readItems('statements', {
-                        filter: { block_id: { _in: blockIds } } as any, // **[CHANGED]** from paragraph_id
-                        fields: ['id', 'text', 'order_key', 'block_id'], // **[CHANGED]** from paragraph_id
-                        sort: ['order_key'],
-                        limit: -1
-                    })) as any[];
-                }
-
-                console.log(`Found ${documentStatements.length} statements across ${blockIds.length} content_blocks`); // **[UPDATED]**
-
-                // Group statements by content_block **[UPDATED]**
-                const contentBlockMap: Record<number, any> = {}; // **[RENAMED]** from paragraphMap
-                for (const block of documentContentBlocks) { // **[RENAMED]** from para
-                    contentBlockMap[block.id] = {
+            // Process the nested data structure
+            for (const doc of topicDocuments) {
+                const docBlocks = doc.content_blocks || [];
+                for (const block of docBlocks) {
+                    contentBlocks.push({
                         id: block.id,
-                        content: block.content, // **[CHANGED]** from text
+                        content: block.content,
                         order_key: block.order_key,
-                        block_type: block.block_type, // **[NEW]**
-                        document_title: topicDocuments.find(doc => doc.id === block.document_id)?.title || 'Unknown Document', // **[CHANGED]** from doc_id
-                        statements: [] as any[]
-                    };
-                }
-
-                // Add statements to their content_blocks **[UPDATED]**
-                for (const stmt of documentStatements) {
-                    if (stmt.block_id && contentBlockMap[stmt.block_id]) { // **[CHANGED]** from paragraph_id
-                        contentBlockMap[stmt.block_id].statements.push({
+                        block_type: block.block_type,
+                        document_title: doc.title || 'Unknown Document',
+                        statements: (block.statements || []).map((stmt: any) => ({
                             id: stmt.id,
                             text: stmt.text,
                             order_key: stmt.order_key
-                        });
-                    }
+                        }))
+                    });
                 }
-
-                contentBlocks = Object.values(contentBlockMap).sort((a, b) => // **[RENAMED]** from paragraphs
-                    (a.order_key || '').localeCompare(b.order_key || '')
-                );
             }
+
+            // Sort content blocks by order_key
+            contentBlocks.sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
+            console.log(`Processed ${contentBlocks.length} content_blocks with nested statements`);
 
             // SECONDARY: Get additional statement_topics for sources/citations
             try {

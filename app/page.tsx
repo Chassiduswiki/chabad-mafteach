@@ -6,6 +6,7 @@ import Head from 'next/head';
 import { MobileHome } from '@/components/mobile/MobileHome';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { Sparkles, Zap, Globe } from 'lucide-react';
+import { copy } from '@/lib/copy';
 
 // Lazy load below-fold components
 const ContentDiscovery = dynamic(() => import('@/components/features/home/ContentDiscovery').then(mod => ({ default: mod.ContentDiscovery })), {
@@ -16,6 +17,11 @@ const ContentDiscovery = dynamic(() => import('@/components/features/home/Conten
 const FeaturedTopics = dynamic(() => import('@/components/features/home/FeaturedTopics').then(mod => ({ default: mod.FeaturedTopics })), {
   ssr: false,
   loading: () => <div className="h-64 bg-muted/20 animate-pulse rounded-2xl" />
+});
+
+const GraphPreview = dynamic(() => import('@/components/features/home/GraphPreview').then(mod => ({ default: mod.GraphPreview })), {
+  ssr: false,
+  loading: () => <div className="h-80 bg-muted/20 animate-pulse rounded-2xl" />
 });
 
 // Lazy load heavy background component
@@ -40,17 +46,20 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Chabad Maftaiach - Master Index of Chassidic Wisdom</title>
-        <meta name="description" content="Explore Chassidic concepts and discover sources. A comprehensive index connecting topics to their sources across all Chabad literature." />
-        <meta name="keywords" content="Chassidus, Chabad, Torah, Jewish wisdom, Chassidic concepts, Tanya, Kabbalah" />
-        <meta property="og:title" content="Chabad Maftaiach - Master Index of Chassidic Wisdom" />
-        <meta property="og:description" content="Explore Chassidic concepts and discover sources across all Chabad literature." />
+        <title>{copy.meta.defaultTitle}</title>
+        <meta name="description" content={copy.meta.defaultDescription} />
+        <meta name="keywords" content={copy.meta.keywords.join(', ')} />
+        <meta property="og:title" content={copy.meta.ogTitle} />
+        <meta property="og:description" content={copy.meta.ogDescription} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Chabad Maftaiach" />
-        <meta name="twitter:description" content="Master Index of Chassidic Wisdom" />
+        <meta name="twitter:title" content={copy.meta.twitterTitle} />
+        <meta name="twitter:description" content={copy.meta.twitterDescription} />
       </Head>
       <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/20 selection:text-primary">
+
+      {/* Top Navigation - Always visible */}
+      <GlobalNav transparent />
 
       {/* Background - Subtle accent */}
       <div className="pointer-events-none absolute inset-0 z-0">
@@ -60,9 +69,6 @@ export default function Home() {
         {/* Floating Hebrew Letters */}
         <FloatingHebrewLetters />
       </div>
-
-      {/* Global Navigation */}
-      <GlobalNav transparent />
 
       {/* Mobile Homepage - App-like Dashboard (Task 2.11) */}
       <div className="lg:hidden">
@@ -83,7 +89,7 @@ export default function Home() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
           </span>
-          <span>v2.0 Now Available</span>
+          <span>{copy.home.hero.badge}</span>
         </motion.div>
 
         {/* Hero Title */}
@@ -94,7 +100,7 @@ export default function Home() {
             transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
             className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.1]"
           >
-            Master Index of
+            {copy.home.hero.title.split(' ').slice(0, 2).join(' ')}
           </motion.h1>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -103,7 +109,7 @@ export default function Home() {
             className="mt-2"
           >
             <WordRotate
-              words={["Chassidic Wisdom", "Divine Truth", "Inner Light", "Torah Knowledge"]}
+              words={copy.home.hero.titleRotatingWords as unknown as string[]}
               className="text-primary text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl leading-[1.1]"
             />
           </motion.div>
@@ -116,7 +122,7 @@ export default function Home() {
           transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
           className="mt-8 max-w-2xl text-center text-base text-muted-foreground sm:text-lg leading-relaxed"
         >
-          Explore concepts, discover sources. A comprehensive index connecting Chassidic topics to their sources across all Chabad literature.
+          {copy.home.hero.subtitle}
         </motion.p>
 
         {/* Command Palette Trigger Area */}
@@ -130,13 +136,13 @@ export default function Home() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground sm:gap-8">
             <span className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" /> AI-Powered
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" /> {copy.home.features.aiPowered}
             </span>
             <span className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1">
-              <Zap className="h-3.5 w-3.5 text-blue-500" /> Instant Results
+              <Zap className="h-3.5 w-3.5 text-blue-500" /> {copy.home.features.instantResults}
             </span>
             <span className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1">
-              <Globe className="h-3.5 w-3.5 text-emerald-500" /> Bi-Lingual
+              <Globe className="h-3.5 w-3.5 text-emerald-500" /> {copy.home.features.bilingual}
             </span>
           </div>
         </motion.div>
@@ -144,7 +150,7 @@ export default function Home() {
         {/* Content Discovery Section - Moved up for above-fold visibility */}
         <div className="mt-24 w-full" data-onboarding="explore-section">
           <h2 className="mb-12 text-center text-2xl font-bold text-foreground">
-            Discover Content
+            {copy.home.sections.discover}
           </h2>
           <ContentDiscovery />
         </div>
@@ -152,9 +158,14 @@ export default function Home() {
         {/* Featured Topics - Real Content (Task 2.13) */}
         <div className="mt-24 w-full">
           <h2 className="mb-12 text-center text-2xl font-bold text-foreground">
-            Explore Topics
+            {copy.home.sections.featured}
           </h2>
           <FeaturedTopics />
+        </div>
+
+        {/* Knowledge Graph Preview */}
+        <div className="mt-24 w-full max-w-2xl mx-auto">
+          <GraphPreview />
         </div>
 
         {/* Spacer */}
