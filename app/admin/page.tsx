@@ -33,16 +33,24 @@ interface PopularTopic {
   last_viewed?: string;
 }
 
+interface ContentHealth {
+  score: number;
+  metrics: {
+    topicsWithSources: number;
+    statementsTagged: number;
+  };
+  issues: {
+    topicsWithoutSources: number;
+    untaggedStatements: number;
+  };
+}
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ books: 0, authors: 0, topics: 0, statements: 0 });
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [contentHealth, setContentHealth] = useState<{
-    score: number;
-    metrics: { topicsWithSources: number; statementsTagged: number };
-    issues: { topicsWithoutSources: number; untaggedStatements: number };
-  } | null>(null);
+  const [contentHealth, setContentHealth] = useState<ContentHealth | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -96,8 +104,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const formatTimeAgo = (dateString?: string) => {
-    if (!dateString) return 'Never';
+  const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -244,118 +251,158 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
+        {/* Content Health Score Widget */}
+        {contentHealth && (
+          <div className="mb-8 p-6 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Content Health Score
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Overall quality and completeness of your content
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-bold text-primary">
+                  {contentHealth.score}
+                  <span className="text-lg text-muted-foreground">/100</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {contentHealth.score >= 80 ? '🎉 Excellent' :
+                    contentHealth.score >= 60 ? '👍 Good' :
+                      contentHealth.score >= 40 ? '⚠️ Needs Work' : '🚨 Critical'}
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-background/50 rounded-lg border border-border/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">Topics with Sources</span>
+                  <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {contentHealth.metrics.topicsWithSources}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${contentHealth.metrics.topicsWithSources}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-background/50 rounded-lg border border-border/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">Statements Tagged</span>
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {contentHealth.metrics.statementsTagged}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${contentHealth.metrics.statementsTagged}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Items */}
+            {(contentHealth.issues.topicsWithoutSources > 0 || contentHealth.issues.untaggedStatements > 0) && (
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Action Items
+                </h3>
+                <div className="space-y-2">
+                  {contentHealth.issues.topicsWithoutSources > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-yellow-700 dark:text-yellow-300">
+                        📚 Add sources to {contentHealth.issues.topicsWithoutSources} topics
+                      </span>
+                      <Link
+                        href="/editor/topics"
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Fix →
+                      </Link>
+                    </div>
+                  )}
+                  {contentHealth.issues.untaggedStatements > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-yellow-700 dark:text-yellow-300">
+                        🏷️ Tag {contentHealth.issues.untaggedStatements} statements
+                      </span>
+                      <Link
+                        href="/editor/topics"
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Fix →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="p-6 bg-card border border-border rounded-xl">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold text-foreground">Content Overview</h2>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Books</p>
-              <p className="text-2xl font-bold text-foreground">
-                {isLoading ? '...' : stats.books}
-              </p>
-            </div>
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Authors</p>
-              <p className="text-2xl font-bold text-foreground">
-                {isLoading ? '...' : stats.authors}
-              </p>
-            </div>
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Topics</p>
-              <p className="text-2xl font-bold text-foreground">
-                {isLoading ? '...' : stats.topics}
-              </p>
-            </div>
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Database Status</p>
-              <p className="text-sm font-medium text-green-500">Connected</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Popular Topics Analytics */}
-        <div className="mt-8 p-6 bg-card border border-border rounded-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold text-foreground">Popular Topics</h2>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Based on page views
-            </span>
+            <h2 className="text-lg font-semibold text-foreground">Popular Topics</h2>
           </div>
 
           {analyticsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-          ) : popularTopics.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No analytics data yet</p>
-              <p className="text-xs mt-1">Views will appear here as users browse topics</p>
-            </div>
-          ) : (
+          ) : popularTopics.length > 0 ? (
             <div className="space-y-3">
-              {popularTopics.slice(0, 10).map((topic, index) => (
-                <div
+              {popularTopics.map((topic, index) => (
+                <Link
                   key={topic.id}
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/topics/${topic.slug}`}
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-muted-foreground w-6">
-                      {index + 1}
+                    <span className="text-sm font-mono text-muted-foreground w-6">
+                      {index + 1}.
                     </span>
                     <div>
-                      <Link
-                        href={`/topics/${topic.slug}`}
-                        className="font-medium text-foreground hover:text-primary transition-colors"
-                      >
+                      <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
                         {topic.canonical_title}
-                      </Link>
+                      </h3>
                       {topic.topic_type && (
-                        <span className="ml-2 text-xs px-2 py-0.5 bg-muted rounded text-muted-foreground capitalize">
+                        <span className="text-xs text-muted-foreground capitalize">
                           {topic.topic_type}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Eye className="w-4 h-4" />
-                      <span className="font-medium">{topic.views}</span>
+                      <span>{topic.views}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatTimeAgo(topic.last_viewed)}</span>
-                    </div>
+                    {topic.last_viewed && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(topic.last_viewed)}
+                      </span>
+                    )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">
+              No analytics data available yet
+            </p>
           )}
-        </div>
-
-        {/* Footer Links */}
-        <div className="mt-8 pt-6 border-t border-border">
-          <div className="flex flex-wrap gap-6 text-sm">
-            <Link href="/editor" className="text-muted-foreground hover:text-foreground">
-              Editor
-            </Link>
-            <Link href="/explore" className="text-muted-foreground hover:text-foreground">
-              Explore
-            </Link>
-            <Link href="/seforim" className="text-muted-foreground hover:text-foreground">
-              Seforim Reader
-            </Link>
-            <Link href="/topics" className="text-muted-foreground hover:text-foreground">
-              Topics
-            </Link>
-          </div>
         </div>
       </div>
     </div>
