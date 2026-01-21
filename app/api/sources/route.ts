@@ -8,48 +8,120 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const topicId = searchParams.get('topic_id');
+        const id = searchParams.get('id');
+        const search = searchParams.get('search');
+        const limit = parseInt(searchParams.get('limit') || '100');
 
-        if (!topicId) {
-            return NextResponse.json({ error: 'topic_id required' }, { status: 400 });
+        // Get single book by ID with full relations
+        if (id) {
+            const books = await directus.request(readItems('sources', {
+                filter: { id: { _eq: parseInt(id) } },
+                fields: [
+                    '*',
+                    { author_id: ['id', 'canonical_name', 'birth_year', 'death_year', 'era'] }
+                ],
+                limit: 1
+            }));
+
+            if ((books as any[]).length === 0) {
+                return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+            }
+
+            // Get topics using this book (via source_links where statement_id is null)
+            const topicLinks = await directus.request(readItems('source_links', {
+                filter: { 
+                    _and: [
+                        { source_id: { _eq: parseInt(id) } },
+                        { statement_id: { _null: true } }
+                    ]
+                } as any,
+                fields: [
+                    'id',
+                    { topic_id: ['id', 'canonical_title', 'slug'] }
+                ] as any
+            }));
+
+            // Get inline citations (source_links where statement_id has value)
+            const citationLinks = await directus.request(readItems('source_links', {
+                filter: { 
+                    _and: [
+                        { source_id: { _eq: parseInt(id) } },
+                        { statement_id: { _nnull: true } }
+                    ]
+                },
+                fields: [
+                    'id',
+                    'section_reference',
+                    'page_number',
+                    { statement_id: ['id', 'text'] }
+                ]
+            }));
+
+            return NextResponse.json({ 
+                book: (books as any[])[0], 
+                topics: (topicLinks as any[]).map(l => l.topic_id).filter(Boolean),
+                citations: citationLinks
+            });
         }
 
-        // Get source_links for this topic
-        const links = await directus.request(readItems('source_links', {
-            filter: { 
-                statement_id: {
-                    _in: {
-                        _table: 'statements',
-                        _on: {
-                            statement_topics: {
-                                topic_id: { _eq: parseInt(topicId) }
+        // Get sources for a specific topic (original behavior)
+        if (topicId) {
+            const links = await directus.request(readItems('source_links', {
+                filter: { 
+                    statement_id: {
+                        _in: {
+                            _table: 'statements',
+                            _on: {
+                                statement_topics: {
+                                    topic_id: { _eq: parseInt(topicId) }
+                                }
                             }
                         }
                     }
-                }
-            },
-            fields: ['source_id'],
-            limit: -1
-        }));
+                },
+                fields: ['source_id'],
+                limit: -1
+            }));
 
-        const sourceIds = (Array.isArray(links) ? links : [links])
-            .map(l => l.source_id)
-            .filter((id, idx, arr) => arr.indexOf(id) === idx)
-            .filter((id): id is number => id !== undefined); // unique and filter undefined
+            const sourceIds = (Array.isArray(links) ? links : [links])
+                .map(l => l.source_id)
+                .filter((id, idx, arr) => arr.indexOf(id) === idx)
+                .filter((id): id is number => id !== undefined);
 
-        if (sourceIds.length === 0) {
-            return NextResponse.json({ data: [] });
+            if (sourceIds.length === 0) {
+                return NextResponse.json({ data: [] });
+            }
+
+            const result = await directus.request(readItems('sources', {
+                filter: { id: { _in: sourceIds } } as any,
+                fields: ['id', 'title', 'external_system', 'external_url', 'metadata'],
+                limit: -1
+            }));
+
+            const sourcesArray = Array.isArray(result) ? result : result ? [result] : [];
+            return NextResponse.json({ data: sourcesArray });
         }
 
-        // Get sources
-        const result = await directus.request(readItems('sources', {
-            filter: { id: { _in: sourceIds } } as any,
-            fields: ['id', 'title', 'external_system', 'external_url', 'metadata'],
-            limit: -1
+        // List all books with optional search
+        const filter = search ? {
+            _or: [
+                { title: { _icontains: search } },
+                { author_id: { canonical_name: { _icontains: search } } }
+            ]
+        } : {};
+
+        const books = await directus.request(readItems('sources', {
+            filter,
+            fields: [
+                'id', 'title', 'publication_year', 'publisher', 'isbn',
+                'external_system', 'external_url', 'original_lang', 'citation_text',
+                { author_id: ['id', 'canonical_name', 'birth_year', 'death_year'] }
+            ],
+            sort: ['title'],
+            limit
         }));
 
-        const sourcesArray = Array.isArray(result) ? result : result ? [result] : [];
-
-        return NextResponse.json({ data: sourcesArray });
+        return NextResponse.json({ data: books });
     } catch (error) {
         return handleApiError(error);
     }
