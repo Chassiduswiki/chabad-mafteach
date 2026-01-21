@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import Link from 'next/link';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
 import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
@@ -33,6 +34,82 @@ interface TopicExperienceProps {
     relatedTopics: any[];
     sources: Source[];
     citations: any[];
+}
+
+// Helper: Auto-link topic names in text
+function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: string; canonical_title: string; slug: string; name_hebrew?: string; alternate_names?: string[] }>): ReactNode {
+    if (!text || availableTopics.length === 0) return text;
+    
+    // Build a map of topic names to slugs (case-insensitive matching)
+    // Include canonical_title, name, Hebrew name, and alternate names
+    const topicMap = new Map<string, string>();
+    availableTopics.forEach(t => {
+        if (!t.slug) return;
+        
+        // Add canonical title
+        if (t.canonical_title) {
+            topicMap.set(t.canonical_title.toLowerCase(), t.slug);
+        }
+        // Add name if different
+        if (t.name && t.name !== t.canonical_title) {
+            topicMap.set(t.name.toLowerCase(), t.slug);
+        }
+        // Add Hebrew name
+        if ((t as any).name_hebrew) {
+            topicMap.set((t as any).name_hebrew, t.slug); // Hebrew is case-sensitive
+        }
+        // Add alternate names
+        if ((t as any).alternate_names && Array.isArray((t as any).alternate_names)) {
+            (t as any).alternate_names.forEach((altName: string) => {
+                if (altName) topicMap.set(altName.toLowerCase(), t.slug);
+            });
+        }
+    });
+    
+    if (topicMap.size === 0) return text;
+    
+    // Create regex pattern matching any topic name (longest first to avoid partial matches)
+    const sortedNames = Array.from(topicMap.keys()).sort((a, b) => b.length - a.length);
+    const pattern = new RegExp(`\\b(${sortedNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    
+    // Split text by matches and rebuild with links
+    const parts: ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let keyIdx = 0;
+    
+    while ((match = pattern.exec(text)) !== null) {
+        // Add text before match
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+        
+        // Add linked topic
+        const matchedText = match[1];
+        const slug = topicMap.get(matchedText.toLowerCase());
+        if (slug) {
+            parts.push(
+                <Link 
+                    key={`topic-link-${keyIdx++}`}
+                    href={`/topics/${slug}`}
+                    className="text-primary hover:text-primary/80 underline decoration-primary/30 hover:decoration-primary/60 underline-offset-2 transition-colors"
+                >
+                    {matchedText}
+                </Link>
+            );
+        } else {
+            parts.push(matchedText);
+        }
+        
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+    
+    return parts.length > 0 ? <>{parts}</> : text;
 }
 
 // Config
@@ -91,6 +168,24 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
     const [isLoading, setIsLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(false);
+    const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
+
+    // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
+    useEffect(() => {
+        async function fetchAllTopicNames() {
+            try {
+                const res = await fetch('/api/topics?fields=name,canonical_title,slug,name_hebrew,alternate_names&limit=500');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllTopicsForLinking(data.topics || []);
+                }
+            } catch (e) {
+                // Fallback to related topics if fetch fails
+                setAllTopicsForLinking(relatedTopics);
+            }
+        }
+        fetchAllTopicNames();
+    }, [relatedTopics]);
     const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -543,7 +638,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                                     >
                                                         <span className="text-muted-foreground text-sm font-mono opacity-50 mt-0.5">{idx + 1}.</span>
                                                         <div className="flex-1">
-                                                            <span className="font-medium text-foreground leading-relaxed">{sourceText}</span>
+                                                            <span className="font-medium text-foreground leading-relaxed">
+                                                                {linkifyTopicReferences(sourceText, allTopicsForLinking)}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 ))}
