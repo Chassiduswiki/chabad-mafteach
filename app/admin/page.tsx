@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  BookOpen, 
-  User, 
-  FileText, 
-  Layers, 
-  BarChart3, 
+import {
+  BookOpen,
+  User,
+  FileText,
+  Layers,
+  BarChart3,
   Settings,
   Plus,
   ArrowRight,
@@ -47,44 +47,19 @@ export default function AdminDashboardPage() {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
-      const [booksRes, authorsRes, topicsRes] = await Promise.all([
-        fetch('/api/sources?limit=1'),
-        fetch('/api/authors?limit=1'),
-        fetch('/api/topics?limit=1'),
-      ]);
-
-      const [booksData, authorsData, topicsData] = await Promise.all([
-        booksRes.json(),
-        authorsRes.json(),
-        topicsRes.json(),
-      ]);
-
-      setStats({
-        books: booksData.data?.length || 0,
-        authors: authorsData.data?.length || 0,
-        topics: topicsData.data?.length || 0,
-        statements: 0,
-      });
-
-      // Fetch actual counts with higher limits for accuracy
-      const [booksFullRes, authorsFullRes, topicsFullRes] = await Promise.all([
-        fetch('/api/sources?limit=1000'),
-        fetch('/api/authors?limit=1000'),
-        fetch('/api/topics?limit=1000'),
-      ]);
-
-      const [booksFullData, authorsFullData, topicsFullData] = await Promise.all([
-        booksFullRes.json(),
-        authorsFullRes.json(),
-        topicsFullRes.json(),
-      ]);
-
-      setStats({
-        books: booksFullData.data?.length || 0,
-        authors: authorsFullData.data?.length || 0,
-        topics: topicsFullData.data?.length || 0,
-        statements: 0,
-      });
+      // Use new aggregate dashboard endpoint for better performance
+      const response = await fetch('/api/analytics/dashboard');
+      if (response.ok) {
+        const data = await response.json();
+        setStats({
+          books: data.counts.sources || 0,
+          authors: data.counts.authors || 0,
+          topics: data.counts.topics || 0,
+          statements: data.counts.statements || 0,
+        });
+        // Store additional metrics for future use
+        (window as any).__dashboardMetrics = data;
+      }
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {
@@ -95,10 +70,18 @@ export default function AdminDashboardPage() {
   const fetchAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const response = await fetch('/api/analytics');
-      if (response.ok) {
-        const data = await response.json();
-        setPopularTopics(data.topics || []);
+      // Analytics are now fetched with dashboard endpoint
+      // Check if we already have the data
+      const dashboardData = (window as any).__dashboardMetrics;
+      if (dashboardData?.popularTopics) {
+        setPopularTopics(dashboardData.popularTopics);
+      } else {
+        // Fallback to separate endpoint if needed
+        const response = await fetch('/api/analytics');
+        if (response.ok) {
+          const data = await response.json();
+          setPopularTopics(data.topics || []);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
@@ -225,14 +208,14 @@ export default function AdminDashboardPage() {
                   </span>
                 )}
               </div>
-              
+
               <h3 className="text-lg font-semibold text-foreground mb-1">
                 {section.title}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {section.description}
               </p>
-              
+
               <div className="flex items-center gap-3">
                 <Link
                   href={section.href}
@@ -261,7 +244,7 @@ export default function AdminDashboardPage() {
             <BarChart3 className="w-5 h-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold text-foreground">Content Overview</h2>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 bg-muted/30 rounded-lg">
               <p className="text-sm text-muted-foreground">Total Books</p>
@@ -299,7 +282,7 @@ export default function AdminDashboardPage() {
               Based on page views
             </span>
           </div>
-          
+
           {analyticsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

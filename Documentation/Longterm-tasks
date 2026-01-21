@@ -552,6 +552,17 @@ The frontend TypeScript types now match the new Directus schema:
     - Test "Focus Mode" dimming doesn't break accessibility.
     - Verify `AnimatePresence` for bottom sheets handles route changes correctly.
 
+### Phase 15j: URL Redirect System (FUTURE - 6+ months)
+**Goal**: Prevent broken links when topic slugs are changed by implementing automatic redirects.
+
+- [ ] **Slug History Tracking** - Store previous slugs when topics are renamed in a `topic_slug_history` collection
+- [ ] **Automatic Redirects** - Implement 301 redirects from old slugs to new slugs in Next.js middleware
+- [ ] **Redirect Management UI** - Admin interface to view and manage redirects (view history, manually add redirects)
+- [ ] **Redirect API** - Backend endpoint to handle slug lookups and redirect resolution
+- [ ] **Analytics Integration** - Track redirect usage to identify frequently accessed old URLs
+- [ ] **Bulk Redirect Import** - Support importing redirect rules from CSV for migrations
+- [ ] **Redirect Expiry** - Optional TTL for redirects (e.g., expire after 1 year if never used)
+
 ---
 
 ## 🚨 COMPREHENSIVE ROADMAP AUDIT (Dec 29, 2025)

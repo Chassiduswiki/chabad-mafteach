@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { 
-  ArrowLeft, Save, Eye, CheckCircle, AlertCircle, 
+import {
+  ArrowLeft, Save, Eye, CheckCircle, AlertCircle,
   Settings, Link2, BookOpen, Tag, LayoutGrid, FileText,
   Clock, Keyboard
 } from 'lucide-react';
@@ -52,6 +52,7 @@ export default function TopicEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TopicEditorTab>('overview');
   const [manualSaveStatus, setManualSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [originalSlug, setOriginalSlug] = useState('');
 
   // Form data
   const [formData, setFormData] = useState<TopicFormData>({
@@ -90,18 +91,18 @@ export default function TopicEditorPage() {
   // Auto-save hook
   const handleAutoSave = useCallback(async (data: TopicFormData) => {
     if (!topic) return;
-    
+
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${topic.slug || slug}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Auto-save failed');
@@ -112,10 +113,10 @@ export default function TopicEditorPage() {
     }
   }, [topic, slug]);
 
-  const { 
-    isSaving: isAutoSaving, 
-    lastSaved, 
-    saveStatus: autoSaveStatus, 
+  const {
+    isSaving: isAutoSaving,
+    lastSaved,
+    saveStatus: autoSaveStatus,
     hasUnsavedChanges,
     triggerSave,
     markAsSaved,
@@ -141,7 +142,7 @@ export default function TopicEditorPage() {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/topics/${slug}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load topic: ${response.status}`);
       }
@@ -150,7 +151,8 @@ export default function TopicEditorPage() {
       const topicData = data.topic || data;
 
       setTopic(topicData);
-      
+      setOriginalSlug(topicData.slug || '');
+
       // Initialize sections from stored display_config if available
       if (topicData.display_config) {
         const storedConfig = topicData.display_config;
@@ -165,7 +167,7 @@ export default function TopicEditorPage() {
           return section;
         }));
       }
-      
+
       setFormData({
         canonical_title: topicData.canonical_title || '',
         canonical_title_en: topicData.canonical_title_en || '',
@@ -191,10 +193,10 @@ export default function TopicEditorPage() {
 
       // Load relationships
       await loadRelationships(topicData.id);
-      
+
       // Load linked sources
       await loadSources(topicData.slug);
-      
+
     } catch (error) {
       console.error('Error loading topic:', error);
     } finally {
@@ -231,8 +233,8 @@ export default function TopicEditorPage() {
 
       // Include display_config if it was changed
       const displayConfig = displayConfigChanged ? buildDisplayConfigForSave() : undefined;
-      const saveData = { 
-        ...formData, 
+      const saveData = {
+        ...formData,
         ...editorContent,
         ...(displayConfig && { display_config: displayConfig })
       };
@@ -241,7 +243,7 @@ export default function TopicEditorPage() {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${topic.slug || slug}`, {
         method: 'PATCH',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
@@ -313,12 +315,12 @@ export default function TopicEditorPage() {
   // Source handlers
   const handleLinkSource = async (data: SourceLinkFormData) => {
     if (!topic || !data.sourceId) return;
-    
+
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${topic.slug}/sources`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
@@ -346,7 +348,7 @@ export default function TopicEditorPage() {
 
   const handleUnlinkSource = async (sourceId: number) => {
     if (!topic) return;
-    
+
     try {
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${topic.slug}/sources?source_id=${sourceId}`, {
@@ -400,15 +402,15 @@ export default function TopicEditorPage() {
   };
 
   const handleUpdateConceptType = async (conceptId: number, type: 'primary' | 'secondary' | 'related') => {
-    setConcepts(prev => prev.map(c => 
+    setConcepts(prev => prev.map(c =>
       c.id === conceptId ? { ...c, type } : c
     ));
   };
 
   // Display config handler
   const handleUpdateDisplayConfig = (sectionId: string, config: Partial<DisplayConfig>) => {
-    setSections(prev => prev.map(s => 
-      s.id === sectionId 
+    setSections(prev => prev.map(s =>
+      s.id === sectionId
         ? { ...s, displayConfig: { ...s.displayConfig, ...config } }
         : s
     ));
@@ -494,7 +496,7 @@ export default function TopicEditorPage() {
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">Topics</span>
               </button>
-              
+
               <div className="border-l border-border pl-4">
                 <h1 className="text-lg font-semibold text-foreground line-clamp-1">
                   {formData.canonical_title || 'Untitled Topic'}
@@ -549,12 +551,12 @@ export default function TopicEditorPage() {
           {/* Sidebar - Completeness */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <div className="sticky top-20 space-y-4">
-              <TopicCompleteness 
-                formData={formData} 
+              <TopicCompleteness
+                formData={formData}
                 relationshipCount={relationships.length}
                 sourceCount={linkedSources.length}
               />
-              
+
               {/* Keyboard shortcuts hint */}
               <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2 mb-2">
@@ -600,7 +602,7 @@ export default function TopicEditorPage() {
               <TabsContent value="overview" className="space-y-6 mt-6">
                 <div className="bg-card border border-border rounded-lg p-6 space-y-6">
                   <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">
@@ -614,7 +616,7 @@ export default function TopicEditorPage() {
                         dir="rtl"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">
                         Title (English)
@@ -660,6 +662,49 @@ export default function TopicEditorPage() {
                     </div>
                   </div>
 
+                  {/* Slug Field with Warning */}
+                  <div className="col-span-full">
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      URL Slug *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.slug}
+                      onChange={(e) => {
+                        // Validate and sanitize slug: lowercase, alphanumeric + hyphens only
+                        const sanitized = e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, '-')
+                          .replace(/[^a-z0-9-]/g, '');
+                        updateFormField('slug', sanitized);
+                      }}
+                      placeholder="e.g., ahavas-yisroel"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This will be the URL: <span className="font-mono">/topics/{formData.slug || 'slug'}</span>
+                    </p>
+                    {formData.slug && formData.slug !== originalSlug && (
+                      <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                            <p className="font-medium mb-1">⚠️ Warning: Changing the slug will break existing URLs</p>
+                            <p className="mb-1">
+                              Old URL: <span className="font-mono bg-yellow-500/20 px-1 rounded">/topics/{originalSlug}</span>
+                            </p>
+                            <p>
+                              New URL: <span className="font-mono bg-yellow-500/20 px-1 rounded">/topics/{formData.slug}</span>
+                            </p>
+                            <p className="mt-2 text-yellow-700 dark:text-yellow-300">
+                              Any bookmarks or external links to the old URL will return 404 errors.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
                       Short Description *
@@ -674,7 +719,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, description: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -745,7 +790,7 @@ export default function TopicEditorPage() {
                 {/* Definition Section */}
                 <div className="bg-card border border-border rounded-lg p-6 space-y-6">
                   <h2 className="text-lg font-semibold text-foreground">Definitions & Boundaries</h2>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
                       What It IS (Positive Definition)
@@ -760,7 +805,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, definition_positive: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -779,7 +824,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, definition_negative: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -803,7 +848,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, overview: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -822,7 +867,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, article: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -846,7 +891,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, practical_takeaways: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -865,7 +910,7 @@ export default function TopicEditorPage() {
                           }
                           editorsRef.current = { ...editorsRef.current, historical_context: editor };
                         }}
-                        onBreakStatements={async () => {}}
+                        onBreakStatements={async () => { }}
                       />
                     </div>
                   </div>
@@ -885,7 +930,7 @@ export default function TopicEditorPage() {
                             }
                             editorsRef.current = { ...editorsRef.current, mashal: editor };
                           }}
-                          onBreakStatements={async () => {}}
+                          onBreakStatements={async () => { }}
                         />
                       </div>
                     </div>
@@ -904,7 +949,7 @@ export default function TopicEditorPage() {
                             }
                             editorsRef.current = { ...editorsRef.current, global_nimshal: editor };
                           }}
-                          onBreakStatements={async () => {}}
+                          onBreakStatements={async () => { }}
                         />
                       </div>
                     </div>
@@ -954,7 +999,7 @@ export default function TopicEditorPage() {
       </main>
 
       {/* Save Status Toast */}
-      <SaveStatusToast 
+      <SaveStatusToast
         status={autoSaveStatus}
         lastSaved={lastSaved}
         hasUnsavedChanges={hasUnsavedChanges}
