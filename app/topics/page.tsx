@@ -9,9 +9,50 @@ import { Suspense } from 'react';
 import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 import Dynamic from 'next/dynamic';
 import { FeaturedTopicCard } from '@/components/topics/FeaturedTopicCard';
+import { Metadata } from 'next';
 
-// Force dynamic rendering for real-time data
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+    searchParams
+}: {
+    searchParams: Promise<{ page?: string; category?: string }>
+}): Promise<Metadata> {
+    const resolvedSearchParams = await searchParams;
+    const category = resolvedSearchParams.category;
+    const page = Number(resolvedSearchParams.page) || 1;
+
+    const baseTitle = 'Topics & Concepts';
+    const siteName = 'Chabad Maftaiach';
+    
+    let title = baseTitle;
+    let description = 'Explore Chassidic concepts and find all the sources that discuss them';
+
+    if (category) {
+        const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+        title = `${categoryName} Topics - ${baseTitle}`;
+        description = `Browse ${categoryName.toLowerCase()} topics in Chassidic philosophy and discover related sources and teachings.`;
+    }
+
+    if (page > 1) {
+        title = `${title} - Page ${page}`;
+    }
+
+    return {
+        title: `${title} | ${siteName}`,
+        description,
+        openGraph: {
+            title: `${title} | ${siteName}`,
+            description,
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${title} | ${siteName}`,
+            description,
+        },
+    };
+}
 
 // Lazy load client components
 const ContextualSearch = Dynamic(() => import('@/components/features/search/ContextualSearch'), {
@@ -104,23 +145,23 @@ export default async function TopicsPage({
     const totalPages = Math.ceil(totalCount / limit);
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <main className="min-h-screen bg-background text-foreground">
             <div className="mx-auto max-w-5xl px-4 pt-8 pb-32 sm:px-6 lg:px-8 lg:pt-12">
 
                 {/* Breadcrumbs */}
-                <div className="mb-6">
+                <nav className="mb-6" aria-label="Breadcrumb">
                     <Breadcrumbs items={[{ label: 'Topics' }]} />
-                </div>
+                </nav>
 
                 {/* Header */}
-                <div className="mb-8 text-center sm:text-left">
-                    <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/10">
-                        <Hash className="h-7 w-7 text-primary" />
+                <header className="mb-12 text-center sm:text-left">
+                    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden="true">
+                        <Hash className="h-6 w-6" />
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
                         Topics & Concepts
                     </h1>
-                    <p className="mt-2 text-base sm:text-lg text-muted-foreground max-w-2xl">
+                    <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-2xl">
                         {category ? (
                             <span>
                                 Showing <span className="font-semibold text-foreground capitalize">{category}</span> topics
@@ -129,10 +170,10 @@ export default async function TopicsPage({
                             'Explore Chassidic concepts and find all the sources that discuss them'
                         )}
                     </p>
-                </div>
+                </header>
 
                 {/* Search */}
-                <div className="mb-6">
+                <div className="mb-6" role="search">
                     <ContextualSearch
                         placeholder="Search topics..."
                         searchType="topics"
@@ -157,13 +198,15 @@ export default async function TopicsPage({
                 </div>
 
                 {/* Topics List */}
-                <TopicsList
-                    topics={topics}
-                    currentPage={page}
-                    totalPages={totalPages}
-                    totalCount={totalCount}
-                />
+                <section aria-label="Topics list">
+                    <TopicsList
+                        topics={topics}
+                        currentPage={page}
+                        totalPages={totalPages}
+                        totalCount={totalCount}
+                    />
+                </section>
             </div>
-        </div>
+        </main>
     );
 }
