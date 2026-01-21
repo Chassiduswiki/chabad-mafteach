@@ -43,33 +43,28 @@ export function GlobalNav({
             )}
         >
             <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
-                {/* Left: Back button or Logo */}
+                {/* Left: Logo + optional back */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {showBack && !isHome ? (
+                    {/* Back button when on detail pages */}
+                    {showBack && !isHome && (
                         <Link 
                             href={backHref}
-                            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                            aria-label={backLabel || 'Back'}
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            <span className="hidden sm:inline">{backLabel || 'Back'}</span>
-                        </Link>
-                    ) : (
-                        <Link href="/" className="flex items-center gap-2 group shrink-0">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
-                                <BookOpen className="h-4 w-4" />
-                            </div>
-                            <span className="text-sm font-semibold tracking-tight hidden sm:inline">
-                                Chabad Maftaiach
-                            </span>
                         </Link>
                     )}
-
-                    {/* Page title for mobile when showing back */}
-                    {title && showBack && (
-                        <span className="text-sm font-medium truncate sm:hidden">
-                            {title}
+                    
+                    {/* Logo - always visible */}
+                    <Link href="/" className="flex items-center gap-2 group shrink-0">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
+                            <BookOpen className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-semibold tracking-tight hidden sm:inline">
+                            Chabad Maftaiach
                         </span>
-                    )}
+                    </Link>
                 </div>
 
                 {/* Center: Navigation Links (desktop) */}
