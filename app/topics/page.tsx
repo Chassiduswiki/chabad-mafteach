@@ -11,6 +11,7 @@ import { TopicsListSkeleton } from '@/components/topics/TopicsListSkeleton';
 import Dynamic from 'next/dynamic';
 import { FeaturedTopicCard } from '@/components/topics/FeaturedTopicCard';
 import { Metadata } from 'next';
+import { copy } from '@/lib/copy';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +24,11 @@ export async function generateMetadata({
     const category = resolvedSearchParams.category;
     const page = Number(resolvedSearchParams.page) || 1;
 
-    const baseTitle = 'Topics & Concepts';
-    const siteName = 'Chabad Maftaiach';
+    const baseTitle = copy.topics.pageTitle as string;
+    const siteName = copy.brand.name as string;
     
-    let title = baseTitle;
-    let description = 'Explore Chassidic concepts and find all the sources that discuss them';
+    let title: string = baseTitle;
+    let description: string = copy.topics.pageSubtitle as string;
 
     if (category) {
         const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
@@ -157,7 +158,7 @@ export default async function TopicsPage({
                         <Hash className="h-6 w-6" />
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-                        Topics & Concepts
+                        {copy.topics.pageTitle}
                     </h1>
                     <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-2xl">
                         {category ? (
@@ -165,7 +166,7 @@ export default async function TopicsPage({
                                 Showing <span className="font-semibold text-foreground capitalize">{category}</span> topics
                             </span>
                         ) : (
-                            'Explore Chassidic concepts and find all the sources that discuss them'
+                            copy.topics.pageSubtitle
                         )}
                     </p>
                 </header>
@@ -173,7 +174,7 @@ export default async function TopicsPage({
                 {/* Search */}
                 <div className="mb-6" role="search">
                     <ContextualSearch
-                        placeholder="Search topics..."
+                        placeholder={copy.topics.searchPlaceholder}
                         searchType="topics"
                     />
                 </div>

@@ -22,11 +22,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://beta.chassiduswiki.com'),
   title: {
-    default: "Chabad Mafteach - Chassidic Concepts Explorer",
+    default: "Chabad Mafteach - Deepen Your Understanding",
     template: "%s | Chabad Mafteach"
   },
-  description: "Explore Chassidic concepts with citations and sources from Chabad literature. Discover the depth of Jewish mysticism, ethics, and philosophy through our comprehensive index.",
-  keywords: ["Chassidus", "Chabad", "Jewish", "Kabbalah", "Torah", "Mysticism", "Philosophy", "Ethics", "Lubavitch", "Rebbe"],
+  description: "Explore Chassidic concepts and discover the sources that illuminate them. Your thinking space for Torah.",
+  keywords: ["Chassidus", "Chabad", "Torah", "Jewish wisdom", "Kabbalah", "Tanya", "Mysticism"],
   authors: [{ name: "Chabad Mafteach Team" }],
   creator: "Chabad Mafteach",
   publisher: "Chabad Mafteach",
@@ -42,22 +42,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    title: 'Chabad Mafteach - Chassidic Concepts Explorer',
-    description: 'Explore Chassidic concepts with citations and sources from Chabad literature. Discover the depth of Jewish mysticism, ethics, and philosophy.',
+    title: 'Chabad Mafteach - Deepen Your Understanding',
+    description: 'Explore Chassidic concepts and discover connections across all Chabad literature.',
     siteName: 'Chabad Mafteach',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Chabad Mafteach - Chassidic Concepts Explorer',
+        alt: 'Chabad Mafteach - Deepen Your Understanding',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Chabad Mafteach - Chassidic Concepts Explorer',
-    description: 'Explore Chassidic concepts with citations and sources from Chabad literature.',
+    title: 'Chabad Mafteach - Deepen Your Understanding',
+    description: 'Your Torah thinking space. Explore concepts and discover connections.',
     images: ['/og-image.png'],
     creator: '@chabadmafteach',
   },

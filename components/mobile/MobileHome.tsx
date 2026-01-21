@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Hash, Compass, Clock, ArrowRight, BookOpen, Search } from 'lucide-react';
 import { ContentDiscovery } from '@/components/features/home/ContentDiscovery';
 import { useSearch } from '@/lib/search-context';
+import { copy } from '@/lib/copy';
 
 interface LastTopic {
     slug: string;
@@ -52,10 +53,10 @@ export function MobileHome() {
                 className="mb-6 text-center"
             >
                 <h1 className="text-2xl font-bold text-foreground mb-2">
-                    Welcome Back
+                    {copy.home.mobile.greeting}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                    Explore Chassidic wisdom
+                    {copy.home.mobile.subtitle}
                 </p>
             </motion.div>
 
@@ -69,7 +70,7 @@ export function MobileHome() {
                 style={{ minHeight: '48px' }}
             >
                 <Search className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Search topics, sources...</span>
+                <span className="text-sm text-muted-foreground">{copy.search.placeholder}</span>
                 <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                     <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">⌘K</kbd>
                 </div>
@@ -128,8 +129,8 @@ export function MobileHome() {
                             <Hash className="h-6 w-6 text-blue-500" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-base font-semibold text-foreground mb-0.5">Browse All Topics</h3>
-                            <p className="text-xs text-muted-foreground">Explore Chassidic concepts</p>
+                            <h3 className="text-base font-semibold text-foreground mb-0.5">{copy.topics.pageTitle}</h3>
+                            <p className="text-xs text-muted-foreground">{copy.actions.explore} concepts</p>
                         </div>
                         <ArrowRight className="h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 flex-shrink-0" />
                     </Link>

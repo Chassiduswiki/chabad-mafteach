@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
     try {
         const directus = createClient();
         const searchParams = request.nextUrl.searchParams;
-        const paragraphId = searchParams.get('paragraphId');
+        const blockId = searchParams.get('blockId') || searchParams.get('paragraphId'); // Support both new and legacy params
 
         const filter: any = {};
-        if (paragraphId) {
-            filter.block_id = { _eq: parseInt(paragraphId) };
+        if (blockId) {
+            filter.block_id = { _eq: parseInt(blockId) };
         }
 
         const statements = await directus.request(readItems('statements', {
@@ -47,9 +47,10 @@ export async function POST(request: NextRequest) {
         const directus = createClient();
         const body = await request.json();
 
-        const { paragraph_id, text, order_key, appended_text, metadata } = body;
+        const { block_id, paragraph_id, text, order_key, appended_text, metadata } = body;
+        const blockId = block_id || paragraph_id; // Support both new and legacy params
 
-        if (!paragraph_id || !text) {
+        if (!blockId || !text) {
             return NextResponse.json(
                 { error: 'Block ID and text are required' },
                 { status: 400 }
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate order_key if not provided
-        const finalOrderKey = order_key || await getNextOrderKey(parseInt(paragraph_id));
+        const finalOrderKey = order_key || await getNextOrderKey(parseInt(blockId));
 
         const response = await fetch(`${process.env.DIRECTUS_URL}/items/statements`, {
             method: 'POST',
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                block_id: parseInt(paragraph_id),
+                block_id: parseInt(blockId),
                 text,
                 order_key: finalOrderKey,
                 appended_text: appended_text || null,
@@ -93,11 +94,11 @@ export async function POST(request: NextRequest) {
 /**
  * Helper function to get next order key for a block
  */
-async function getNextOrderKey(paragraphId: number): Promise<number> {
+async function getNextOrderKey(blockId: number): Promise<number> {
     const directus = createClient();
 
     const existingStatements = await directus.request(readItems('statements', {
-        filter: { block_id: { _eq: paragraphId } } as any,
+        filter: { block_id: { _eq: blockId } } as any,
         fields: ['order_key'],
         sort: ['-order_key'],
         limit: 1
