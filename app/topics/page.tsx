@@ -1,4 +1,5 @@
 import { Hash } from 'lucide-react';
+import { GlobalNav } from '@/components/layout/GlobalNav';
 import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { readItems } from '@directus/sdk';
@@ -145,13 +146,10 @@ export default async function TopicsPage({
     const totalPages = Math.ceil(totalCount / limit);
 
     return (
-        <main className="min-h-screen bg-background text-foreground">
-            <div className="mx-auto max-w-5xl px-4 pt-8 pb-32 sm:px-6 lg:px-8 lg:pt-12">
-
-                {/* Breadcrumbs */}
-                <nav className="mb-6" aria-label="Breadcrumb">
-                    <Breadcrumbs items={[{ label: 'Topics' }]} />
-                </nav>
+        <>
+            <GlobalNav />
+            <main className="min-h-screen bg-background text-foreground">
+                <div className="mx-auto max-w-5xl px-4 pt-6 pb-32 sm:px-6 lg:px-8 lg:pt-8">
 
                 {/* Header */}
                 <header className="mb-12 text-center sm:text-left">
@@ -206,7 +204,8 @@ export default async function TopicsPage({
                         totalCount={totalCount}
                     />
                 </section>
-            </div>
-        </main>
+                </div>
+            </main>
+        </>
     );
 }

@@ -1,31 +1,21 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BookOpen, Search, Users, Heart, Sparkles, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { BookOpen, Search, Users, Heart, Sparkles } from 'lucide-react';
+import { GlobalNav } from '@/components/layout/GlobalNav';
 
 export default function AboutPage() {
     return (
-        <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary">
-            {/* Background Gradients */}
-            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-                <div className="hero-glow absolute left-1/2 top-[-10%] h-[800px] w-[800px] -translate-x-1/2 rounded-full opacity-40" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.03]" />
-            </div>
+        <>
+            <GlobalNav />
+            <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary">
+                {/* Background Gradients */}
+                <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                    <div className="hero-glow absolute left-1/2 top-[-10%] h-[800px] w-[800px] -translate-x-1/2 rounded-full opacity-40" />
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.03]" />
+                </div>
 
-            <main className="relative z-10 mx-auto max-w-5xl px-6 py-12 sm:px-8">
-                {/* Back Link */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="mb-12"
-                >
-                    <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Home
-                    </Link>
-                </motion.div>
+                <main className="relative z-10 mx-auto max-w-5xl px-6 py-8 sm:px-8">
 
                 {/* Header */}
                 <div className="mb-20 text-center">
@@ -146,7 +136,8 @@ export default function AboutPage() {
                         </button>
                     </div>
                 </motion.section>
-            </main>
-        </div>
+                </main>
+            </div>
+        </>
     );
 }

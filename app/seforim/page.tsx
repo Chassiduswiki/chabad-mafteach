@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { BookOpen, ChevronDown, ChevronRight, FileText, FolderOpen } from 'lucide-react';
+import { GlobalNav } from '@/components/layout/GlobalNav';
 import { createClient } from '@/lib/directus';
 // No top-level call here - we use the API routes for data fetching
 import { readItems } from '@directus/sdk';
@@ -151,16 +152,10 @@ function SeforimContent() {
     }, [category]);
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <div className="mx-auto max-w-5xl px-6 pt-12 pb-32 sm:px-8 sm:py-16">
-
-                <div className="mb-8">
-                    <Breadcrumbs
-                        items={[
-                            { label: 'Sources' }
-                        ]}
-                    />
-                </div>
+        <>
+            <GlobalNav />
+            <div className="min-h-screen bg-background text-foreground">
+                <div className="mx-auto max-w-5xl px-6 pt-6 pb-32 sm:px-8">
 
                 {/* Header */}
                 <div className="mb-12 text-center">
@@ -240,8 +235,9 @@ function SeforimContent() {
                         </p>
                     </div>
                 )}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

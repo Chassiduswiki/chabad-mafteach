@@ -17,6 +17,7 @@ import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
 import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
+import { GlobalNav } from '@/components/layout/GlobalNav';
 
 // Types
 type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'charts' | 'sources';
@@ -387,6 +388,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
 
     return (
         <div className="min-h-screen bg-background relative">
+            <GlobalNav showBack backHref="/topics" backLabel="Topics" />
             <ScrollProgressIndicator />
             <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
             <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
@@ -400,7 +402,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             />
 
             {/* Sticky Tab Navigation */}
-            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
+            <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
                 <div className="max-w-4xl mx-auto">
                     <div
                         ref={tabsRef}

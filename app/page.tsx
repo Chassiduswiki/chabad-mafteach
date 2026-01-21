@@ -3,10 +3,9 @@
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
 import { MobileHome } from '@/components/mobile/MobileHome';
-import Link from 'next/link';
-import { Sparkles, ArrowRight, BookOpen, Search, Zap, Globe } from 'lucide-react';
+import { GlobalNav } from '@/components/layout/GlobalNav';
+import { Sparkles, Zap, Globe } from 'lucide-react';
 
 // Lazy load below-fold components
 const ContentDiscovery = dynamic(() => import('@/components/features/home/ContentDiscovery').then(mod => ({ default: mod.ContentDiscovery })), {
@@ -62,35 +61,8 @@ export default function Home() {
         <FloatingHebrewLetters />
       </div>
 
-      {/* Navigation - Enhanced prominence per Task 2.5 */}
-      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <span className="text-base font-bold tracking-tight">Chabad Maftaiach</span>
-        </Link>
-
-        {/* Primary Navigation - Enhanced visibility */}
-        <div className="hidden items-center gap-2 sm:flex">
-          {/* Main nav links - larger, bolder, higher contrast */}
-          <div className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-1">
-            <Link
-              href="/topics"
-              className="rounded-full px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-            >
-              Topics
-            </Link>
-          </div>
-
-          {/* Utility links - separated from primary nav */}
-          <div className="ml-4 flex items-center gap-2">
-            <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
-            <div className="h-4 w-px bg-border" />
-            <ThemeToggleCompact />
-          </div>
-        </div>
-      </nav>
+      {/* Global Navigation */}
+      <GlobalNav transparent />
 
       {/* Mobile Homepage - App-like Dashboard (Task 2.11) */}
       <div className="lg:hidden">
