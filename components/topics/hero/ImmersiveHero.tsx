@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowLeft, Share2, Headphones, Bookmark, BookmarkCheck, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Share2, Headphones, Bookmark, BookmarkCheck, ChevronDown, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface ArticleHeroProps {
@@ -94,10 +94,6 @@ export function ImmersiveHero({
     const opacityHero = useTransform(scrollY, [0, 250], [1, 0]);
     const scaleHero = useTransform(scrollY, [0, 300], [1, 0.95]);
 
-    // Nav Bar State (appears after scroll)
-    const navOpacity = useTransform(scrollY, [200, 300], [0, 1]);
-    const navY = useTransform(scrollY, [200, 300], [-20, 0]);
-
     useEffect(() => {
         if (definitionRef.current) {
             // Check if the text is overflowing (i.e., it's clamped)
@@ -107,37 +103,8 @@ export function ImmersiveHero({
 
     return (
         <>
-            {/* Sticky Minimal Nav (Hidden initially) */}
-            <motion.div
-                style={{ opacity: navOpacity, y: navY }}
-                className="fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-md border-b border-border/50 z-40 flex items-center justify-between px-4 sm:px-6 pointer-events-none data-[visible=true]:pointer-events-auto"
-            >
-                <div className="flex items-center gap-3">
-                    <Link href="/topics" className="p-2 -ml-2 hover:bg-muted/50 rounded-full transition-colors pointer-events-auto">
-                        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-                    </Link>
-                    <span className="font-semibold text-lg">{title}</span>
-                </div>
-                <div className="flex gap-2 pointer-events-auto">
-                    <button 
-                        onClick={handleListen}
-                        className={`p-2 hover:bg-muted/50 rounded-full transition-colors ${isListening ? 'bg-primary/10 text-primary' : ''}`}
-                        aria-label={isListening ? 'Stop listening' : 'Listen to topic'}
-                    >
-                        {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4 text-muted-foreground" />}
-                    </button>
-                    <button 
-                        onClick={handleShare}
-                        className="p-2 hover:bg-muted/50 rounded-full transition-colors"
-                        aria-label="Share topic"
-                    >
-                        {shareSuccess ? <Check className="w-4 h-4 text-emerald-500" /> : <Share2 className="w-4 h-4 text-muted-foreground" />}
-                    </button>
-                </div>
-            </motion.div>
-
             {/* Immersive Hero Area */}
-            <div ref={containerRef} className="relative min-h-[60vh] sm:min-h-[50vh] flex flex-col justify-center overflow-hidden bg-gradient-to-b from-background via-background/50 to-background">
+            <div ref={containerRef} className="relative min-h-[50vh] sm:min-h-[40vh] flex flex-col justify-center bg-gradient-to-b from-background via-background/50 to-background">
                 {/* Dynamic Background */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     {/* Hebrew Watermark */}
