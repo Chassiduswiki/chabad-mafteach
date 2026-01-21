@@ -30,20 +30,18 @@ export default function TopicsEditorPage() {
   }, [topics, searchQuery, filterType]);
 
   const checkAuth = () => {
+    // In development, allow access without auth
+    const isDev = process.env.NODE_ENV === 'development';
     const token = localStorage.getItem('auth_token');
-    if (!token) {
+    
+    if (!token && !isDev) {
       router.push('/auth/signin');
       return;
     }
 
-    try {
-      setUser({ role: 'editor', name: 'Editor User' });
-    } catch (error) {
-      localStorage.removeItem('auth_token');
-      router.push('/auth/signin');
-    } finally {
-      setAuthLoading(false);
-    }
+    // Set user (real or dev placeholder)
+    setUser({ role: 'editor', name: isDev && !token ? 'Dev User' : 'Editor User' });
+    setAuthLoading(false);
   };
 
   const loadTopics = async () => {
@@ -52,7 +50,8 @@ export default function TopicsEditorPage() {
       const response = await fetch('/api/topics?limit=100');
       if (response.ok) {
         const data = await response.json();
-        setTopics(data.data || []);
+        // Handle both { data: [...] } and { topics: [...] } formats
+        setTopics(data.data || data.topics || []);
       } else {
         console.error('Failed to load topics');
       }
@@ -175,7 +174,7 @@ export default function TopicsEditorPage() {
 
         {/* Topics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredTopics.map((topic) => (
+          {filteredTopics.map((topic: any) => (
             <div
               key={topic.id}
               className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer group"
@@ -183,9 +182,16 @@ export default function TopicsEditorPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                  {/* Hebrew Title */}
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 text-lg" dir="rtl">
                     {topic.canonical_title}
                   </h3>
+                  {/* English Title or Transliteration */}
+                  {(topic.canonical_title_en || topic.canonical_title_transliteration) && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {topic.canonical_title_en || topic.canonical_title_transliteration}
+                    </p>
+                  )}
                   {topic.topic_type && (
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${getTopicTypeColor(topic.topic_type)}`}>
                       {topic.topic_type}
@@ -196,13 +202,13 @@ export default function TopicsEditorPage() {
               </div>
 
               {topic.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {topic.description}
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  {topic.description.replace(/<[^>]*>/g, '').substring(0, 150)}
                 </p>
               )}
 
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>ID: {topic.id}</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-3 mt-auto">
+                <span className="font-mono">/{topic.slug}</span>
                 <span className="text-primary group-hover:underline">Edit →</span>
               </div>
             </div>

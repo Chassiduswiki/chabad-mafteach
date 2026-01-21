@@ -1,52 +1,131 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Eye, AlertCircle, CheckCircle, FileText, BookOpen } from 'lucide-react';
-import { Topic } from '@/lib/types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { 
+  ArrowLeft, Save, Eye, CheckCircle, AlertCircle, 
+  Settings, Link2, BookOpen, Tag, LayoutGrid, FileText,
+  Clock, Keyboard
+} from 'lucide-react';
+import { Topic, TopicRelationship, Source } from '@/lib/types';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TipTapEditor } from '@/components/editor/TipTapEditor';
-import { ParagraphsEditor } from '@/components/editor/ParagraphsEditor';
-import { ImportExport } from '@/components/editor/ImportExport';
-import { TranslationReview } from '@/components/editor/TranslationReview';
-import { TranslationPreview } from '@/components/editor/TranslationPreview';
+import {
+  TopicRelationshipManager,
+  SourceLinker,
+  ConceptTagger,
+  DisplayFormatSelector,
+  TopicCompleteness,
+  useAutoSave,
+  useSaveShortcut,
+  TopicFormData,
+  TopicEditorTab,
+  RelationshipFormData,
+  SourceLinkFormData,
+  ConceptTag,
+  SectionConfig,
+  DisplayConfig,
+} from '@/components/topic-editor';
+
+// Content sections configuration
+const CONTENT_SECTIONS: SectionConfig[] = [
+  { id: 'description', label: 'Description', field: 'description', required: true, displayConfig: { format: 'prose', visible: true }, helpText: 'Brief overview of the topic' },
+  { id: 'overview', label: 'Overview', field: 'overview', displayConfig: { format: 'prose', visible: true }, helpText: 'Detailed overview for the main page' },
+  { id: 'article', label: 'Article', field: 'article', displayConfig: { format: 'prose', visible: true }, helpText: 'In-depth article content' },
+  { id: 'definition_positive', label: 'What It Is', field: 'definition_positive', displayConfig: { format: 'prose', visible: true }, helpText: 'Define what this concept encompasses' },
+  { id: 'definition_negative', label: 'What It\'s Not', field: 'definition_negative', displayConfig: { format: 'prose', visible: true }, helpText: 'Clarify boundaries and common confusions' },
+  { id: 'practical_takeaways', label: 'Practical Takeaways', field: 'practical_takeaways', displayConfig: { format: 'list', visible: true }, helpText: 'Actionable applications' },
+  { id: 'historical_context', label: 'Historical Context', field: 'historical_context', displayConfig: { format: 'prose', visible: true }, helpText: 'Historical background' },
+  { id: 'mashal', label: 'Mashal (Parable)', field: 'mashal', displayConfig: { format: 'prose', visible: true }, helpText: 'Illustrative parable' },
+  { id: 'global_nimshal', label: 'Nimshal (Application)', field: 'global_nimshal', displayConfig: { format: 'prose', visible: true }, helpText: 'Application of the parable' },
+  { id: 'charts', label: 'Charts & Tables', field: 'charts', displayConfig: { format: 'table', visible: true }, helpText: 'Structured data displays' },
+];
 
 export default function TopicEditorPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
 
+  // Core state
   const [topic, setTopic] = useState<Topic | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [editors, setEditors] = useState<{
-    overview: any;
-    article: any;
-    practical_takeaways: any;
-    historical_context: any;
-    description: any;
-    definition_positive: any;
-    definition_negative: any;
-  }>({
-    overview: null,
-    article: null,
-    practical_takeaways: null,
-    historical_context: null,
-    description: null,
-    definition_positive: null,
-    definition_negative: null,
-  });
-  const [formData, setFormData] = useState({
+  const [activeTab, setActiveTab] = useState<TopicEditorTab>('overview');
+  const [manualSaveStatus, setManualSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+
+  // Form data
+  const [formData, setFormData] = useState<TopicFormData>({
     canonical_title: '',
-    description: '',
+    canonical_title_en: '',
+    canonical_title_transliteration: '',
+    name_hebrew: '',
+    slug: '',
     topic_type: '',
+    description: '',
+    description_en: '',
     definition_positive: '',
     definition_negative: '',
     overview: '',
     article: '',
     practical_takeaways: '',
-    historical_context: ''
+    historical_context: '',
+    mashal: '',
+    global_nimshal: '',
+    charts: '',
+    content_status: 'minimal',
+    status_label: '',
+    badge_color: '',
+  });
+
+  // Related data
+  const [relationships, setRelationships] = useState<TopicRelationship[]>([]);
+  const [linkedSources, setLinkedSources] = useState<Source[]>([]);
+  const [concepts, setConcepts] = useState<ConceptTag[]>([]);
+  const [sections, setSections] = useState<SectionConfig[]>(CONTENT_SECTIONS);
+
+  // Editor references - use ref to avoid re-render loops
+  const editorsRef = useRef<Record<string, any>>({});
+
+  // Auto-save hook
+  const handleAutoSave = useCallback(async (data: TopicFormData) => {
+    if (!topic) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/topics/${topic.slug || slug}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Auto-save failed');
+      }
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      throw error;
+    }
+  }, [topic, slug]);
+
+  const { 
+    isSaving: isAutoSaving, 
+    lastSaved, 
+    saveStatus: autoSaveStatus, 
+    hasUnsavedChanges,
+    triggerSave,
+    markAsSaved,
+  } = useAutoSave(formData, {
+    debounceMs: 5000,
+    onSave: handleAutoSave,
+    enabled: !!topic,
+  });
+
+  // Keyboard shortcut for save
+  useSaveShortcut(() => {
+    handleManualSave();
   });
 
   // Load topic data
@@ -59,833 +138,724 @@ export default function TopicEditorPage() {
   const loadTopic = async () => {
     try {
       setIsLoading(true);
-      // Load full topic data including documents and paragraphs
       const response = await fetch(`/api/topics/${slug}`);
-      if (response.ok) {
-        const data = await response.json();
-        // The API returns { topic: {...}, citations: [...], relatedTopics: [...] }
-        const topicData = data.topic || data;
-        setTopic(topicData);
-        setFormData({
-          canonical_title: topicData.canonical_title || '',
-          description: topicData.description || '',
-          topic_type: topicData.topic_type || '',
-          definition_positive: topicData.definition_positive || '',
-          definition_negative: topicData.definition_negative || '',
-          overview: topicData.overview || '',
-          article: topicData.article || '',
-          practical_takeaways: topicData.practical_takeaways || '',
-          historical_context: topicData.historical_context || ''
-        });
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Failed to load topic:', response.status, errorData);
-        // Show more specific error message
-        console.error(`HTTP ${response.status}: ${errorData.error || 'Failed to load topic'}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load topic: ${response.status}`);
       }
+
+      const data = await response.json();
+      const topicData = data.topic || data;
+
+      setTopic(topicData);
+      setFormData({
+        canonical_title: topicData.canonical_title || '',
+        canonical_title_en: topicData.canonical_title_en || '',
+        canonical_title_transliteration: topicData.canonical_title_transliteration || '',
+        name_hebrew: topicData.name_hebrew || '',
+        slug: topicData.slug || '',
+        topic_type: topicData.topic_type || '',
+        description: topicData.description || '',
+        description_en: topicData.description_en || '',
+        definition_positive: topicData.definition_positive || '',
+        definition_negative: topicData.definition_negative || '',
+        overview: topicData.overview || '',
+        article: topicData.article || '',
+        practical_takeaways: topicData.practical_takeaways || '',
+        historical_context: topicData.historical_context || '',
+        mashal: topicData.mashal || '',
+        global_nimshal: topicData.global_nimshal || '',
+        charts: topicData.charts || '',
+        content_status: topicData.content_status || 'minimal',
+        status_label: topicData.status_label || '',
+        badge_color: topicData.badge_color || '',
+      });
+
+      // Load relationships
+      await loadRelationships(topicData.id);
+      
+      // Load sources (if endpoint exists)
+      // await loadSources(topicData.id);
+      
     } catch (error) {
-      console.error('Network error loading topic:', error);
-      console.error('Error details:', error);
+      console.error('Error loading topic:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!topic) return;
-
-    setIsSaving(true);
-    setSaveStatus('idle');
-
+  const loadRelationships = async (topicId: number) => {
     try {
-      // Extract rich text content from editors
-      const richTextData = {
-        overview: editors.overview?.getHTML() || formData.overview,
-        article: editors.article?.getHTML() || formData.article,
-        practical_takeaways: editors.practical_takeaways?.getHTML() || formData.practical_takeaways,
-        historical_context: editors.historical_context?.getHTML() || formData.historical_context,
-        description: editors.description?.getHTML() || formData.description,
-        definition_positive: editors.definition_positive?.getHTML() || formData.definition_positive,
-        definition_negative: editors.definition_negative?.getHTML() || formData.definition_negative,
-      };
-
-      // Combine form data with rich text data
-      const saveData = {
-        ...formData,
-        ...richTextData,
-      };
-
-      const response = await fetch(`/api/topics/${topic.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify(saveData)
-      });
-
+      const response = await fetch(`/api/topics/${topicId}/relationships`);
       if (response.ok) {
-        setSaveStatus('success');
-        setTimeout(() => {
-          router.push(`/topics/${slug}`);
-        }, 1500);
-      } else {
-        setSaveStatus('error');
+        const data = await response.json();
+        setRelationships(data.data || data || []);
       }
     } catch (error) {
-      console.error('Error saving topic:', error);
-      setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
+      console.error('Error loading relationships:', error);
     }
   };
 
-  const handlePreview = () => {
-    router.push(`/topics/${slug}`);
+  // Manual save handler
+  const handleManualSave = async () => {
+    if (!topic) return;
+
+    setManualSaveStatus('saving');
+
+    try {
+      // Extract content from TipTap editors
+      const editorContent: Partial<TopicFormData> = {};
+      Object.entries(editorsRef.current).forEach(([field, editor]) => {
+        if (editor?.getHTML) {
+          editorContent[field as keyof TopicFormData] = editor.getHTML();
+        }
+      });
+
+      const saveData = { ...formData, ...editorContent };
+
+      // Use slug for API call, not ID
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/topics/${topic.slug || slug}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify(saveData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Save failed:', response.status, errorData);
+        throw new Error(errorData.error || `Save failed: ${response.status}`);
+      }
+
+      setManualSaveStatus('success');
+      markAsSaved();
+
+      setTimeout(() => setManualSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Save error:', error);
+      setManualSaveStatus('error');
+    }
   };
 
+  // Relationship handlers
+  const handleAddRelationship = async (data: RelationshipFormData) => {
+    if (!topic || !data.relatedTopicId) return;
+
+    const payload = {
+      parent_topic_id: data.direction === 'parent' ? data.relatedTopicId : topic.id,
+      child_topic_id: data.direction === 'child' ? data.relatedTopicId : topic.id,
+      relation_type: data.relationType,
+      strength: data.strength,
+      description: data.description,
+    };
+
+    const response = await fetch('/api/topic-relationships', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error('Failed to add relationship');
+
+    await loadRelationships(topic.id);
+  };
+
+  const handleRemoveRelationship = async (relationshipId: number) => {
+    const response = await fetch(`/api/topic-relationships/${relationshipId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) throw new Error('Failed to remove relationship');
+
+    setRelationships(prev => prev.filter(r => r.id !== relationshipId));
+  };
+
+  // Source handlers
+  const handleLinkSource = async (data: SourceLinkFormData) => {
+    if (!topic || !data.sourceId) return;
+    
+    try {
+      // For now, just add to local state - full implementation would create source_link in DB
+      console.log('Link source:', data);
+      // TODO: Create source_link in database
+    } catch (error) {
+      console.error('Failed to link source:', error);
+      throw error;
+    }
+  };
+
+  const handleUnlinkSource = async (sourceId: number) => {
+    setLinkedSources(prev => prev.filter(s => s.id !== sourceId));
+  };
+
+  const handleCreateSource = async (sourceData: Partial<Source>): Promise<Source> => {
+    const response = await fetch('/api/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sourceData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to create source');
+    }
+
+    const data = await response.json();
+    return data.data;
+  };
+
+  // Concept handlers
+  const handleAddConcept = async (conceptId: number, type: 'primary' | 'secondary' | 'related') => {
+    // This would typically call an API
+    const newConcept: ConceptTag = {
+      id: conceptId,
+      name: `Concept ${conceptId}`, // Would come from API
+      type,
+      relevanceScore: type === 'primary' ? 1 : type === 'secondary' ? 0.7 : 0.4,
+    };
+    setConcepts(prev => [...prev, newConcept]);
+  };
+
+  const handleRemoveConcept = async (conceptId: number) => {
+    setConcepts(prev => prev.filter(c => c.id !== conceptId));
+  };
+
+  const handleUpdateConceptType = async (conceptId: number, type: 'primary' | 'secondary' | 'related') => {
+    setConcepts(prev => prev.map(c => 
+      c.id === conceptId ? { ...c, type } : c
+    ));
+  };
+
+  // Display config handler
+  const handleUpdateDisplayConfig = (sectionId: string, config: Partial<DisplayConfig>) => {
+    setSections(prev => prev.map(s => 
+      s.id === sectionId 
+        ? { ...s, displayConfig: { ...s.displayConfig, ...config } }
+        : s
+    ));
+  };
+
+  // Form field update handler
+  const updateFormField = (field: keyof TopicFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading topic...</p>
+        </div>
       </div>
     );
   }
 
+  // Not found state
   if (!topic) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Topic Not Found</h1>
-          <p className="text-muted-foreground mb-6">The topic you're trying to edit doesn't exist.</p>
+          <p className="text-muted-foreground mb-6">The topic "{slug}" doesn't exist.</p>
           <button
-            onClick={() => router.push('/editor')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            onClick={() => router.push('/editor/topics')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
-            Back to Editor
+            Back to Topics
           </button>
         </div>
       </div>
     );
   }
 
+  const getSaveStatusDisplay = () => {
+    if (manualSaveStatus === 'saving' || isAutoSaving) {
+      return { text: 'Saving...', color: 'text-muted-foreground' };
+    }
+    if (manualSaveStatus === 'success' || autoSaveStatus === 'success') {
+      return { text: 'Saved', color: 'text-green-600' };
+    }
+    if (manualSaveStatus === 'error' || autoSaveStatus === 'error') {
+      return { text: 'Save failed', color: 'text-red-600' };
+    }
+    if (hasUnsavedChanges) {
+      return { text: 'Unsaved changes', color: 'text-yellow-600' };
+    }
+    if (lastSaved) {
+      return { text: `Last saved ${lastSaved.toLocaleTimeString()}`, color: 'text-muted-foreground' };
+    }
+    return null;
+  };
+
+  const saveStatusDisplay = getSaveStatusDisplay();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => router.push('/editor')}
-                className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => router.push('/editor/topics')}
+                className="flex items-center gap-2 px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Editor
+                <span className="hidden sm:inline">Topics</span>
               </button>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">Edit Topic</h1>
-                <p className="text-sm text-muted-foreground">ID: {topic.id} • Slug: {slug}</p>
+              
+              <div className="border-l border-border pl-4">
+                <h1 className="text-lg font-semibold text-foreground line-clamp-1">
+                  {formData.canonical_title || 'Untitled Topic'}
+                </h1>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>ID: {topic.id}</span>
+                  <span>•</span>
+                  <span>{formData.topic_type || 'No type'}</span>
+                  {saveStatusDisplay && (
+                    <>
+                      <span>•</span>
+                      <span className={saveStatusDisplay.color}>{saveStatusDisplay.text}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
-                onClick={handlePreview}
-                className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-accent transition-colors"
+                onClick={() => router.push(`/topics/${slug}`)}
+                className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md hover:bg-muted transition-colors"
               >
                 <Eye className="h-4 w-4" />
-                Preview
+                <span className="hidden sm:inline">Preview</span>
               </button>
 
               <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={handleManualSave}
+                disabled={manualSaveStatus === 'saving'}
+                className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border border-primary-foreground border-t-transparent"></div>
-                    Saving...
-                  </>
+                {manualSaveStatus === 'saving' ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full" />
+                ) : manualSaveStatus === 'success' ? (
+                  <CheckCircle className="h-4 w-4" />
                 ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
+                  <Save className="h-4 w-4" />
                 )}
+                <span className="hidden sm:inline">
+                  {manualSaveStatus === 'saving' ? 'Saving...' : 'Save'}
+                </span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Save Status */}
-      {saveStatus !== 'idle' && (
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
-            saveStatus === 'success'
-              ? 'bg-green-50 text-green-800 border-green-200'
-              : 'bg-red-50 text-red-800 border-red-200'
-          }`}>
-            {saveStatus === 'success' ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-600" />
-            )}
-            <span>
-              {saveStatus === 'success'
-                ? 'Topic saved successfully! Redirecting to topic page...'
-                : 'Failed to save topic. Please try again.'
-              }
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {/* Basic Information */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Basic Information</h2>
-
-            <div className="space-y-6">
-              {/* Canonical Title */}
-              <div>
-                <label htmlFor="canonical_title" className="block text-sm font-medium text-foreground mb-2">
-                  Canonical Title *
-                </label>
-                <input
-                  id="canonical_title"
-                  type="text"
-                  value={formData.canonical_title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, canonical_title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="e.g., Ahavas Yisroel"
-                  required
-                />
-              </div>
-
-              {/* Topic Type */}
-              <div>
-                <label htmlFor="topic_type" className="block text-sm font-medium text-foreground mb-2">
-                  Topic Type *
-                </label>
-                <select
-                  id="topic_type"
-                  value={formData.topic_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, topic_type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                >
-                  <option value="">Select a type...</option>
-                  <option value="concept">Concept</option>
-                  <option value="person">Person</option>
-                  <option value="place">Place</option>
-                  <option value="event">Event</option>
-                  <option value="mitzvah">Mitzvah</option>
-                  <option value="sefirah">Sefirah</option>
-                </select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
-                  Short Description *
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current description content
-                      if (formData.description && editor) {
-                        editor.commands.setContent(formData.description);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, description: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar - Completeness */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            <div className="sticky top-20 space-y-4">
+              <TopicCompleteness formData={formData} />
+              
+              {/* Keyboard shortcuts hint */}
+              <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 mb-2">
+                  <Keyboard className="h-4 w-4" />
+                  <span className="font-medium">Shortcuts</span>
+                </div>
+                <div className="space-y-1">
+                  <div>⌘/Ctrl + S — Save</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Boundaries */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Boundaries</h2>
-
-            <div className="space-y-6">
-              {/* What it IS */}
-              <div>
-                <label htmlFor="definition_positive" className="block text-sm font-medium text-foreground mb-2">
-                  What it IS (Definition)
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current definition_positive content
-                      if (formData.definition_positive && editor) {
-                        editor.commands.setContent(formData.definition_positive);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, definition_positive: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* What it's NOT */}
-              <div>
-                <label htmlFor="definition_negative" className="block text-sm font-medium text-foreground mb-2">
-                  What it's NOT (Boundaries)
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current definition_negative content
-                      if (formData.definition_negative && editor) {
-                        editor.commands.setContent(formData.definition_negative);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, definition_negative: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Content Sections */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Content Sections</h2>
-
-            <div className="space-y-8">
-              {/* Overview */}
-              <div>
-                <label htmlFor="overview" className="block text-sm font-medium text-foreground mb-3">
+          {/* Main Editor Area */}
+          <div className="lg:col-span-3 order-1 lg:order-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TopicEditorTab)}>
+              <TabsList className="w-full justify-start overflow-x-auto">
+                <TabsTrigger value="overview" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
                   Overview
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current overview content
-                      if (formData.overview && editor) {
-                        editor.commands.setContent(formData.overview);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, overview: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
+                </TabsTrigger>
+                <TabsTrigger value="content" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Content
+                </TabsTrigger>
+                <TabsTrigger value="relationships" className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Relationships
+                </TabsTrigger>
+                <TabsTrigger value="sources" className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Sources
+                </TabsTrigger>
+                <TabsTrigger value="display" className="flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Display
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                  <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Title (Hebrew) *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.canonical_title}
+                        onChange={(e) => updateFormField('canonical_title', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        dir="rtl"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Title (English)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.canonical_title_en || ''}
+                        onChange={(e) => updateFormField('canonical_title_en', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Transliteration
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.canonical_title_transliteration || ''}
+                        onChange={(e) => updateFormField('canonical_title_transliteration', e.target.value)}
+                        placeholder="e.g., Ahavas Yisroel"
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Topic Type *
+                      </label>
+                      <select
+                        value={formData.topic_type}
+                        onChange={(e) => updateFormField('topic_type', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select type...</option>
+                        <option value="concept">Concept</option>
+                        <option value="person">Person</option>
+                        <option value="place">Place</option>
+                        <option value="event">Event</option>
+                        <option value="mitzvah">Mitzvah</option>
+                        <option value="sefirah">Sefirah</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Short Description *
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[120px]"
+                        onEditorReady={(editor) => {
+                          if (formData.description && editor) {
+                            editor.commands.setContent(formData.description);
+                          }
+                          editorsRef.current = { ...editorsRef.current, description: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Content Status
+                      </label>
+                      <select
+                        value={formData.content_status}
+                        onChange={(e) => updateFormField('content_status', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="minimal">Minimal</option>
+                        <option value="partial">Partial</option>
+                        <option value="comprehensive">Comprehensive</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Status Label
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.status_label || ''}
+                        onChange={(e) => updateFormField('status_label', e.target.value)}
+                        placeholder="e.g., In Progress"
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Badge Color
+                      </label>
+                      <select
+                        value={formData.badge_color || ''}
+                        onChange={(e) => updateFormField('badge_color', e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Default</option>
+                        <option value="gray">Gray</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="purple">Purple</option>
+                        <option value="orange">Orange</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Concept Tagging in Overview */}
+                <div className="bg-card border border-border rounded-lg p-6">
+                  <ConceptTagger
+                    topicId={topic.id}
+                    concepts={concepts}
+                    onAddConcept={handleAddConcept}
+                    onRemoveConcept={handleRemoveConcept}
+                    onUpdateConceptType={handleUpdateConceptType}
                   />
                 </div>
-              </div>
+              </TabsContent>
 
-              {/* Article */}
-              <div>
-                <label htmlFor="article" className="block text-sm font-medium text-foreground mb-3">
-                  Article Content
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current article content
-                      if (formData.article && editor) {
-                        editor.commands.setContent(formData.article);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, article: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Paragraphs Editor */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Paragraphs & Statements</h2>
-            <ParagraphsEditor topicId={topic.id} />
-          </div>
-
-          {/* Advanced Content */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Advanced Content</h2>
-
-            <div className="space-y-8">
-              {/* Practical Takeaways */}
-              <div>
-                <label htmlFor="practical_takeaways" className="block text-sm font-medium text-foreground mb-3">
-                  Practical Takeaways
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current practical_takeaways content
-                      if (formData.practical_takeaways && editor) {
-                        editor.commands.setContent(formData.practical_takeaways);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, practical_takeaways: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Historical Context */}
-              <div>
-                <label htmlFor="historical_context" className="block text-sm font-medium text-foreground mb-3">
-                  Historical Context
-                </label>
-                <div className="border border-border rounded-md">
-                  <TipTapEditor
-                    docId={null}
-                    className=""
-                    onEditorReady={(editor) => {
-                      // Initialize with current historical_context content
-                      if (formData.historical_context && editor) {
-                        editor.commands.setContent(formData.historical_context);
-                      }
-                      // Register editor in state
-                      setEditors(prev => ({ ...prev, historical_context: editor }));
-                    }}
-                    onBreakStatements={async () => {
-                      // Not applicable for topic content
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Content Processing Pipeline - Always Show */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Content Processing Pipeline</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              See how raw document content gets processed into paragraphs, statements, and enriched with appended text (footnotes, sources, etc.)
-            </p>
-
-            {/* Processing Types Explanation */}
-            <div className="bg-muted/30 rounded-lg p-4 mb-6">
-              <h4 className="font-medium mb-4 text-foreground">Document Breakdown Flow</h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Understanding how <strong>Document → Paragraph → Statement → Appended Text</strong> works
-              </p>
-
-              <div className="space-y-4">
-                {/* Sefer Document Flow */}
-                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
-                    <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents (Imported)</span>
-                    <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">Already Processed</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">1. External Source</div>
-                      <div className="text-blue-700 dark:text-blue-300">Sefaria, PDF, etc.</div>
-                      <div className="text-blue-600 dark:text-blue-400 mt-1">Raw content with footnotes</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">2. Document</div>
-                      <div className="text-blue-700 dark:text-blue-300">Imported book</div>
-                      <div className="text-blue-600 dark:text-blue-400 mt-1">doc_type: "sefer"</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">3. Paragraphs</div>
-                      <div className="text-blue-700 dark:text-blue-300">AI splits content</div>
-                      <div className="text-blue-600 dark:text-blue-400 mt-1">Logical sections</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">4. Statements</div>
-                      <div className="text-blue-700 dark:text-blue-300">Individual claims</div>
-                      <div className="text-blue-600 dark:text-blue-400 mt-1">appended_text: footnotes</div>
+              {/* Content Tab */}
+              <TabsContent value="content" className="space-y-6 mt-6">
+                {/* Definition Section */}
+                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                  <h2 className="text-lg font-semibold text-foreground">Definitions & Boundaries</h2>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      What It IS (Positive Definition)
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[150px]"
+                        onEditorReady={(editor) => {
+                          if (formData.definition_positive && editor) {
+                            editor.commands.setContent(formData.definition_positive);
+                          }
+                          editorsRef.current = { ...editorsRef.current, definition_positive: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
                     </div>
                   </div>
 
-                  <div className="mt-3 text-xs text-blue-700 dark:text-blue-300">
-                    <strong>Example:</strong> Import "Tanya" → AI extracts paragraphs → Splits into statements → Footnotes become appended_text
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      What It's NOT (Boundaries)
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[150px]"
+                        onEditorReady={(editor) => {
+                          if (formData.definition_negative && editor) {
+                            editor.commands.setContent(formData.definition_negative);
+                          }
+                          editorsRef.current = { ...editorsRef.current, definition_negative: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Entry Document Flow */}
-                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="h-5 w-5 text-green-600" />
-                    <span className="font-medium text-green-900 dark:text-green-100">Entry Documents (User-Written)</span>
-                    <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded">Real-time Processing</span>
-                  </div>
+                {/* Main Content Section */}
+                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                  <h2 className="text-lg font-semibold text-foreground">Main Content</h2>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">1. User Writing</div>
-                      <div className="text-green-700 dark:text-green-300">In /editor/write</div>
-                      <div className="text-green-600 dark:text-green-400 mt-1">Add citations while typing</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">2. Document</div>
-                      <div className="text-green-700 dark:text-green-300">User-created content</div>
-                      <div className="text-green-600 dark:text-green-400 mt-1">doc_type: "entry"</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">3. Break Statements</div>
-                      <div className="text-green-700 dark:text-green-300">Click button in editor</div>
-                      <div className="text-green-600 dark:text-green-400 mt-1">AI processes content</div>
-                    </div>
-                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded border">
-                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">4. Citations → Appended Text</div>
-                      <div className="text-green-700 dark:text-green-300">The "Scary" Part</div>
-                      <div className="text-green-600 dark:text-green-400 mt-1">[Tanya 1:1] becomes appended_text</div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Overview
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[200px]"
+                        onEditorReady={(editor) => {
+                          if (formData.overview && editor) {
+                            editor.commands.setContent(formData.overview);
+                          }
+                          editorsRef.current = { ...editorsRef.current, overview: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
                     </div>
                   </div>
 
-                  <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
-                    <p className="text-sm text-orange-800 dark:text-orange-200">
-                      <strong>⚠️ The "Scary" Breakdown:</strong><br/>
-                      <code className="bg-orange-100 dark:bg-orange-900 px-1 rounded">User writes: "As Tanya teaches [1:1]..."</code><br/>
-                      <code className="bg-orange-100 dark:bg-orange-900 px-1 rounded">AI processes: "As Tanya teaches..." + appended_text: "[1:1] reference"</code><br/>
-                      <strong>Citations get separated from main text and attached as metadata!</strong>
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Article Content
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[300px]"
+                        onEditorReady={(editor) => {
+                          if (formData.article && editor) {
+                            editor.commands.setContent(formData.article);
+                          }
+                          editorsRef.current = { ...editorsRef.current, article: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {topic?.paragraphs && topic.paragraphs.length > 0 ? (
-              <div className="space-y-6">
-                {topic.paragraphs.map((paragraph: any) => (
-                  <div key={paragraph.id} className="border border-border rounded-lg overflow-hidden">
-                    {/* Document Header - Shows processing source */}
-                    <div className="bg-muted/50 px-4 py-3 border-b border-border">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                          <BookOpen className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-foreground">{paragraph.document_title || 'Document'}</h3>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>📄 {paragraph.statements?.length || 0} statements</span>
-                            <span>📝 Paragraph {paragraph.order_key}</span>
-                            <span>🔤 {paragraph.original_lang?.toUpperCase()}</span>
-                            {paragraph.metadata?.folio_notation && (
-                              <span>📖 Folio {paragraph.metadata.folio_notation}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                {/* Advanced Content Section */}
+                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                  <h2 className="text-lg font-semibold text-foreground">Additional Content</h2>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Practical Takeaways
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[150px]"
+                        onEditorReady={(editor) => {
+                          if (formData.practical_takeaways && editor) {
+                            editor.commands.setContent(formData.practical_takeaways);
+                          }
+                          editorsRef.current = { ...editorsRef.current, practical_takeaways: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
                     </div>
+                  </div>
 
-                    {/* Processing Pipeline */}
-                    <div className="p-4 space-y-4">
-                      {/* Step 1: Raw Paragraph Text */}
-                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">
-                            1
-                          </div>
-                          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Raw Paragraph Content</span>
-                          <span className="text-xs text-blue-700 dark:text-blue-300">(from document processing)</span>
-                        </div>
-                        <div
-                          className="text-sm text-blue-800 dark:text-blue-200 prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{
-                            __html: paragraph.text?.length > 500
-                              ? paragraph.text.substring(0, 500) + '...'
-                              : paragraph.text || 'No paragraph text available'
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Historical Context
+                    </label>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[150px]"
+                        onEditorReady={(editor) => {
+                          if (formData.historical_context && editor) {
+                            editor.commands.setContent(formData.historical_context);
+                          }
+                          editorsRef.current = { ...editorsRef.current, historical_context: editor };
+                        }}
+                        onBreakStatements={async () => {}}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Mashal (Parable)
+                      </label>
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <TipTapEditor
+                          docId={null}
+                          className="min-h-[120px]"
+                          onEditorReady={(editor) => {
+                            if (formData.mashal && editor) {
+                              editor.commands.setContent(formData.mashal);
+                            }
+                            editorsRef.current = { ...editorsRef.current, mashal: editor };
                           }}
+                          onBreakStatements={async () => {}}
                         />
-                        {paragraph.metadata?.section_title && (
-                          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                            Section: {paragraph.metadata.section_title}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Step 2: Statement Breakdown */}
-                      {paragraph.statements && paragraph.statements.length > 0 && (
-                        <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold">
-                              2
-                            </div>
-                            <span className="text-sm font-medium text-green-900 dark:text-green-100">Statement Breakdown</span>
-                            <span className="text-xs text-green-700 dark:text-green-300">
-                              ({paragraph.statements.length} statements extracted via AI processing)
-                            </span>
-                          </div>
-
-                          <div className="space-y-3">
-                            {paragraph.statements.map((statement: any, index: number) => (
-                              <div key={statement.id} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-300 dark:border-green-700">
-                                {/* Statement Header */}
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">
-                                    Statement {index + 1}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    ID: {statement.id} • Order: {statement.order_key}
-                                  </span>
-                                  {statement.metadata?.auto_generated && (
-                                    <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
-                                      🤖 AI Generated
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Statement Text */}
-                                <div className="text-sm text-foreground mb-3 leading-relaxed">
-                                  {statement.text}
-                                </div>
-
-                                {/* Appended Text (Footnotes, Sources, etc.) */}
-                                {statement.appended_text && (
-                                  <div className="border-t border-green-300 dark:border-green-700 pt-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900 px-2 py-1 rounded">
-                                        📎 Appended Content
-                                      </span>
-                                      <span className="text-xs text-orange-600 dark:text-orange-400">
-                                        Footnotes, sources, and additional references
-                                      </span>
-                                    </div>
-                                    <div
-                                      className="text-sm text-orange-800 dark:text-orange-200 prose prose-sm max-w-none"
-                                      dangerouslySetInnerHTML={{
-                                        __html: statement.appended_text.length > 300
-                                          ? statement.appended_text.substring(0, 300) + '...'
-                                          : statement.appended_text
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {/* Statement Metadata */}
-                                <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                    {statement.metadata?.source && (
-                                      <span>Source: {statement.metadata.source}</span>
-                                    )}
-                                    {statement.metadata?.page_number && (
-                                      <span>Page: {statement.metadata.page_number}</span>
-                                    )}
-                                    {statement.metadata?.confidence && (
-                                      <span>Confidence: {(statement.metadata.confidence * 100).toFixed(0)}%</span>
-                                    )}
-                                    {statement.metadata?.auto_generated && (
-                                      <span>Processing: AI Statement Breaking</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Processing Summary */}
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Processing Summary</span>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                          <div className="text-center">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
-                              {paragraph.text?.length || 0}
-                            </div>
-                            <div className="text-gray-600 dark:text-gray-400">Characters</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
-                              {paragraph.statements?.length || 0}
-                            </div>
-                            <div className="text-gray-600 dark:text-gray-400">Statements</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
-                              {paragraph.statements?.filter((s: any) => s.appended_text)?.length || 0}
-                            </div>
-                            <div className="text-gray-600 dark:text-gray-400">With Footnotes</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
-                              {paragraph.metadata?.source || 'N/A'}
-                            </div>
-                            <div className="text-gray-600 dark:text-gray-400">Source</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Processed Content Yet</h3>
-                <p className="text-sm max-w-md mx-auto mb-4">
-                  This topic doesn't have any associated documents that have been processed into paragraphs and statements.
-                  The content processing pipeline will appear here once you add and process documents.
-                </p>
-
-                <div className="bg-muted/30 rounded-lg p-6 max-w-2xl mx-auto">
-                  <h4 className="font-medium mb-3 text-foreground">How the Processing Pipeline Works:</h4>
-                  <div className="space-y-4 text-sm text-left">
-                    {/* Sefer Document Processing */}
-                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center gap-2 mb-3">
-                        <BookOpen className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium text-blue-900 dark:text-blue-100">Sefer Documents (Imported)</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">1</div>
-                          <div>
-                            <strong className="text-blue-900 dark:text-blue-100">Import Raw Content:</strong>
-                            <p className="text-blue-800 dark:text-blue-200">Upload PDFs, text files, or import from Sefaria (Tanya, Mishneh Torah, Talmud, etc.)</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">2</div>
-                          <div>
-                            <strong className="text-blue-900 dark:text-blue-100">AI Processing:</strong>
-                            <p className="text-blue-800 dark:text-blue-200">Content automatically broken into paragraphs and statements</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold mt-0.5">3</div>
-                          <div>
-                            <strong className="text-blue-900 dark:text-blue-100">Enrichment:</strong>
-                            <p className="text-blue-800 dark:text-blue-200">Footnotes, sources, and references attached as appended text</p>
-                          </div>
-                        </div>
                       </div>
                     </div>
 
-                    {/* Entry Document Processing */}
-                    <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-5 w-5 text-green-600" />
-                        <span className="font-medium text-green-900 dark:text-green-100">Entry Documents (User-Written)</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">1</div>
-                          <div>
-                            <strong className="text-green-900 dark:text-green-100">Write Content:</strong>
-                            <p className="text-green-800 dark:text-green-200">Authors write articles, essays, or explanations directly on the platform</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">2</div>
-                          <div>
-                            <strong className="text-green-900 dark:text-green-100">Add Citations:</strong>
-                            <p className="text-green-800 dark:text-green-200">Inline citations and footnotes become "appended text" attached to statements</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white text-xs font-bold mt-0.5">3</div>
-                          <div>
-                            <strong className="text-green-900 dark:text-green-100">Processing:</strong>
-                            <p className="text-green-800 dark:text-green-200">Content gets broken into statements with attached citations as appended text</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
-                        <p className="text-sm text-orange-800 dark:text-orange-200">
-                          <strong>⚠️ The "Scary" Part:</strong> When you add citations like [Tanya 1:1] or footnotes in your writing,
-                          these become the "appended text" that gets processed and attached to individual statements for reference tracking.
-                        </p>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        Nimshal (Application)
+                      </label>
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <TipTapEditor
+                          docId={null}
+                          className="min-h-[120px]"
+                          onEditorReady={(editor) => {
+                            if (formData.global_nimshal && editor) {
+                              editor.commands.setContent(formData.global_nimshal);
+                            }
+                            editorsRef.current = { ...editorsRef.current, global_nimshal: editor };
+                          }}
+                          onBreakStatements={async () => {}}
+                        />
                       </div>
                     </div>
-                  </div>
-
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      <strong>To see this pipeline in action:</strong> Go to <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/editor/import</code> and add some content to process.
-                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              </TabsContent>
 
-          {/* Translation Preview */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Content Preview</h2>
-            <TranslationPreview topicId={topic.id} />
-          </div>
+              {/* Relationships Tab */}
+              <TabsContent value="relationships" className="mt-6">
+                <div className="bg-card border border-border rounded-lg p-6">
+                  <TopicRelationshipManager
+                    topicId={topic.id}
+                    topicTitle={formData.canonical_title}
+                    relationships={relationships}
+                    onAddRelationship={handleAddRelationship}
+                    onRemoveRelationship={handleRemoveRelationship}
+                  />
+                </div>
+              </TabsContent>
 
-          {/* Translation Review */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Translation Review</h2>
-            <TranslationReview />
-          </div>
+              {/* Sources Tab */}
+              <TabsContent value="sources" className="mt-6">
+                <div className="bg-card border border-border rounded-lg p-6">
+                  <SourceLinker
+                    topicId={topic.id}
+                    linkedSources={linkedSources}
+                    onLinkSource={handleLinkSource}
+                    onUnlinkSource={handleUnlinkSource}
+                    onCreateSource={handleCreateSource}
+                  />
+                </div>
+              </TabsContent>
 
-          {/* Import/Export Tools */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6">Import/Export</h2>
-            <ImportExport topicId={topic.id} />
-          </div>
-
-          {/* Save Actions */}
-          <div className="flex items-center justify-between pt-6 border-t border-border">
-            <div className="text-sm text-muted-foreground">
-              * Required fields
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push(`/topics/${slug}`)}
-                className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving || !formData.canonical_title.trim() || !formData.topic_type}
-                className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border border-primary-foreground border-t-transparent"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Topic
-                  </>
-                )}
-              </button>
-            </div>
+              {/* Display Tab */}
+              <TabsContent value="display" className="mt-6">
+                <div className="bg-card border border-border rounded-lg p-6">
+                  <DisplayFormatSelector
+                    sections={sections}
+                    onUpdateSection={handleUpdateDisplayConfig}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>

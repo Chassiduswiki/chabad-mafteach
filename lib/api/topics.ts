@@ -13,9 +13,12 @@ export async function getTopicBySlug(slug: string) {
     try {
         const directus = createClient();
 
+        // Normalize slug to lowercase for case-insensitive matching
+        const normalizedSlug = slug.toLowerCase();
+
         // OPTIMIZED: Fetch topic with documents and nested content in fewer queries
         const topics = await directus.request(readItems('topics', {
-            filter: { slug: { _eq: slug } },
+            filter: { slug: { _eq: normalizedSlug } },
             fields: ['*'],
             limit: 1
         }));
@@ -268,11 +271,12 @@ export async function getTopicBySlug(slug: string) {
 export async function updateTopic(slug: string, updates: any) {
     try {
         const directus = createClient();
+        const normalizedSlug = slug.toLowerCase();
 
         // First get the topic by slug to get its ID
         const topics = await directus.request(readItems('topics', {
             filter: {
-                slug: { _eq: slug }
+                slug: { _eq: normalizedSlug }
             },
             fields: ['id'],
             limit: 1
@@ -297,11 +301,12 @@ export async function updateTopic(slug: string, updates: any) {
 export async function getTopicMetadata(slug: string) {
     try {
         const directus = createClient();
+        const normalizedSlug = slug.toLowerCase();
 
         // Fetch just the topic by slug
         const topics = await directus.request(readItems('topics', {
             filter: {
-                slug: { _eq: slug }
+                slug: { _eq: normalizedSlug }
             },
             fields: ['*'],
             limit: 1
