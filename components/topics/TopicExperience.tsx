@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart } from 'lucide-react';
+import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
+import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
 import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
+import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
+import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Topic, Source } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
@@ -12,6 +15,8 @@ import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
+import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
+import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 
 // Types
 type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'charts' | 'sources';
@@ -89,6 +94,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
 
     const handleTutorialClose = () => {
         setIsTutorialOpen(false);
@@ -242,29 +248,77 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
         }
     };
 
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    const getRelationshipIcon = (type: string) => {
+        switch (type) {
+            case 'parent': return <ArrowUp className="w-4 h-4" />;
+            case 'child': return <ArrowDown className="w-4 h-4" />;
+            case 'opposite': return <RefreshCcw className="w-4 h-4" />;
+            default: return <GitBranch className="w-4 h-4" />;
+        }
+    };
+
+    const getRelationshipColor = (type: string) => {
+        switch (type) {
+            case 'parent': return 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20';
+            case 'child': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+            case 'opposite': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+            default: return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20';
+        }
+    };
+
     const handleGraphClick = (node: string, type: string) => {
         const relatedTopic = relatedTopics.find(t => t.canonical_title === node);
+        const cleanDescription = relatedTopic?.description ? stripHtml(relatedTopic.description) : null;
 
         setSheetContent({
             title: node,
             content: (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <span className="uppercase tracking-widest text-[10px] font-bold bg-muted px-2 py-0.5 rounded-sm">{type}</span>
-                        <span>Concept</span>
+                <div className="space-y-5">
+                    {/* Type Badge with Icon */}
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium ${getRelationshipColor(type)}`}>
+                        {getRelationshipIcon(type)}
+                        <span className="capitalize">{type} Concept</span>
                     </div>
-                    <p className="text-lg leading-relaxed">
-                        {relatedTopic?.description || `A related concept to ${topic.canonical_title}.`}
+
+                    {/* Description */}
+                    <p className="text-lg leading-relaxed text-foreground">
+                        {cleanDescription || `A related concept to ${topic.canonical_title}.`}
                     </p>
-                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
-                        <h4 className="font-semibold mb-2 text-sm uppercase text-primary">Relationship</h4>
-                        <p className="text-sm">
-                            {relatedTopic?.relationship?.description || `Explore how ${node} connects to the current topic.`}
+
+                    {/* Relationship Card */}
+                    <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                        <div className="flex items-center gap-2 mb-2">
+                            <GitBranch className="w-4 h-4 text-primary" />
+                            <h4 className="font-semibold text-sm text-primary">How They Connect</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            {relatedTopic?.relationship?.description 
+                                ? stripHtml(relatedTopic.relationship.description)
+                                : `Explore how ${node} relates to ${topic.canonical_title}.`}
                         </p>
                     </div>
+
+                    {/* Hebrew Name if available */}
+                    {relatedTopic?.name_hebrew && (
+                        <div className="text-center py-2">
+                            <span className="text-2xl font-hebrew text-muted-foreground">{relatedTopic.name_hebrew}</span>
+                        </div>
+                    )}
+
+                    {/* Action Button */}
                     {relatedTopic && (
-                        <a href={`/topics/${relatedTopic.slug}`} className="block w-full text-center py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors">
-                            Go to Topic
+                        <a 
+                            href={`/topics/${relatedTopic.slug}`}
+                            onClick={() => setIsNavigating(true)}
+                            className="flex items-center justify-center gap-2 w-full py-3.5 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                        >
+                            {isNavigating ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</>
+                            ) : (
+                                <><span>Explore {node}</span> <ChevronRight className="w-4 h-4" /></>
+                            )}
                         </a>
                     )}
                 </div>
@@ -333,6 +387,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
 
     return (
         <div className="min-h-screen bg-background relative">
+            <ScrollProgressIndicator />
             <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
             <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
             {/* New Immersive Hero */}
@@ -341,6 +396,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                 titleHebrew={topic.name_hebrew || ''}
                 category={topic.topic_type || 'Concept'}
                 definitionShort={topic.description}
+                topicSlug={topic.slug}
             />
 
             {/* Sticky Tab Navigation */}
@@ -537,20 +593,31 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     );
                 })}
 
-            {/* Smart Pathways & Constellation */}
+                {/* Smart Pathways & Constellation */}
             <div className="pt-8 border-t border-border space-y-8">
                 {/* Visual Graph */}
                 <div>
-                    <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-500" />
-                        Concept Constellation
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-foreground flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            Concept Constellation
+                        </h3>
+                        <button
+                            onClick={() => setIsDeepDiveOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Deep Dive Mode
+                        </button>
+                    </div>
                     <div className="flex justify-center">
-                        <ConceptConstellation
-                            centerConcept={graphData.centerConcept}
-                            relatedConcepts={graphData.relatedConcepts}
-                            onNodeClick={handleGraphClick}
-                        />
+                        <ConstellationErrorBoundary>
+                            <ConceptConstellation
+                                centerConcept={graphData.centerConcept}
+                                relatedConcepts={graphData.relatedConcepts}
+                                onNodeClick={handleGraphClick}
+                            />
+                        </ConstellationErrorBoundary>
                     </div>
                 </div>
             </div>
@@ -573,6 +640,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     onClick={() => { setFocusMode(false); setFocusedSection(null); }}
                 />
             )}
+
+            {/* Deep Dive Mode */}
+            <DeepDiveMode
+                currentTopic={{ slug: topic.slug, canonical_title: topic.canonical_title }}
+                relatedTopics={relatedTopics}
+                isOpen={isDeepDiveOpen}
+                onClose={() => setIsDeepDiveOpen(false)}
+            />
         </div>
     );
 }
