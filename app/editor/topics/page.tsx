@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit3, ArrowLeft, Plus, Search, Filter } from 'lucide-react';
+import { Edit3, ArrowLeft, Plus, Search, Filter, Copy, Trash2, ExternalLink } from 'lucide-react';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Topic } from '@/lib/types';
 
 export default function TopicsEditorPage() {
@@ -30,20 +31,18 @@ export default function TopicsEditorPage() {
   }, [topics, searchQuery, filterType]);
 
   const checkAuth = () => {
+    // In development, allow access without auth
+    const isDev = process.env.NODE_ENV === 'development';
     const token = localStorage.getItem('auth_token');
-    if (!token) {
+    
+    if (!token && !isDev) {
       router.push('/auth/signin');
       return;
     }
 
-    try {
-      setUser({ role: 'editor', name: 'Editor User' });
-    } catch (error) {
-      localStorage.removeItem('auth_token');
-      router.push('/auth/signin');
-    } finally {
-      setAuthLoading(false);
-    }
+    // Set user (real or dev placeholder)
+    setUser({ role: 'editor', name: isDev && !token ? 'Dev User' : 'Editor User' });
+    setAuthLoading(false);
   };
 
   const loadTopics = async () => {
@@ -52,7 +51,8 @@ export default function TopicsEditorPage() {
       const response = await fetch('/api/topics?limit=100');
       if (response.ok) {
         const data = await response.json();
-        setTopics(data.data || []);
+        // Handle both { data: [...] } and { topics: [...] } formats
+        setTopics(data.data || data.topics || []);
       } else {
         console.error('Failed to load topics');
       }
@@ -71,14 +71,18 @@ export default function TopicsEditorPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(topic =>
         topic.canonical_title?.toLowerCase().includes(query) ||
+        topic.name_hebrew?.toLowerCase().includes(query) ||
+        topic.name?.toLowerCase().includes(query) ||
         topic.description?.toLowerCase().includes(query) ||
-        topic.topic_type?.toLowerCase().includes(query)
+        topic.definition_short?.toLowerCase().includes(query) ||
+        topic.topic_type?.toLowerCase().includes(query) ||
+        topic.category?.toLowerCase().includes(query)
       );
     }
 
     // Filter by type
     if (filterType !== 'all') {
-      filtered = filtered.filter(topic => topic.topic_type === filterType);
+      filtered = filtered.filter(topic => (topic.topic_type || topic.category) === filterType);
     }
 
     setFilteredTopics(filtered);
@@ -96,10 +100,77 @@ export default function TopicsEditorPage() {
     return colors[type as keyof typeof colors] || 'bg-gray-500/10 text-gray-600';
   };
 
+  // Memoize type counts to avoid recalculating on every render
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: topics.length,
+      concept: 0,
+      person: 0,
+      place: 0,
+      event: 0,
+      mitzvah: 0,
+      sefirah: 0,
+    };
+    
+    topics.forEach(t => {
+      const type = (t as any).topic_type || (t as any).category;
+      if (type && counts[type] !== undefined) {
+        counts[type]++;
+      }
+    });
+    
+    return counts;
+  }, [topics]);
+
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent"></div>
+      <div className="min-h-screen bg-background">
+        {/* Skeleton Header */}
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-8 bg-muted rounded animate-pulse" />
+                <div>
+                  <div className="w-32 h-5 bg-muted rounded animate-pulse mb-1" />
+                  <div className="w-20 h-4 bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="w-28 h-9 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </header>
+        
+        {/* Skeleton Content */}
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 h-10 bg-muted rounded animate-pulse" />
+            <div className="w-40 h-10 bg-muted rounded animate-pulse" />
+          </div>
+          
+          {/* Skeleton Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="h-5 bg-muted rounded animate-pulse w-3/4 mb-2" />
+                    <div className="h-4 bg-muted rounded animate-pulse w-1/2 mb-2" />
+                    <div className="h-5 bg-muted rounded animate-pulse w-16" />
+                  </div>
+                </div>
+                <div className="space-y-2 mb-3">
+                  <div className="h-3 bg-muted rounded animate-pulse w-full" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-4/5" />
+                </div>
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <div className="h-3 bg-muted rounded animate-pulse w-20" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-12" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -162,20 +233,20 @@ export default function TopicsEditorPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
             >
-              <option value="all">All Types ({topics.length})</option>
-              <option value="concept">Concepts ({topics.filter(t => t.topic_type === 'concept').length})</option>
-              <option value="person">People ({topics.filter(t => t.topic_type === 'person').length})</option>
-              <option value="place">Places ({topics.filter(t => t.topic_type === 'place').length})</option>
-              <option value="event">Events ({topics.filter(t => t.topic_type === 'event').length})</option>
-              <option value="mitzvah">Mitzvot ({topics.filter(t => t.topic_type === 'mitzvah').length})</option>
-              <option value="sefirah">Sefirot ({topics.filter(t => t.topic_type === 'sefirah').length})</option>
+              <option value="all">All Types ({typeCounts.all})</option>
+              <option value="concept">Concepts ({typeCounts.concept})</option>
+              <option value="person">People ({typeCounts.person})</option>
+              <option value="place">Places ({typeCounts.place})</option>
+              <option value="event">Events ({typeCounts.event})</option>
+              <option value="mitzvah">Mitzvot ({typeCounts.mitzvah})</option>
+              <option value="sefirah">Sefirot ({typeCounts.sefirah})</option>
             </select>
           </div>
         </div>
 
         {/* Topics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredTopics.map((topic) => (
+          {filteredTopics.map((topic: any) => (
             <div
               key={topic.id}
               className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer group"
@@ -183,26 +254,67 @@ export default function TopicsEditorPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                    {topic.canonical_title}
+                  {/* Hebrew Title */}
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 text-lg" dir="rtl">
+                    {topic.name_hebrew || topic.canonical_title || topic.name || `Topic ${topic.id}`}
                   </h3>
-                  {topic.topic_type && (
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${getTopicTypeColor(topic.topic_type)}`}>
-                      {topic.topic_type}
+                  {/* English Title or Transliteration */}
+                  {(topic.name && topic.name !== topic.name_hebrew) && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {topic.name}
+                    </p>
+                  )}
+                  {(topic.category || topic.topic_type) && (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mt-2 ${getTopicTypeColor(topic.category || topic.topic_type)}`}>
+                      {topic.category || topic.topic_type}
                     </span>
                   )}
                 </div>
-                <Edit3 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
+                <DropdownMenu
+                  items={[
+                    {
+                      label: 'Edit',
+                      icon: <Edit3 className="h-4 w-4" />,
+                      onClick: () => router.push(`/editor/topics/${topic.slug}`),
+                    },
+                    {
+                      label: 'View Live',
+                      icon: <ExternalLink className="h-4 w-4" />,
+                      onClick: () => window.open(`/topics/${topic.slug}`, '_blank'),
+                    },
+                    {
+                      label: 'Duplicate',
+                      icon: <Copy className="h-4 w-4" />,
+                      onClick: () => {
+                        if (confirm(`Create a copy of "${topic.name_hebrew || topic.name}"?`)) {
+                          // TODO: Implement duplicate API
+                          alert('Duplicate feature coming soon!');
+                        }
+                      },
+                    },
+                    {
+                      label: 'Delete',
+                      icon: <Trash2 className="h-4 w-4" />,
+                      variant: 'danger',
+                      onClick: () => {
+                        if (confirm(`Are you sure you want to delete "${topic.name_hebrew || topic.name}"? This cannot be undone.`)) {
+                          // TODO: Implement delete API
+                          alert('Delete feature coming soon!');
+                        }
+                      },
+                    },
+                  ]}
+                />
               </div>
 
-              {topic.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                  {topic.description}
+              {(topic.definition_short || topic.description) && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  {(topic.definition_short || topic.description || '').replace(/<[^>]*>/g, '').substring(0, 150)}
                 </p>
               )}
 
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>ID: {topic.id}</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-3 mt-auto">
+                <span className="font-mono">/{topic.slug}</span>
                 <span className="text-primary group-hover:underline">Edit →</span>
               </div>
             </div>

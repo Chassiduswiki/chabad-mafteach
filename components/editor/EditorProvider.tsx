@@ -23,6 +23,12 @@ interface EditorContextType {
   handleInsertCitation: () => void;
   handleInsertImage: () => void;
   isEditorReady: boolean;
+  showCitationModal: boolean;
+  setShowCitationModal: (show: boolean) => void;
+  insertCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string }) => void;
+  showImageModal: boolean;
+  setShowImageModal: (show: boolean) => void;
+  insertImage: (imageUrl: string, altText: string) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -42,11 +48,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   placeholder = 'Start writing your content here... You can paste Hebrew text or images for OCR processing.',
   characterLimit = 10000,
   onUpdate,
-  initialContent = '<p>Hello World! 🌍️</p><p>You can now paste Hebrew text or images for automatic OCR processing.</p>',
+  initialContent = '',
 }) => {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [activeCitation, setActiveCitation] = useState<CitationData | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [showCitationModal, setShowCitationModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -118,38 +126,37 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editor]);
 
   const handleInsertCitation = () => {
-    // Open citation palette or dialog
-    console.log('Insert citation clicked');
+    // Open citation modal
+    setShowCitationModal(true);
+  };
 
-    // For now, open a simple citation dialog
-    const citationText = prompt('Enter citation (e.g., Tanya 1:1 or "Book Title" p. 45):');
-    if (citationText && editor) {
-      // Insert citation as a formatted node
-      editor.commands.insertContent({
-        type: 'citation',
-        attrs: {
-          sourceTitle: citationText,
-          reference: citationText,
-          sourceId: null,
-        },
-      });
-    }
+  const insertCitation = (citation: { sourceId: number | null; sourceTitle: string; reference: string }) => {
+    if (!editor) return;
+    
+    // Insert citation as a formatted node
+    editor.commands.insertContent({
+      type: 'citation',
+      attrs: {
+        sourceTitle: citation.sourceTitle,
+        reference: citation.reference,
+        sourceId: citation.sourceId,
+      },
+    });
+    
+    setShowCitationModal(false);
   };
 
   const handleInsertImage = () => {
-    // Trigger file input for image upload
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        // The OCR extension will handle this automatically when pasted
-        // For now, we'll just insert a placeholder
-        editor?.commands.insertContent(`<p>[Image: ${file.name}]</p>`);
-      }
-    };
-    input.click();
+    // Open image upload modal
+    setShowImageModal(true);
+  };
+
+  const insertImage = (imageUrl: string, altText: string) => {
+    if (!editor) return;
+    
+    // Insert image into editor
+    editor.commands.insertContent(`<img src="${imageUrl}" alt="${altText}" />`);
+    setShowImageModal(false);
   };
 
   const contextValue: EditorContextType = {
@@ -161,6 +168,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleInsertCitation,
     handleInsertImage,
     isEditorReady,
+    showCitationModal,
+    setShowCitationModal,
+    insertCitation,
+    showImageModal,
+    setShowImageModal,
+    insertImage,
   };
 
   return (
