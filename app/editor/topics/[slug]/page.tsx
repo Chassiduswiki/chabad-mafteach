@@ -192,8 +192,8 @@ export default function TopicEditorPage() {
       // Load relationships
       await loadRelationships(topicData.id);
       
-      // Load sources (if endpoint exists)
-      // await loadSources(topicData.id);
+      // Load linked sources
+      await loadSources(topicData.slug);
       
     } catch (error) {
       console.error('Error loading topic:', error);
@@ -297,14 +297,47 @@ export default function TopicEditorPage() {
     setRelationships(prev => prev.filter(r => r.id !== relationshipId));
   };
 
+  // Load linked sources from API
+  const loadSources = async (topicSlug: string) => {
+    try {
+      const response = await fetch(`/api/topics/${topicSlug}/sources`);
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedSources(data.sources || []);
+      }
+    } catch (error) {
+      console.error('Failed to load sources:', error);
+    }
+  };
+
   // Source handlers
   const handleLinkSource = async (data: SourceLinkFormData) => {
     if (!topic || !data.sourceId) return;
     
     try {
-      // For now, just add to local state - full implementation would create source_link in DB
-      console.log('Link source:', data);
-      // TODO: Create source_link in database
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/topics/${topic.slug}/sources`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          source_id: data.sourceId,
+          relationship_type: data.relationshipType,
+          page_number: data.pageNumber,
+          verse_reference: data.verseReference,
+          notes: data.notes,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to link source');
+      }
+
+      // Reload sources to get the full data
+      await loadSources(topic.slug);
     } catch (error) {
       console.error('Failed to link source:', error);
       throw error;
@@ -312,7 +345,26 @@ export default function TopicEditorPage() {
   };
 
   const handleUnlinkSource = async (sourceId: number) => {
-    setLinkedSources(prev => prev.filter(s => s.id !== sourceId));
+    if (!topic) return;
+    
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/topics/${topic.slug}/sources?source_id=${sourceId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlink source');
+      }
+
+      setLinkedSources(prev => prev.filter(s => s.id !== sourceId));
+    } catch (error) {
+      console.error('Failed to unlink source:', error);
+      throw error;
+    }
   };
 
   const handleCreateSource = async (sourceData: Partial<Source>): Promise<Source> => {

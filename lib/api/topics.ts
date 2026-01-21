@@ -186,63 +186,62 @@ export async function getTopicBySlug(slug: string) {
             // Continue without related topics - this is not critical
         }
 
-        // Get sources for the statements
+        // Get linked sources via topic_sources junction table
         let sources: any[] = [];
         try {
-            // Get all statement IDs
-            const allStatementIds = contentBlocks.flatMap(cb => cb.statements.map((s: any) => s.id)); // **[CHANGED]** from paragraphs
-            const validStatementIds = new Set(allStatementIds);
-            console.log('Fetching sources for', allStatementIds.length, 'statement IDs');
-            if (allStatementIds.length > 0) {
-                // Get source_links for these statements
-                console.log('Fetching source_links...');
-                const sourceLinks = await directus.request(readItems('source_links', {
-                    filter: { statement_id: { _in: allStatementIds } } as any,
-                    fields: ['id', 'statement_id', 'source_id', 'relationship_type', 'page_number', 'verse_reference']
-                })) as any[];
+            // Fetch topic_sources with expanded source data
+            const topicSources = await directus.request(readItems('topic_sources' as any, {
+                filter: { topic_id: { _eq: topic.id } } as any,
+                fields: [
+                    'id',
+                    'relationship_type',
+                    'page_number',
+                    'verse_reference',
+                    'notes',
+                    'is_primary',
+                    'sort',
+                    {
+                        source_id: [
+                            'id',
+                            'title',
+                            'publication_year',
+                            'external_url',
+                            'external_system',
+                            'citation_text',
+                            { author_id: ['canonical_name'] }
+                        ]
+                    }
+                ] as any,
+                sort: ['sort', '-is_primary'] as any
+            })) as any[];
 
-                console.log('Found', sourceLinks.length, 'source links');
+            console.log(`Found ${topicSources.length} linked sources for topic ${topic.id}`);
 
-                if (sourceLinks.length > 0) {
-                    // Get unique source IDs
-                    const sourceIds = Array.from(new Set(sourceLinks.map(sl => sl.source_id)));
-                    console.log('Fetching', sourceIds.length, 'unique sources:', sourceIds);
-
-                    // Fetch sources
-                    console.log('Fetching sources data...');
-                    const sourcesData = await directus.request(readItems('sources', {
-                        filter: { id: { _in: sourceIds } } as any,
-                        fields: ['id', 'title', 'external_url', 'publication_year', { author_id: ['canonical_name'] }]
-                    })) as any[];
-
-                    console.log('Found', sourcesData.length, 'sources');
-
-                    // Attach relationship info to sources
-                    sources = sourcesData.map((source: any) => {
-                        const links = sourceLinks.filter(sl => sl.source_id === source.id);
-                        return {
-                            ...source,
-                            author: source.author_id?.canonical_name,
-                            relationships: links.map(link => ({
-                                statement_id: link.statement_id,
-                                relationship_type: link.relationship_type,
-                                page_number: link.page_number,
-                                verse_reference: link.verse_reference
-                            }))
-                        };
-                    });
-                    console.log('Attached relationships to', sources.length, 'sources');
-                }
-            }
+            // Transform to a cleaner format
+            sources = topicSources.map(ts => ({
+                id: ts.source_id?.id,
+                title: ts.source_id?.title,
+                author: ts.source_id?.author_id?.canonical_name,
+                publication_year: ts.source_id?.publication_year,
+                external_url: ts.source_id?.external_url,
+                external_system: ts.source_id?.external_system,
+                citation_text: ts.source_id?.citation_text,
+                // Link metadata
+                link_id: ts.id,
+                relationship_type: ts.relationship_type,
+                page_number: ts.page_number,
+                verse_reference: ts.verse_reference,
+                notes: ts.notes,
+                is_primary: ts.is_primary,
+                // Keep relationships array for backward compatibility
+                relationships: [{
+                    relationship_type: ts.relationship_type,
+                    page_number: ts.page_number,
+                    verse_reference: ts.verse_reference
+                }]
+            })).filter(s => s.id); // Filter out any with missing source data
         } catch (error) {
-            console.error('Error fetching sources:', error);
-            console.error('Error details:', {
-                message: (error as any)?.message,
-                code: (error as any)?.code,
-                response: (error as any)?.response?.data,
-                status: (error as any)?.response?.status,
-                stack: (error as any)?.stack
-            });
+            console.error('Error fetching topic sources:', error);
             // Continue without sources
         }
 
