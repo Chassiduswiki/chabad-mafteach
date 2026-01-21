@@ -90,7 +90,7 @@ function DocumentTree({ documents, level = 0 }: { documents: HierarchicalDocumen
                                                 <span className="capitalize">{doc.doc_type}</span>
                                             )}
                                             {hasChildren && (
-                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                                <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                                                     {doc.children!.length} sections
                                                 </span>
                                             )}
@@ -154,7 +154,7 @@ function SeforimContent() {
     return (
         <>
             <GlobalNav />
-            <div className="min-h-screen bg-background text-foreground">
+            <div id="main-content" className="min-h-screen bg-background text-foreground">
                 <div className="mx-auto max-w-5xl px-6 pt-6 pb-32 sm:px-8">
 
                 {/* Header */}
@@ -206,7 +206,7 @@ function SeforimContent() {
                                             <span className="capitalize">{sefer.doc_type}</span>
                                         )}
                                         {sefer.children && sefer.children.length > 0 && (
-                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                                                 {sefer.children.length} sections
                                             </span>
                                         )}

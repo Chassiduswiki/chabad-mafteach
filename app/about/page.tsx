@@ -15,7 +15,7 @@ export default function AboutPage() {
                     <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.03]" />
                 </div>
 
-                <main className="relative z-10 mx-auto max-w-5xl px-6 py-8 sm:px-8">
+                <main id="main-content" className="relative z-10 mx-auto max-w-5xl px-6 py-8 sm:px-8">
 
                 {/* Header */}
                 <div className="mb-20 text-center">

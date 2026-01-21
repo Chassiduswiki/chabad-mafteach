@@ -54,6 +54,7 @@ export function ZenCard({ statement, onNext, onSave, isLoading }: ZenCardProps) 
                         transition={{ delay: 0.1 }}
                         className="font-hebrew text-2xl sm:text-3xl md:text-4xl leading-relaxed text-foreground"
                         dir="rtl"
+                        lang="he"
                     >
                         {statement.text}
                     </motion.div>

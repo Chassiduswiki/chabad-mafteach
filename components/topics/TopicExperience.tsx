@@ -429,16 +429,49 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     </div>
                 </div>
                 
-                {/* Tab Navigation */}
-                <div className="max-w-4xl mx-auto">
+                {/* Tab Navigation with scroll indicators and keyboard support */}
+                <div className="max-w-4xl mx-auto relative">
+                    {/* Left scroll indicator */}
+                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                    {/* Right scroll indicator */}
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                    
                     <div
                         ref={tabsRef}
                         className="flex overflow-x-auto overflow-y-hidden scrollbar-hide -mx-1 px-4 sm:px-6 snap-x snap-mandatory touch-pan-x"
                         role="tablist"
                         aria-label="Topic Sections"
                         style={{ WebkitOverflowScrolling: 'touch' }}
+                        onKeyDown={(e) => {
+                            const sectionTypes = sections.map(s => s.type);
+                            const currentIndex = sectionTypes.indexOf(activeSection);
+                            
+                            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                const nextIndex = (currentIndex + 1) % sectionTypes.length;
+                                scrollToSection(sectionTypes[nextIndex]);
+                                // Focus the next tab
+                                const nextTab = document.getElementById(`tab-${sectionTypes[nextIndex]}`);
+                                nextTab?.focus();
+                            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                const prevIndex = (currentIndex - 1 + sectionTypes.length) % sectionTypes.length;
+                                scrollToSection(sectionTypes[prevIndex]);
+                                // Focus the previous tab
+                                const prevTab = document.getElementById(`tab-${sectionTypes[prevIndex]}`);
+                                prevTab?.focus();
+                            } else if (e.key === 'Home') {
+                                e.preventDefault();
+                                scrollToSection(sectionTypes[0]);
+                                document.getElementById(`tab-${sectionTypes[0]}`)?.focus();
+                            } else if (e.key === 'End') {
+                                e.preventDefault();
+                                scrollToSection(sectionTypes[sectionTypes.length - 1]);
+                                document.getElementById(`tab-${sectionTypes[sectionTypes.length - 1]}`)?.focus();
+                            }
+                        }}
                     >
-                        {sections.map((section) => {
+                        {sections.map((section, index) => {
                             const config = sectionConfig[section.type];
                             const Icon = config.icon;
                             const isActive = activeSection === section.type;
@@ -450,8 +483,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                     role="tab"
                                     aria-selected={isActive}
                                     aria-controls={`panel-${section.type}`}
+                                    tabIndex={isActive ? 0 : -1}
                                     onClick={() => scrollToSection(section.type)}
-                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 ${isActive
+                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${isActive
                                         ? `border-primary ${config.color}`
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                         }`}

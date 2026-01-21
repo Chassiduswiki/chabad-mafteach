@@ -148,7 +148,7 @@ export default async function TopicsPage({
     return (
         <>
             <GlobalNav />
-            <main className="min-h-screen bg-background text-foreground">
+            <main id="main-content" className="min-h-screen bg-background text-foreground">
                 <div className="mx-auto max-w-5xl px-4 pt-6 pb-32 sm:px-6 lg:px-8 lg:pt-8">
 
                 {/* Header */}

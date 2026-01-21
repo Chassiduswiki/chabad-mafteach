@@ -70,7 +70,7 @@ export default function Home() {
       </div>
 
       {/* Desktop Homepage - Google-like Hero (Original) */}
-      <main className="hidden lg:flex relative z-10 mx-auto max-w-6xl flex-col items-center px-6 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
+      <main id="main-content" className="hidden lg:flex relative z-10 mx-auto max-w-6xl flex-col items-center px-6 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
 
         {/* Badge */}
         <motion.div

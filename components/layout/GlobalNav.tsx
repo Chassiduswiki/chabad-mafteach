@@ -80,6 +80,19 @@ export function GlobalNav({
                     >
                         Topics
                     </Link>
+                    {/* Sources link hidden for now
+                    <Link
+                        href="/seforim"
+                        className={cn(
+                            "px-4 py-2 text-sm font-medium rounded-full transition-colors",
+                            pathname === '/seforim' || pathname.startsWith('/seforim/')
+                                ? "bg-primary/10 text-primary" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                    >
+                        Sources
+                    </Link>
+                    */}
                     <Link
                         href="/about"
                         className={cn(

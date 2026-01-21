@@ -27,7 +27,7 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-    const debouncedPreviewRef = useRef<(topicId: number) => void>();
+    const debouncedPreviewRef = useRef<(topicId: number) => void>(undefined);
 
     useEffect(() => {
         const previewHandler = (topicId: number) => {
@@ -62,7 +62,7 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
     if (view === 'list') {
         return (
             <div className="group relative border-b border-border/50 last:border-b-0">
-                <Link href={`/topics/${topic.slug}`} className="block p-4 transition-all duration-200 hover:bg-background/80">
+                <Link href={`/topics/${topic.slug}`} className="block p-4 transition-all duration-200 hover:bg-background/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                             <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -125,7 +125,7 @@ export function TopicCard({ topic, view, contentCount, colorClass, preview, onPr
 
     return (
         <div className="group relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-            <Link href={`/topics/${topic.slug}`} className="relative flex flex-col h-full max-h-[400px] overflow-hidden rounded-2xl border border-border/50 bg-background/60 p-6 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10">
+            <Link href={`/topics/${topic.slug}`} className="relative flex flex-col h-full max-h-[400px] overflow-hidden rounded-2xl border border-border/50 bg-background/60 p-6 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 <div className="flex flex-col gap-3 flex-1">
                     <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">

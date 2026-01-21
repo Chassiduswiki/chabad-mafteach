@@ -96,10 +96,10 @@ export function TorahReader({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Reading Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-1 bg-border">
+      {/* Reading Progress Bar - positioned below sticky header */}
+      <div className="fixed top-14 left-0 right-0 z-30 h-1 bg-border">
         <div
-          className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-500 ease-out"
+          className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 ease-out"
           style={{ width: `${readingProgress}%` }}
         />
       </div>
@@ -209,7 +209,7 @@ export function TorahReader({
                   >
                     {currentSectionData.statements.length > 0 ? (
                       currentSectionData.statements.map((s, idx) => (
-                        <div key={s.id} className="mb-4 font-hebrew">
+                        <div key={s.id} className="mb-4 font-hebrew" dir="rtl">
                           <span
                             onClick={() => handleSelect(s.id)}
                             className={`
@@ -305,6 +305,7 @@ export function TorahReader({
                           <div className="space-y-4">
                             <div
                               onClick={() => handleSelect(s.id)}
+                              dir="rtl"
                               className={`
                                     font-hebrew cursor-pointer transition-all duration-200 rounded-sm px-1 -mx-1 py-0.5
                                     hover:bg-accent/50 dark:hover:bg-accent/10

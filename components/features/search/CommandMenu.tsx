@@ -40,12 +40,51 @@ const typeConfig: Record<string, { icon: typeof Brain; gradient: string }> = {
     statement: { icon: BookOpen, gradient: 'from-blue-500 to-cyan-600' },
 };
 
+const RECENT_SEARCHES_KEY = 'chabad-mafteach:recent-searches';
+const MAX_RECENT_SEARCHES = 5;
+
+function getRecentSearches(): string[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
+
+function addRecentSearch(query: string) {
+    if (typeof window === 'undefined' || !query.trim()) return;
+    try {
+        const recent = getRecentSearches().filter(s => s !== query);
+        recent.unshift(query);
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT_SEARCHES)));
+    } catch {
+        // Ignore localStorage errors
+    }
+}
+
+function clearRecentSearches() {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch {
+        // Ignore
+    }
+}
+
 export function CommandMenu() {
     const { open, setOpen } = useSearch();
     const [search, setSearch] = React.useState('');
     const [results, setResults] = React.useState<SearchResult[]>([]);
     const [loading, setLoading] = React.useState(false);
+    const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
     const router = useRouter();
+
+    // Load recent searches on mount
+    React.useEffect(() => {
+        setRecentSearches(getRecentSearches());
+    }, [open]);
 
     // Bottom sheet drag control
     const y = useMotionValue(0);
@@ -124,9 +163,22 @@ export function CommandMenu() {
     }, [search]);
 
     const handleSelect = (url: string) => {
+        // Save search to recent if there was a query
+        if (search.trim()) {
+            addRecentSearch(search.trim());
+        }
         setOpen(false);
         setSearch('');
         router.push(url);
+    };
+
+    const handleRecentSearchClick = (query: string) => {
+        setSearch(query);
+    };
+
+    const handleClearRecent = () => {
+        clearRecentSearches();
+        setRecentSearches([]);
     };
 
     return (
@@ -208,12 +260,43 @@ export function CommandMenu() {
                                 )}
 
                                 {!loading && !search && (
-                                    <div className="py-12 text-center">
-                                        <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                                        <h3 className="text-base font-semibold text-foreground">Search the Library</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Topics, sources, and concepts
-                                        </p>
+                                    <div className="py-6">
+                                        {recentSearches.length > 0 ? (
+                                            <div>
+                                                <div className="flex items-center justify-between mb-3 px-2">
+                                                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                                        <History className="w-3.5 h-3.5" />
+                                                        Recent Searches
+                                                    </div>
+                                                    <button
+                                                        onClick={handleClearRecent}
+                                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {recentSearches.map((query, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => handleRecentSearchClick(query)}
+                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                                                        >
+                                                            <History className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="text-sm text-foreground">{query}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="py-6 text-center">
+                                                <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                                                <h3 className="text-base font-semibold text-foreground">Search the Library</h3>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    Topics, sources, and concepts
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -310,12 +393,44 @@ export function CommandMenu() {
                                 )}
 
                                 {!loading && !search && (
-                                    <div className="py-16 text-center">
-                                        <Search className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
-                                        <h3 className="text-lg font-semibold text-foreground">Search the Library</h3>
-                                        <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                                            Find topics, sources, and concepts
-                                        </p>
+                                    <div className="py-6">
+                                        {recentSearches.length > 0 ? (
+                                            <div>
+                                                <div className="flex items-center justify-between mb-3 px-1">
+                                                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                                        <History className="w-3.5 h-3.5" />
+                                                        Recent Searches
+                                                    </div>
+                                                    <button
+                                                        onClick={handleClearRecent}
+                                                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                    >
+                                                        Clear all
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {recentSearches.map((query, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => handleRecentSearchClick(query)}
+                                                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left group"
+                                                        >
+                                                            <History className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="text-sm text-foreground group-hover:text-primary transition-colors">{query}</span>
+                                                            <ChevronRight className="w-4 h-4 text-muted-foreground/40 ml-auto" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="py-10 text-center">
+                                                <Search className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+                                                <h3 className="text-lg font-semibold text-foreground">Search the Library</h3>
+                                                <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                                                    Find topics, sources, and concepts
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

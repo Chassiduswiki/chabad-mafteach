@@ -171,8 +171,8 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                     </button>
                     {sortDropdownOpen && (
                         <>
-                            <div className="fixed inset-0 z-10" onClick={() => setSortDropdownOpen(false)} />
-                            <div role="listbox" aria-label="Sort options" className="absolute top-full left-0 mt-2 w-40 rounded-lg border border-border/50 bg-background/95 backdrop-blur-sm shadow-lg z-20 overflow-hidden">
+                            <div className="fixed inset-0 z-10" onClick={() => setSortDropdownOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setSortDropdownOpen(false)} />
+                            <div role="listbox" aria-label="Sort options" className="absolute top-full left-0 mt-2 w-40 rounded-lg border border-border/50 bg-background/95 backdrop-blur-sm shadow-lg z-20 overflow-hidden" onKeyDown={(e) => e.key === 'Escape' && setSortDropdownOpen(false)}>
                                 {(['name', 'category', 'popularity'] as const).map((option) => (
                                     <button
                                         key={option}

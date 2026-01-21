@@ -10,6 +10,7 @@ import { useSearch } from '@/lib/search-context';
 const Home = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Home })));
 const Search = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Search })));
 const Hash = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Hash })));
+const BookOpen = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.BookOpen })));
 
 // Icon wrapper component
 function IconWrapper({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export function MobileNav() {
     const navItems = [
         { href: '/', icon: Home, label: 'Home' },
         { href: '/topics', icon: Hash, label: 'Topics' },
+        // { href: '/seforim', icon: BookOpen, label: 'Sources' }, // Hidden for now
     ];
 
     return (
@@ -61,7 +63,7 @@ export function MobileNav() {
                             )}
                         >
                             {isActive(href) && (
-                                <span className="absolute -top-0.5 w-8 h-1 bg-primary rounded-full" />
+                                <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-full" />
                             )}
                             <IconWrapper><Icon size={22} strokeWidth={isActive(href) ? 2.5 : 2} /></IconWrapper>
                             <span className={cn(
