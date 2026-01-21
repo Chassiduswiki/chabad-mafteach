@@ -463,7 +463,11 @@ export default function TopicEditorPage() {
           {/* Sidebar - Completeness */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <div className="sticky top-20 space-y-4">
-              <TopicCompleteness formData={formData} />
+              <TopicCompleteness 
+                formData={formData} 
+                relationshipCount={relationships.length}
+                sourceCount={linkedSources.length}
+              />
               
               {/* Keyboard shortcuts hint */}
               <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">

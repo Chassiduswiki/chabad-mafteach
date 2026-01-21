@@ -6,6 +6,8 @@ import { TopicCompleteness as CompletenessType, TopicFormData } from './types';
 
 interface TopicCompletenessProps {
   formData: TopicFormData;
+  relationshipCount?: number;
+  sourceCount?: number;
   className?: string;
 }
 
@@ -32,6 +34,8 @@ const SECTION_LABELS: Record<keyof CompletenessType['sections'], string> = {
 
 export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
   formData,
+  relationshipCount = 0,
+  sourceCount = 0,
   className = '',
 }) => {
   const calculateCompleteness = (): CompletenessType => {
@@ -89,10 +93,14 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
       );
     });
 
-    // Relationships and sources are tracked separately (would need props)
-    sections.relationships = 50; // Placeholder
-    sections.sources = 50; // Placeholder
-    sections.display = 100; // Display is always "complete"
+    // Relationships: 0 = 0%, 1-2 = 50%, 3+ = 100%
+    sections.relationships = relationshipCount >= 3 ? 100 : relationshipCount >= 1 ? 50 : 0;
+    
+    // Sources: 0 = 0%, 1-2 = 50%, 3+ = 100%
+    sections.sources = sourceCount >= 3 ? 100 : sourceCount >= 1 ? 50 : 0;
+    
+    // Display is always "complete" (configurable via UI)
+    sections.display = 100;
 
     // Generate suggestions
     if (!formData.description || formData.description.length < 50) {

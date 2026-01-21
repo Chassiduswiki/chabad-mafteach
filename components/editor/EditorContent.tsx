@@ -7,6 +7,7 @@ import { CitationViewerModal } from './CitationViewerModal';
 import { CitationInsertModal } from './CitationInsertModal';
 import { ImageUploadModal } from './ImageUploadModal';
 import { SlashCommandMenu } from './SlashCommandMenu';
+import { BubbleToolbar } from './BubbleToolbar';
 import { useEditorContext } from './EditorProvider';
 
 interface EditorContentProps {
@@ -88,11 +89,14 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
       />
 
       {editor && (
-        <SlashCommandMenu
-          editor={editor}
-          onInsertCitation={handleInsertCitation}
-          onInsertImage={handleInsertImage}
-        />
+        <>
+          <SlashCommandMenu
+            editor={editor}
+            onInsertCitation={handleInsertCitation}
+            onInsertImage={handleInsertImage}
+          />
+          <BubbleToolbar editor={editor} />
+        </>
       )}
 
       {feedback && (
