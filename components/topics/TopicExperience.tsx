@@ -418,7 +418,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
             </div>
 
             {/* Sticky Title + Tab Navigation Container */}
-            <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
+            <div className="sticky top-14 z-30 bg-background border-b border-border shadow-sm">
                 {/* Topic Title - shows when scrolled past hero */}
                 <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3">
