@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit3, ArrowLeft, Plus, Search, Filter } from 'lucide-react';
+import { Edit3, ArrowLeft, Plus, Search, Filter, Copy, Trash2, ExternalLink } from 'lucide-react';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Topic } from '@/lib/types';
 
 export default function TopicsEditorPage() {
@@ -269,7 +270,41 @@ export default function TopicsEditorPage() {
                     </span>
                   )}
                 </div>
-                <Edit3 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 ml-2" />
+                <DropdownMenu
+                  items={[
+                    {
+                      label: 'Edit',
+                      icon: <Edit3 className="h-4 w-4" />,
+                      onClick: () => router.push(`/editor/topics/${topic.slug}`),
+                    },
+                    {
+                      label: 'View Live',
+                      icon: <ExternalLink className="h-4 w-4" />,
+                      onClick: () => window.open(`/topics/${topic.slug}`, '_blank'),
+                    },
+                    {
+                      label: 'Duplicate',
+                      icon: <Copy className="h-4 w-4" />,
+                      onClick: () => {
+                        if (confirm(`Create a copy of "${topic.name_hebrew || topic.name}"?`)) {
+                          // TODO: Implement duplicate API
+                          alert('Duplicate feature coming soon!');
+                        }
+                      },
+                    },
+                    {
+                      label: 'Delete',
+                      icon: <Trash2 className="h-4 w-4" />,
+                      variant: 'danger',
+                      onClick: () => {
+                        if (confirm(`Are you sure you want to delete "${topic.name_hebrew || topic.name}"? This cannot be undone.`)) {
+                          // TODO: Implement delete API
+                          alert('Delete feature coming soon!');
+                        }
+                      },
+                    },
+                  ]}
+                />
               </div>
 
               {(topic.definition_short || topic.description) && (
