@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Hash, Brain, Hand, Sparkles, BookText, FileText, Layers, TrendingUp, SortAsc } from 'lucide-react';
+import { Hash, Brain, Hand, Sparkles, BookText, FileText, Layers, TrendingUp, SortAsc, Check, ChevronDown } from 'lucide-react';
 import type { Topic } from '@/lib/types';
 import { ViewToggle } from '@/components/layout/ViewToggle';
 import Pagination from './Pagination';
@@ -46,6 +46,7 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
     const [contentCounts, setContentCounts] = useState<Record<number, TopicContentCount>>({});
     const [topicPreviews, setTopicPreviews] = useState<Record<number, any>>({});
     const [sortBy, setSortBy] = useState<'name' | 'category' | 'popularity'>('name');
+    const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
     const [topicAnalytics, setTopicAnalytics] = useState<Record<number, any>>({});
 
     const fetchTopicAnalytics = async () => {
@@ -103,16 +104,26 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
 
     useEffect(() => {
         const savedView = localStorage.getItem('topicsView');
+        const savedSort = localStorage.getItem('topicsSort');
         if (savedView === 'grid' || savedView === 'list') {
             setView(savedView);
         } else if (isMobile) {
             setView('list');
+        }
+        if (savedSort === 'name' || savedSort === 'category' || savedSort === 'popularity') {
+            setSortBy(savedSort);
         }
     }, [isMobile]);
 
     const handleViewChange = (newView: 'grid' | 'list') => {
         setView(newView);
         localStorage.setItem('topicsView', newView);
+    };
+
+    const handleSortChange = (newSort: 'name' | 'category' | 'popularity') => {
+        setSortBy(newSort);
+        localStorage.setItem('topicsSort', newSort);
+        setSortDropdownOpen(false);
     };
 
     const grouped = topics.reduce((acc: Record<string, Topic[]>, topic: Topic) => {
@@ -137,26 +148,57 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
     }, {} as Record<string, Topic[]>);
 
     return (
-        <div className="space-y-12">
+        <div className="space-y-8">
             <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-sm">
+                <div className="relative flex items-center gap-2 text-sm">
                     <SortAsc className="h-4 w-4 text-muted-foreground" />
-                    <label htmlFor="sort-by" className="text-muted-foreground">Sort by:</label>
-                    <select
-                        id="sort-by"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as 'name' | 'category' | 'popularity')}
-                        className="bg-background border-none rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    <span className="text-muted-foreground hidden sm:inline">Sort by:</span>
+                    <button
+                        onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSortDropdownOpen(!sortDropdownOpen);
+                            }
+                        }}
+                        aria-label="Sort topics"
+                        aria-expanded={sortDropdownOpen}
+                        aria-haspopup="listbox"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/60 border border-border/50 hover:border-primary/30 hover:bg-background/80 transition-all font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
                     >
-                        <option value="name">Name</option>
-                        <option value="category">Category</option>
-                        <option value="popularity">Popularity</option>
-                    </select>
+                        <span className="capitalize">{sortBy}</span>
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${sortDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {sortDropdownOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setSortDropdownOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setSortDropdownOpen(false)} />
+                            <div role="listbox" aria-label="Sort options" className="absolute top-full left-0 mt-2 w-40 rounded-lg border border-border/50 bg-background/95 backdrop-blur-sm shadow-lg z-20 overflow-hidden" onKeyDown={(e) => e.key === 'Escape' && setSortDropdownOpen(false)}>
+                                {(['name', 'category', 'popularity'] as const).map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() => handleSortChange(option)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                handleSortChange(option);
+                                            }
+                                        }}
+                                        role="option"
+                                        aria-selected={sortBy === option}
+                                        className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors focus:outline-none focus:bg-muted/50"
+                                    >
+                                        <span className="capitalize">{option}</span>
+                                        {sortBy === option && <Check className="h-4 w-4 text-primary" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
                 <ViewToggle view={view} onViewChange={handleViewChange} />
             </div>
 
-            <div className="space-y-16">
+            <div className="space-y-12">
                 {Object.entries(sortedGrouped).map(([category, items]) => {
                     const Icon = categoryIcons[category as keyof typeof categoryIcons] || Hash;
                     const colorClass = categoryColors[category as keyof typeof categoryColors] || categoryColors.other;
@@ -164,10 +206,12 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
                     return (
                         <div key={category}>
                             <div className="mb-6 flex items-center gap-3">
+                                <h2 className="sr-only">Category: {category}</h2>
                                 <div className={`inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${colorClass}`}>
                                     <Icon className="h-4 w-4" />
                                 </div>
                                 <h2 className="text-xl font-semibold capitalize tracking-tight">{category}</h2>
+                                <span className="text-sm text-muted-foreground font-mono">({items.length})</span>
                             </div>
 
                             <div className={view === 'grid' ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" : "border-t border-border"}>
@@ -190,17 +234,17 @@ export function TopicsList({ topics, currentPage, totalPages, totalCount }: Topi
 
             {topics.length > 0 && (
                 <div className="mt-16">
-                    <p className="text-center text-sm text-muted-foreground mb-4">
-                        Showing {((currentPage - 1) * 50) + 1}–{Math.min(currentPage * 50, totalCount)} of {totalCount} topics
-                    </p>
                     <Pagination currentPage={currentPage} totalPages={totalPages} />
                 </div>
             )}
 
             {topics.length === 0 && (
-                <div className="py-24 text-center">
-                    <Hash className="mx-auto h-16 w-16 text-muted-foreground/20" />
-                    <p className="mt-4 text-muted-foreground">No topics available yet.</p>
+                <div className="py-24 text-center" role="status" aria-live="polite">
+                    <div className="mx-auto w-fit p-6 rounded-2xl bg-muted/30 mb-6">
+                        <Hash className="mx-auto h-16 w-16 text-muted-foreground/40" aria-hidden="true" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No topics found</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">Try adjusting your filters or search terms to discover more content.</p>
                 </div>
             )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, memo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -33,6 +33,16 @@ export const TopicCategoryChips = memo(function TopicCategoryChips() {
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showLeftFade, setShowLeftFade] = useState(false);
+    const [showRightFade, setShowRightFade] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = () => {
+        if (!scrollContainerRef.current) return;
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        setShowLeftFade(scrollLeft > 10);
+        setShowRightFade(scrollLeft < scrollWidth - clientWidth - 10);
+    };
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -60,6 +70,20 @@ export const TopicCategoryChips = memo(function TopicCategoryChips() {
         fetchCategories();
     }, []);
 
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        
+        handleScroll();
+        container.addEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleScroll);
+        
+        return () => {
+            container.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [categories]);
+
     const handleCategoryClick = (categoryId: string | null) => {
         const params = new URLSearchParams(searchParams.toString());
         if (categoryId) {
@@ -84,11 +108,19 @@ export const TopicCategoryChips = memo(function TopicCategoryChips() {
     if (categories.length === 0) return null;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex gap-2 overflow-x-auto scrollbar-hide py-2 -mx-2 px-2"
-        >
+        <div className="relative">
+            {showLeftFade && (
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            )}
+            {showRightFade && (
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+            )}
+            <motion.div
+                ref={scrollContainerRef}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-2 overflow-x-auto scrollbar-hide py-2 -mx-2 px-2"
+            >
             {/* "All" chip */}
             <button
                 onClick={() => handleCategoryClick(null)}
@@ -123,6 +155,7 @@ export const TopicCategoryChips = memo(function TopicCategoryChips() {
                     </button>
                 );
             })}
-        </motion.div>
+            </motion.div>
+        </div>
     );
 });

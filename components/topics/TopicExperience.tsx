@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import Link from 'next/link';
+import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
+import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
 import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
+import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
+import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Topic, Source } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
@@ -12,6 +16,9 @@ import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
+import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
+import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
+import { GlobalNav } from '@/components/layout/GlobalNav';
 
 // Types
 type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'charts' | 'sources';
@@ -27,6 +34,82 @@ interface TopicExperienceProps {
     relatedTopics: any[];
     sources: Source[];
     citations: any[];
+}
+
+// Helper: Auto-link topic names in text
+function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: string; canonical_title: string; slug: string; name_hebrew?: string; alternate_names?: string[] }>): ReactNode {
+    if (!text || availableTopics.length === 0) return text;
+    
+    // Build a map of topic names to slugs (case-insensitive matching)
+    // Include canonical_title, name, Hebrew name, and alternate names
+    const topicMap = new Map<string, string>();
+    availableTopics.forEach(t => {
+        if (!t.slug) return;
+        
+        // Add canonical title
+        if (t.canonical_title) {
+            topicMap.set(t.canonical_title.toLowerCase(), t.slug);
+        }
+        // Add name if different
+        if (t.name && t.name !== t.canonical_title) {
+            topicMap.set(t.name.toLowerCase(), t.slug);
+        }
+        // Add Hebrew name
+        if ((t as any).name_hebrew) {
+            topicMap.set((t as any).name_hebrew, t.slug); // Hebrew is case-sensitive
+        }
+        // Add alternate names
+        if ((t as any).alternate_names && Array.isArray((t as any).alternate_names)) {
+            (t as any).alternate_names.forEach((altName: string) => {
+                if (altName) topicMap.set(altName.toLowerCase(), t.slug);
+            });
+        }
+    });
+    
+    if (topicMap.size === 0) return text;
+    
+    // Create regex pattern matching any topic name (longest first to avoid partial matches)
+    const sortedNames = Array.from(topicMap.keys()).sort((a, b) => b.length - a.length);
+    const pattern = new RegExp(`\\b(${sortedNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    
+    // Split text by matches and rebuild with links
+    const parts: ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let keyIdx = 0;
+    
+    while ((match = pattern.exec(text)) !== null) {
+        // Add text before match
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+        
+        // Add linked topic
+        const matchedText = match[1];
+        const slug = topicMap.get(matchedText.toLowerCase());
+        if (slug) {
+            parts.push(
+                <Link 
+                    key={`topic-link-${keyIdx++}`}
+                    href={`/topics/${slug}`}
+                    className="text-primary hover:text-primary/80 underline decoration-primary/30 hover:decoration-primary/60 underline-offset-2 transition-colors"
+                >
+                    {matchedText}
+                </Link>
+            );
+        } else {
+            parts.push(matchedText);
+        }
+        
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+    
+    return parts.length > 0 ? <>{parts}</> : text;
 }
 
 // Config
@@ -85,10 +168,43 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
     const [isLoading, setIsLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(false);
+    const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
+
+    // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
+    useEffect(() => {
+        async function fetchAllTopicNames() {
+            try {
+                const res = await fetch('/api/topics?fields=name,canonical_title,slug,name_hebrew,alternate_names&limit=500');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllTopicsForLinking(data.topics || []);
+                }
+            } catch (e) {
+                // Fallback to related topics if fetch fails
+                setAllTopicsForLinking(relatedTopics);
+            }
+        }
+        fetchAllTopicNames();
+    }, [relatedTopics]);
     const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
+    const [showStickyTitle, setShowStickyTitle] = useState(false);
+    const heroRef = useRef<HTMLDivElement>(null);
+
+    // Show sticky title when scrolled past hero
+    useEffect(() => {
+        const handleScroll = () => {
+            if (heroRef.current) {
+                const heroBottom = heroRef.current.getBoundingClientRect().bottom;
+                setShowStickyTitle(heroBottom < 56); // 56px = navbar height
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleTutorialClose = () => {
         setIsTutorialOpen(false);
@@ -242,29 +358,77 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
         }
     };
 
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    const getRelationshipIcon = (type: string) => {
+        switch (type) {
+            case 'parent': return <ArrowUp className="w-4 h-4" />;
+            case 'child': return <ArrowDown className="w-4 h-4" />;
+            case 'opposite': return <RefreshCcw className="w-4 h-4" />;
+            default: return <GitBranch className="w-4 h-4" />;
+        }
+    };
+
+    const getRelationshipColor = (type: string) => {
+        switch (type) {
+            case 'parent': return 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20';
+            case 'child': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+            case 'opposite': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+            default: return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20';
+        }
+    };
+
     const handleGraphClick = (node: string, type: string) => {
         const relatedTopic = relatedTopics.find(t => t.canonical_title === node);
+        const cleanDescription = relatedTopic?.description ? stripHtml(relatedTopic.description) : null;
 
         setSheetContent({
             title: node,
             content: (
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <span className="uppercase tracking-widest text-[10px] font-bold bg-muted px-2 py-0.5 rounded-sm">{type}</span>
-                        <span>Concept</span>
+                <div className="space-y-5">
+                    {/* Type Badge with Icon */}
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium ${getRelationshipColor(type)}`}>
+                        {getRelationshipIcon(type)}
+                        <span className="capitalize">{type} Concept</span>
                     </div>
-                    <p className="text-lg leading-relaxed">
-                        {relatedTopic?.description || `A related concept to ${topic.canonical_title}.`}
+
+                    {/* Description */}
+                    <p className="text-lg leading-relaxed text-foreground">
+                        {cleanDescription || `A related concept to ${topic.canonical_title}.`}
                     </p>
-                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
-                        <h4 className="font-semibold mb-2 text-sm uppercase text-primary">Relationship</h4>
-                        <p className="text-sm">
-                            {relatedTopic?.relationship?.description || `Explore how ${node} connects to the current topic.`}
+
+                    {/* Relationship Card */}
+                    <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                        <div className="flex items-center gap-2 mb-2">
+                            <GitBranch className="w-4 h-4 text-primary" />
+                            <h4 className="font-semibold text-sm text-primary">How They Connect</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            {relatedTopic?.relationship?.description 
+                                ? stripHtml(relatedTopic.relationship.description)
+                                : `Explore how ${node} relates to ${topic.canonical_title}.`}
                         </p>
                     </div>
+
+                    {/* Hebrew Name if available */}
+                    {relatedTopic?.name_hebrew && (
+                        <div className="text-center py-2">
+                            <span className="text-2xl font-hebrew text-muted-foreground">{relatedTopic.name_hebrew}</span>
+                        </div>
+                    )}
+
+                    {/* Action Button */}
                     {relatedTopic && (
-                        <a href={`/topics/${relatedTopic.slug}`} className="block w-full text-center py-3 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-colors">
-                            Go to Topic
+                        <a 
+                            href={`/topics/${relatedTopic.slug}`}
+                            onClick={() => setIsNavigating(true)}
+                            className="flex items-center justify-center gap-2 w-full py-3.5 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                        >
+                            {isNavigating ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</>
+                            ) : (
+                                <><span>Explore {node}</span> <ChevronRight className="w-4 h-4" /></>
+                            )}
                         </a>
                     )}
                 </div>
@@ -333,27 +497,76 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
 
     return (
         <div className="min-h-screen bg-background relative">
+            <GlobalNav showBack backHref="/topics" backLabel="Topics" />
+            <ScrollProgressIndicator />
             <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
             <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
-            {/* New Immersive Hero */}
-            <ImmersiveHero
-                title={topic.canonical_title}
-                titleHebrew={topic.name_hebrew || ''}
-                category={topic.topic_type || 'Concept'}
-                definitionShort={topic.description}
-            />
+            {/* Immersive Hero */}
+            <div ref={heroRef}>
+                <ImmersiveHero
+                    title={topic.canonical_title}
+                    titleHebrew={topic.name_hebrew || ''}
+                    category={topic.topic_type || 'Concept'}
+                    definitionShort={topic.description}
+                    topicSlug={topic.slug}
+                />
+            </div>
 
-            {/* Sticky Tab Navigation */}
-            <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm">
-                <div className="max-w-4xl mx-auto">
+            {/* Sticky Title + Tab Navigation Container */}
+            <div className="sticky top-[56px] z-40 bg-background border-b border-border shadow-sm">
+                {/* Topic Title - shows when scrolled past hero */}
+                <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3">
+                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            {topic.topic_type || 'Concept'}
+                        </span>
+                        <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                    </div>
+                </div>
+                
+                {/* Tab Navigation with scroll indicators and keyboard support */}
+                <div className="max-w-4xl mx-auto relative">
+                    {/* Left scroll indicator */}
+                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                    {/* Right scroll indicator */}
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                    
                     <div
                         ref={tabsRef}
                         className="flex overflow-x-auto overflow-y-hidden scrollbar-hide -mx-1 px-4 sm:px-6 snap-x snap-mandatory touch-pan-x"
                         role="tablist"
                         aria-label="Topic Sections"
                         style={{ WebkitOverflowScrolling: 'touch' }}
+                        onKeyDown={(e) => {
+                            const sectionTypes = sections.map(s => s.type);
+                            const currentIndex = sectionTypes.indexOf(activeSection);
+                            
+                            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                const nextIndex = (currentIndex + 1) % sectionTypes.length;
+                                scrollToSection(sectionTypes[nextIndex]);
+                                // Focus the next tab
+                                const nextTab = document.getElementById(`tab-${sectionTypes[nextIndex]}`);
+                                nextTab?.focus();
+                            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                const prevIndex = (currentIndex - 1 + sectionTypes.length) % sectionTypes.length;
+                                scrollToSection(sectionTypes[prevIndex]);
+                                // Focus the previous tab
+                                const prevTab = document.getElementById(`tab-${sectionTypes[prevIndex]}`);
+                                prevTab?.focus();
+                            } else if (e.key === 'Home') {
+                                e.preventDefault();
+                                scrollToSection(sectionTypes[0]);
+                                document.getElementById(`tab-${sectionTypes[0]}`)?.focus();
+                            } else if (e.key === 'End') {
+                                e.preventDefault();
+                                scrollToSection(sectionTypes[sectionTypes.length - 1]);
+                                document.getElementById(`tab-${sectionTypes[sectionTypes.length - 1]}`)?.focus();
+                            }
+                        }}
                     >
-                        {sections.map((section) => {
+                        {sections.map((section, index) => {
                             const config = sectionConfig[section.type];
                             const Icon = config.icon;
                             const isActive = activeSection === section.type;
@@ -365,8 +578,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                     role="tab"
                                     aria-selected={isActive}
                                     aria-controls={`panel-${section.type}`}
+                                    tabIndex={isActive ? 0 : -1}
                                     onClick={() => scrollToSection(section.type)}
-                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 ${isActive
+                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${isActive
                                         ? `border-primary ${config.color}`
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                         }`}
@@ -424,7 +638,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                                                     >
                                                         <span className="text-muted-foreground text-sm font-mono opacity-50 mt-0.5">{idx + 1}.</span>
                                                         <div className="flex-1">
-                                                            <span className="font-medium text-foreground leading-relaxed">{sourceText}</span>
+                                                            <span className="font-medium text-foreground leading-relaxed">
+                                                                {linkifyTopicReferences(sourceText, allTopicsForLinking)}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -525,11 +741,20 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                             id={`panel-${section.type}`}
                             role="tabpanel"
                             aria-labelledby={`tab-${section.type}`}
-                            className={`scroll-mt-36 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
+                            className={`scroll-mt-40 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
                             onClick={handleContentClick}
                             onDoubleClick={() => toggleFocusMode(section.type)}
                             onKeyDown={handleContentKeyDown}
                         >
+                            {/* Section Header */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`p-2 rounded-xl ${config.bgColor} border ${config.borderColor}`}>
+                                    <Icon className={`w-5 h-5 ${config.color}`} />
+                                </div>
+                                <h2 className="text-lg font-semibold text-foreground">{config.title}</h2>
+                            </div>
+                            
+                            {/* Section Content */}
                             <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
                                <ArticleSectionContent section={section} topic={topic} />
                             </div>
@@ -537,20 +762,31 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     );
                 })}
 
-            {/* Smart Pathways & Constellation */}
+                {/* Smart Pathways & Constellation */}
             <div className="pt-8 border-t border-border space-y-8">
                 {/* Visual Graph */}
                 <div>
-                    <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-500" />
-                        Concept Constellation
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-foreground flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            Concept Constellation
+                        </h3>
+                        <button
+                            onClick={() => setIsDeepDiveOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Deep Dive Mode
+                        </button>
+                    </div>
                     <div className="flex justify-center">
-                        <ConceptConstellation
-                            centerConcept={graphData.centerConcept}
-                            relatedConcepts={graphData.relatedConcepts}
-                            onNodeClick={handleGraphClick}
-                        />
+                        <ConstellationErrorBoundary>
+                            <ConceptConstellation
+                                centerConcept={graphData.centerConcept}
+                                relatedConcepts={graphData.relatedConcepts}
+                                onNodeClick={handleGraphClick}
+                            />
+                        </ConstellationErrorBoundary>
                     </div>
                 </div>
             </div>
@@ -573,6 +809,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     onClick={() => { setFocusMode(false); setFocusedSection(null); }}
                 />
             )}
+
+            {/* Deep Dive Mode */}
+            <DeepDiveMode
+                currentTopic={{ slug: topic.slug, canonical_title: topic.canonical_title }}
+                relatedTopics={relatedTopics}
+                isOpen={isDeepDiveOpen}
+                onClose={() => setIsDeepDiveOpen(false)}
+            />
         </div>
     );
 }

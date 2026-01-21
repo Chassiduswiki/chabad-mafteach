@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 interface ConceptNode {
     id: string;
     label: string;
-    type: 'main' | 'parent' | 'child' | 'opposite' | 'related';
-    x: number;
-    y: number;
+    type: 'main' | 'parent' | 'child' | 'opposite';
     color: string;
 }
 
@@ -23,159 +21,194 @@ interface ConceptConstellationProps {
 }
 
 /**
- * ConceptConstellation - Interactive Node Graph
- * Redesigned for a sleek, premium, and dynamic feel.
+ * ConceptConstellation - Clean, minimal node graph
+ * Apple-quality: readable text, subtle design, no visual noise
  */
 export function ConceptConstellation({ centerConcept, relatedConcepts, onNodeClick }: ConceptConstellationProps) {
-    const width = 380;
-    const height = 320;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
+    // Build nodes array
     const nodes: ConceptNode[] = useMemo(() => {
         const list: ConceptNode[] = [
-            { id: 'main', label: centerConcept, type: 'main', x: centerX, y: centerY, color: '#0ea5e9' }, // Sky Blue
+            { id: 'main', label: centerConcept, type: 'main', color: '#0ea5e9' },
         ];
-
         if (relatedConcepts.parent) {
-            list.push({ id: 'parent', label: relatedConcepts.parent, type: 'parent', x: centerX, y: 60, color: '#8b5cf6' }); // Violet
+            list.push({ id: 'parent', label: relatedConcepts.parent, type: 'parent', color: '#8b5cf6' });
         }
-
         if (relatedConcepts.opposite) {
-            list.push({ id: 'opposite', label: relatedConcepts.opposite, type: 'opposite', x: width - 60, y: centerY + 20, color: '#ef4444' }); // Red
+            list.push({ id: 'opposite', label: relatedConcepts.opposite, type: 'opposite', color: '#ef4444' });
         }
-
         if (relatedConcepts.components) {
-            const count = relatedConcepts.components.length;
-            const startX = centerX - ((count - 1) * 60); // Center the children appropriately
-
             relatedConcepts.components.slice(0, 3).forEach((comp, i) => {
-                list.push({
-                    id: `comp-${i}`,
-                    label: comp,
-                    type: 'child',
-                    x: Math.max(60, Math.min(width - 60, startX + (i * 120))),
-                    y: height - 60,
-                    color: '#10b981' // Emerald
-                });
+                list.push({ id: `child-${i}`, label: comp, type: 'child', color: '#10b981' });
             });
         }
         return list;
-    }, [centerConcept, relatedConcepts, centerX, centerY, width, height]);
+    }, [centerConcept, relatedConcepts]);
+
+    const handleClick = useCallback((node: ConceptNode) => {
+        onNodeClick?.(node.label, node.type);
+    }, [onNodeClick]);
+
+    // Calculate positions based on node count
+    const getNodePosition = (node: ConceptNode, index: number, total: number) => {
+        if (node.type === 'main') return { x: 50, y: 50 }; // Center
+        
+        // Distribute other nodes around center
+        const otherNodes = nodes.filter(n => n.type !== 'main');
+        const otherIndex = otherNodes.findIndex(n => n.id === node.id);
+        const count = otherNodes.length;
+        
+        if (count === 1) return { x: 50, y: 15 }; // Single node above
+        if (count === 2) {
+            return otherIndex === 0 ? { x: 25, y: 20 } : { x: 75, y: 20 };
+        }
+        // 3+ nodes: spread in arc above
+        const angle = -Math.PI / 2 + (otherIndex - (count - 1) / 2) * (Math.PI / (count + 1));
+        const radius = 35;
+        return {
+            x: 50 + Math.cos(angle) * radius,
+            y: 50 + Math.sin(angle) * radius * 0.8
+        };
+    };
+
+    const mainNode = nodes.find(n => n.type === 'main')!;
+    const otherNodes = nodes.filter(n => n.type !== 'main');
 
     return (
-        <div className="w-full h-[360px] relative flex flex-col items-center justify-center rounded-3xl overflow-hidden bg-gradient-to-br from-background via-muted/5 to-muted/20 border border-white/5 shadow-2xl group/graph">
-            {/* Ambient Background - Softer, deeply blurred */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_50%)] opacity-[0.03] blur-3xl" />
-            </div>
-
-            <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} className="max-w-[420px] relative z-10 overflow-visible">
-                <defs>
-                    <linearGradient id="subtle-line" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
-                        <stop offset="50%" stopColor="currentColor" stopOpacity="0.2" />
-                        <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                    </linearGradient>
-                </defs>
-
-                {/* Connections - Minimalist, only hint at connection */}
-                {nodes.filter(n => n.type !== 'main').map((node, i) => (
-                    <motion.line
-                        key={`line-${i}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 1.5, delay: 0.2 }}
-                        x1={centerX}
-                        y1={centerY}
-                        x2={node.x}
-                        y2={node.y}
-                        stroke="url(#subtle-line)"
-                        strokeWidth="1"
-                        className="text-primary/50"
-                    />
-                ))}
-
-                {/* Nodes */}
-                {nodes.map((node, i) => (
-                    <g
-                        key={node.id}
-                        onClick={() => onNodeClick?.(node.label, node.type)}
-                        className="cursor-pointer group/node"
-                        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
-                    >
-                        {/* Hover Interaction Area */}
-                        <circle cx={node.x} cy={node.y} r={40} fill="transparent" />
-
-                        {/* Node Visual - Clean, Solid, No Stroke rings */}
-                        <motion.circle
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            whileHover={{ scale: 1.1 }}
-                            transition={{
-                                delay: i * 0.1,
-                                type: "spring",
-                                stiffness: 200,
-                                damping: 15
-                            }}
-                            cx={node.x}
-                            cy={node.y}
-                            r={node.type === 'main' ? 32 : 20}
-                            className={`${node.type === 'main' ? 'fill-background shadow-lg' : 'fill-background/80 shadow-sm'} backdrop-blur-md transition-all duration-300`}
-                            // Add a subtle border glow instead of a stroke
-                            style={{
-                                filter: node.type === 'main' ? `drop-shadow(0 4px 12px ${node.color}40)` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.05))'
-                            }}
-                        />
-
-                        {/* Inner Color Dot - Minimal indicator */}
-                        {node.type === 'main' && (
-                            <motion.circle
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                cx={node.x}
-                                cy={node.y}
-                                r={32}
-                                stroke={node.color}
-                                strokeWidth={1.5}
-                                fill="transparent"
-                                className="opacity-20"
+        <div 
+            className="w-full max-w-md mx-auto"
+            role="img"
+            aria-label={`Concept map: ${centerConcept} and related concepts`}
+        >
+            <div className="relative bg-muted/30 rounded-2xl border border-border/50 p-6 min-h-[220px]">
+                <svg 
+                    viewBox="0 0 100 100" 
+                    className="w-full h-auto"
+                    style={{ minHeight: 180, maxHeight: 240 }}
+                >
+                    {/* Connection lines - simple and subtle */}
+                    {otherNodes.map((node, i) => {
+                        const pos = getNodePosition(node, i, nodes.length);
+                        const mainPos = getNodePosition(mainNode, 0, nodes.length);
+                        const isHovered = hoveredNode === node.id || hoveredNode === 'main';
+                        
+                        return (
+                            <motion.line
+                                key={`line-${node.id}`}
+                                x1={`${mainPos.x}%`}
+                                y1={`${mainPos.y}%`}
+                                x2={`${pos.x}%`}
+                                y2={`${pos.y}%`}
+                                stroke="currentColor"
+                                strokeWidth={1}
+                                className={`transition-opacity duration-200 ${isHovered ? 'opacity-30' : 'opacity-10'}`}
+                                initial={{ pathLength: 0 }}
+                                animate={{ pathLength: 1 }}
+                                transition={{ duration: 0.5, delay: 0.1 * i }}
                             />
-                        )}
+                        );
+                    })}
 
-                        {/* Label - Clean Typography */}
-                        <foreignObject
-                            x={node.x - 60}
-                            y={node.y - (node.type === 'main' ? 12 : 10)} // Centered vertically 
-                            width="120"
-                            height="60"
-                            className="overflow-visible pointer-events-none"
-                        >
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.4 + (i * 0.1) }}
-                                className="flex flex-col items-center justify-center p-1"
-                            >
-                                <span
-                                    className={`
-                                        text-xs font-medium text-center leading-tight transition-colors duration-300
-                                        ${node.type === 'main' ? 'text-foreground font-semibold text-sm' : 'text-muted-foreground group-hover/node:text-foreground'}
-                                    `}
+                    {/* All nodes */}
+                    {nodes.map((node, i) => {
+                        const pos = getNodePosition(node, i, nodes.length);
+                        const isMain = node.type === 'main';
+                        const isHovered = hoveredNode === node.id;
+                        const radius = isMain ? 8 : 5;
+
+                        return (
+                            <g key={node.id}>
+                                {/* Clickable circle */}
+                                <motion.circle
+                                    cx={`${pos.x}%`}
+                                    cy={`${pos.y}%`}
+                                    r={radius}
+                                    fill={node.color}
+                                    className="cursor-pointer"
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ 
+                                        scale: isHovered ? 1.15 : 1, 
+                                        opacity: isMain ? 1 : 0.85 
+                                    }}
+                                    transition={{ 
+                                        delay: i * 0.08,
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 25
+                                    }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleClick(node)}
+                                    onMouseEnter={() => setHoveredNode(node.id)}
+                                    onMouseLeave={() => setHoveredNode(null)}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-label={`${node.label}${node.type !== 'main' ? ` (${node.type})` : ''}`}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleClick(node); }}
+                                    style={{
+                                        filter: isHovered ? `drop-shadow(0 0 8px ${node.color}80)` : 'none'
+                                    }}
+                                />
+                            </g>
+                        );
+                    })}
+                </svg>
+
+                {/* Labels rendered as HTML for crisp text */}
+                <div className="absolute inset-0 pointer-events-none p-6">
+                    <div className="relative w-full h-full" style={{ minHeight: 180 }}>
+                        {nodes.map((node, i) => {
+                            const pos = getNodePosition(node, i, nodes.length);
+                            const isMain = node.type === 'main';
+                            const isHovered = hoveredNode === node.id;
+
+                            return (
+                                <motion.div
+                                    key={`label-${node.id}`}
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 + i * 0.08 }}
+                                    className="absolute text-center pointer-events-auto"
+                                    style={{
+                                        left: `${pos.x}%`,
+                                        top: `${pos.y}%`,
+                                        transform: `translate(-50%, ${isMain ? '14px' : '10px'})`,
+                                    }}
                                 >
-                                    {node.label}
-                                </span>
-                            </motion.div>
-                        </foreignObject>
-                    </g>
-                ))}
-            </svg>
-
-            {/* Minimal Caption */}
-            <div className="absolute bottom-4 text-[10px] items-center gap-1.5 text-muted-foreground/40 hidden sm:flex">
-                <span className="w-1 h-1 rounded-full bg-primary/40" />
-                <span>Relationship Map</span>
+                                    <button
+                                        onClick={() => handleClick(node)}
+                                        onMouseEnter={() => setHoveredNode(node.id)}
+                                        onMouseLeave={() => setHoveredNode(null)}
+                                        className={`
+                                            block px-2 py-0.5 rounded-md transition-all duration-150
+                                            ${isMain 
+                                                ? 'text-sm font-semibold text-foreground' 
+                                                : 'text-xs text-muted-foreground hover:text-foreground'
+                                            }
+                                            ${isHovered ? 'bg-muted' : ''}
+                                        `}
+                                    >
+                                        {node.label}
+                                    </button>
+                                    {!isMain && (
+                                        <span 
+                                            className="block text-[10px] text-muted-foreground/50 capitalize mt-0.5"
+                                            style={{ color: node.color }}
+                                        >
+                                            {node.type}
+                                        </span>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
+
+            {/* Minimal hint */}
+            <p className="text-center text-xs text-muted-foreground/50 mt-3">
+                Click any concept to explore
+            </p>
         </div>
     );
 }

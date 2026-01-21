@@ -41,12 +41,23 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
     const gridCols = isCompact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3';
     const itemLimit = isCompact ? 2 : 3;
 
-    useEffect(() => {
+    const [error, setError] = useState(false);
+
+    const loadData = () => {
+        setLoading(true);
+        setError(false);
         fetch('/api/topics?mode=discovery')
             .then(res => res.json())
             .then(setData)
-            .catch(console.error)
+            .catch(err => {
+                console.error('Failed to load discovery content:', err);
+                setError(true);
+            })
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        loadData();
     }, []);
 
     if (loading) {
@@ -55,6 +66,20 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
                 {(isCompact ? [1, 2] : [1, 2, 3]).map(i => (
                     <TopicCardSkeleton key={i} />
                 ))}
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-sm text-muted-foreground mb-4">Unable to load content</p>
+                <button 
+                    onClick={loadData}
+                    className="text-sm text-primary hover:underline"
+                >
+                    Try again
+                </button>
             </div>
         );
     }
@@ -72,7 +97,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
             {data.featuredTopic && (
                 <Link
                     href={`/topics/${data.featuredTopic.slug}`}
-                    className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-primary/10 p-6 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+                    className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/60 p-6 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/80 hover:shadow-lg hover:shadow-primary/10"
                 >
                     <div className="mb-4 flex items-center gap-2 text-xs font-medium text-primary">
                         <Sparkles className="h-4 w-4" />
@@ -82,16 +107,16 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
                         {data.featuredTopic.name}
                     </h3>
                     {data.featuredTopic.name_hebrew && (
-                        <p className="mb-3 font-hebrew text-lg text-muted-foreground">
+                        <p className="mb-3 text-lg font-semibold text-muted-foreground">
                             {data.featuredTopic.name_hebrew}
                         </p>
                     )}
                     {data.featuredTopic.definition_short && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                            {data.featuredTopic.definition_short}
+                            {data.featuredTopic.definition_short.replace(/<[^>]*>/g, '')}
                         </p>
                     )}
-                    <ArrowRight className="absolute bottom-6 right-6 h-5 w-5 text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
+                    <ArrowRight className="absolute bottom-6 right-6 h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1" />
                 </Link>
             )}
 
@@ -123,7 +148,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
             )} */}
 
             {/* Recently Updated */}
-            <div className="rounded-2xl border border-border bg-background/40 p-6">
+            <div className="rounded-2xl border border-border/50 bg-background/60 p-6 backdrop-blur-sm shadow-sm">
                 <div className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     Recently Updated

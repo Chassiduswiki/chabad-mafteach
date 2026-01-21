@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowLeft, Share2, Headphones, Bookmark, ChevronDown } from 'lucide-react';
+import { Share2, Headphones, Bookmark, BookmarkCheck, ChevronDown, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface ArticleHeroProps {
@@ -10,6 +10,7 @@ interface ArticleHeroProps {
     titleHebrew: string;
     category?: string;
     definitionShort?: string;
+    topicSlug?: string;
     onScrollProgress?: (progress: number) => void;
 }
 
@@ -17,22 +18,81 @@ export function ImmersiveHero({
     title,
     titleHebrew,
     category = "General Concept",
-    definitionShort
+    definitionShort,
+    topicSlug
 }: ArticleHeroProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isTruncated, setIsTruncated] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareSuccess, setShareSuccess] = useState(false);
+    const [isListening, setIsListening] = useState(false);
     const definitionRef = useRef<HTMLParagraphElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll();
+
+    // Check if topic is saved on mount
+    useEffect(() => {
+        if (topicSlug) {
+            const savedTopics = JSON.parse(localStorage.getItem('savedTopics') || '[]');
+            setIsSaved(savedTopics.includes(topicSlug));
+        }
+    }, [topicSlug]);
+
+    const handleSave = () => {
+        if (!topicSlug) return;
+        const savedTopics = JSON.parse(localStorage.getItem('savedTopics') || '[]');
+        if (isSaved) {
+            const filtered = savedTopics.filter((s: string) => s !== topicSlug);
+            localStorage.setItem('savedTopics', JSON.stringify(filtered));
+            setIsSaved(false);
+        } else {
+            savedTopics.push(topicSlug);
+            localStorage.setItem('savedTopics', JSON.stringify(savedTopics));
+            setIsSaved(true);
+        }
+    };
+
+    const handleShare = async () => {
+        setIsSharing(true);
+        const url = window.location.href;
+        const shareData = { title: `${title} - Chabad Maftaiach`, text: definitionShort || `Learn about ${title}`, url };
+        
+        try {
+            if (navigator.share && navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(url);
+                setShareSuccess(true);
+                setTimeout(() => setShareSuccess(false), 2000);
+            }
+        } catch (err) {
+            // User cancelled or error
+            console.log('Share cancelled');
+        }
+        setIsSharing(false);
+    };
+
+    const handleListen = () => {
+        if ('speechSynthesis' in window) {
+            if (isListening) {
+                window.speechSynthesis.cancel();
+                setIsListening(false);
+            } else {
+                const text = definitionShort?.replace(/<[^>]*>/g, '') || `${title}. ${category} concept.`;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.onend = () => setIsListening(false);
+                utterance.onerror = () => setIsListening(false);
+                window.speechSynthesis.speak(utterance);
+                setIsListening(true);
+            }
+        }
+    };
 
     // Parallax & Opacity transforms
     const yHero = useTransform(scrollY, [0, 300], [0, 100]);
     const opacityHero = useTransform(scrollY, [0, 250], [1, 0]);
     const scaleHero = useTransform(scrollY, [0, 300], [1, 0.95]);
-
-    // Nav Bar State (appears after scroll)
-    const navOpacity = useTransform(scrollY, [200, 300], [0, 1]);
-    const navY = useTransform(scrollY, [200, 300], [-20, 0]);
 
     useEffect(() => {
         if (definitionRef.current) {
@@ -43,29 +103,8 @@ export function ImmersiveHero({
 
     return (
         <>
-            {/* Sticky Minimal Nav (Hidden initially) */}
-            <motion.div
-                style={{ opacity: navOpacity, y: navY }}
-                className="fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-md border-b border-border/50 z-40 flex items-center justify-between px-4 sm:px-6 pointer-events-none data-[visible=true]:pointer-events-auto"
-            >
-                <div className="flex items-center gap-3">
-                    <Link href="/topics" className="p-2 -ml-2 hover:bg-muted/50 rounded-full transition-colors pointer-events-auto">
-                        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-                    </Link>
-                    <span className="font-semibold text-lg">{title}</span>
-                </div>
-                <div className="flex gap-2 pointer-events-auto">
-                    <button className="p-2 hover:bg-muted/50 rounded-full transition-colors">
-                        <Headphones className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button className="p-2 hover:bg-muted/50 rounded-full transition-colors">
-                        <Share2 className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                </div>
-            </motion.div>
-
             {/* Immersive Hero Area */}
-            <div ref={containerRef} className="relative min-h-[60vh] sm:min-h-[50vh] flex flex-col justify-center overflow-hidden bg-gradient-to-b from-background via-background/50 to-background">
+            <div ref={containerRef} className="relative min-h-[50vh] sm:min-h-[40vh] flex flex-col justify-center bg-gradient-to-b from-background via-background/50 to-background">
                 {/* Dynamic Background */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     {/* Hebrew Watermark */}
@@ -129,16 +168,28 @@ export function ImmersiveHero({
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-3 pt-2">
-                                <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-                                    <Headphones className="w-4 h-4" />
-                                    <span>Listen</span>
+                                <button 
+                                    onClick={handleListen}
+                                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all shadow-lg ${isListening ? 'bg-primary/80 text-primary-foreground shadow-primary/30' : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20'}`}
+                                    aria-label={isListening ? 'Stop listening' : 'Listen to topic'}
+                                >
+                                    {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
+                                    <span>{isListening ? 'Playing...' : 'Listen'}</span>
                                 </button>
-                                <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-muted/50 hover:bg-muted border border-border text-foreground font-medium transition-colors">
-                                    <Bookmark className="w-4 h-4" />
-                                    <span>Save</span>
+                                <button 
+                                    onClick={handleSave}
+                                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border font-medium transition-all ${isSaved ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-muted/50 hover:bg-muted border-border text-foreground'}`}
+                                    aria-label={isSaved ? 'Remove from saved' : 'Save topic'}
+                                >
+                                    {isSaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                                    <span>{isSaved ? 'Saved' : 'Save'}</span>
                                 </button>
-                                <button className="p-2.5 rounded-full bg-muted/30 hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors">
-                                    <Share2 className="w-5 h-5" />
+                                <button 
+                                    onClick={handleShare}
+                                    className="p-2.5 rounded-full bg-muted/30 hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors relative"
+                                    aria-label="Share topic"
+                                >
+                                    {isSharing ? <Loader2 className="w-5 h-5 animate-spin" /> : shareSuccess ? <Check className="w-5 h-5 text-emerald-500" /> : <Share2 className="w-5 h-5" />}
                                 </button>
                             </div>
                         </div>
