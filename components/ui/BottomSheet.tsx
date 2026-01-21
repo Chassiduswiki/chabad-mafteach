@@ -55,7 +55,7 @@ export function BottomSheet({ isOpen, onClose, children, title, height = 'h-auto
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
                     />
 
                     {/* Sheet */}
@@ -71,7 +71,7 @@ export function BottomSheet({ isOpen, onClose, children, title, height = 'h-auto
                         onDrag={handleDrag}
                         onDragEnd={handleDragEnd}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className={`fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl border-t border-border overflow-hidden flex flex-col max-h-[90vh] ${height} shadow-2xl touch-none`}
+                        className={`fixed bottom-0 left-0 right-0 z-[60] bg-background rounded-t-3xl border-t border-border overflow-hidden flex flex-col max-h-[90vh] ${height} shadow-2xl touch-none`}
                         style={{ y: dragY > 0 ? dragY : 0 }}
                     >
                         {/* Drag Handle & Header */}

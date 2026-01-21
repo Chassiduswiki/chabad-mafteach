@@ -205,7 +205,8 @@ export function ConceptConstellation({ centerConcept, relatedConcepts, onNodeCli
                     const isMain = node.type === 'main';
                     const isHovered = hoveredNode === node.id;
                     const isClicked = clickedNode === node.label;
-                    const nodeRadius = isMain ? (isMobile ? 28 : 36) : (isMobile ? 16 : 22);
+                    // Smaller, more subtle node sizes
+                    const nodeRadius = isMain ? (isMobile ? 18 : 22) : (isMobile ? 10 : 12);
 
                     return (
                         <motion.g
@@ -253,17 +254,17 @@ export function ConceptConstellation({ centerConcept, relatedConcepts, onNodeCli
                                 />
                             )}
 
-                            {/* Hover glow ring */}
+                            {/* Hover glow ring - smaller */}
                             <motion.circle
                                 cx={node.x}
                                 cy={node.y}
-                                r={nodeRadius + 8}
+                                r={nodeRadius + 4}
                                 fill="transparent"
                                 stroke={node.color}
-                                strokeWidth={isHovered ? 2 : 0}
-                                opacity={isHovered ? 0.3 : 0}
+                                strokeWidth={isHovered ? 1.5 : 0}
+                                opacity={isHovered ? 0.25 : 0}
                                 initial={false}
-                                animate={{ opacity: isHovered ? 0.3 : 0 }}
+                                animate={{ opacity: isHovered ? 0.25 : 0 }}
                                 transition={{ duration: 0.2 }}
                             />
 
@@ -295,50 +296,31 @@ export function ConceptConstellation({ centerConcept, relatedConcepts, onNodeCli
                                 }}
                             />
 
-                            {/* Inner colored dot */}
+                            {/* Inner colored dot - smaller */}
                             <motion.circle
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 transition={{ delay: 0.3 + i * 0.1, type: "spring", stiffness: 400 }}
                                 cx={node.x}
                                 cy={node.y}
-                                r={isMain ? 8 : 5}
+                                r={isMain ? 5 : 3}
                                 fill={node.color}
-                                opacity={0.8}
+                                opacity={0.9}
                             />
 
-                            {/* Label */}
-                            <foreignObject
-                                x={node.x - (isMobile ? 50 : 65)}
-                                y={node.y + nodeRadius + 4}
-                                width={isMobile ? 100 : 130}
-                                height="40"
-                                className="overflow-visible pointer-events-none"
+                            {/* Label - cleaner text rendering */}
+                            <motion.text
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.4 + (i * 0.1) }}
+                                x={node.x}
+                                y={node.y + nodeRadius + (isMain ? 16 : 14)}
+                                textAnchor="middle"
+                                className={`pointer-events-none select-none ${isMain ? 'text-xs font-medium fill-foreground' : 'text-[10px] fill-muted-foreground'}`}
+                                style={{ fontFamily: 'system-ui, sans-serif' }}
                             >
-                                <motion.div
-                                    initial={{ opacity: 0, y: -5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.5 + (i * 0.1) }}
-                                    className="flex flex-col items-center justify-start"
-                                >
-                                    <span
-                                        className={`
-                                            text-center leading-tight transition-all duration-200 px-2 py-0.5 rounded-md
-                                            ${isMain 
-                                                ? 'text-foreground font-semibold text-sm' 
-                                                : `text-muted-foreground text-xs ${isHovered ? 'text-foreground bg-muted/50' : ''}`
-                                            }
-                                        `}
-                                    >
-                                        {node.label}
-                                    </span>
-                                    {!isMain && (
-                                        <span className="text-[10px] text-muted-foreground/60 capitalize mt-0.5">
-                                            {node.type}
-                                        </span>
-                                    )}
-                                </motion.div>
-                            </foreignObject>
+                                {node.label.length > 18 ? node.label.slice(0, 16) + '…' : node.label}
+                            </motion.text>
                         </motion.g>
                     );
                 })}
