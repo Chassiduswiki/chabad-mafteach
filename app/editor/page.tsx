@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Upload, FileText, Users, Settings, Edit3, Search } from 'lucide-react';
-import { IngestionModal } from "@/components/editor/IngestionModal";
+import { BookOpen, Upload, FileText, User, Settings, Edit3, Search, Layers, BarChart3 } from 'lucide-react';
+import Link from "next/link";
 
 export default function EditorPage() {
   const [user, setUser] = useState<any>(null);
@@ -91,13 +91,13 @@ export default function EditorPage() {
               <div className="text-sm text-muted-foreground">
                 Rich editor • Hebrew OCR • Smart citations • AI processing
               </div>
-              <a
+              <Link
                 href="/editor/write"
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
               >
                 <Edit3 className="h-4 w-4" />
                 Start Writing
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -112,64 +112,100 @@ export default function EditorPage() {
             <p className="text-muted-foreground mb-4">
               Explore and improve topic definitions, boundaries, and explanations.
             </p>
-            <a
+            <Link
               href="/editor/topics"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               <Search className="h-4 w-4" />
               Browse Topics
-            </a>
+            </Link>
           </div>
 
           {/* Import Books */}
           <div className="rounded-2xl border bg-card p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
-                <BookOpen className="h-5 w-5" />
+                <Upload className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground">Import Books</h3>
+              <h3 className="text-lg font-semibold text-foreground">Import Content</h3>
             </div>
             <p className="text-muted-foreground mb-4">
               Add seforim from Sefaria, upload PDFs, or import text files to the library.
             </p>
-            <a
+            <Link
               href="/editor/import"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
-              <BookOpen className="h-4 w-4" />
+              <Upload className="h-4 w-4" />
               Import Content
-            </a>
+            </Link>
           </div>
 
         </div>
 
-        {/* Recent Activity */}
+        {/* Library Management */}
         <div className="mt-12">
-          <h2 className="text-xl font-semibold text-foreground mb-6">Recent Activity</h2>
-          <div className="rounded-2xl border bg-card p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
-                  <Upload className="h-4 w-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-6">Library Management</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Link
+              href="/admin/books"
+              className="rounded-xl border bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/20 transition-colors">
+                  <BookOpen className="h-5 w-5" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Import job completed</p>
-                  <p className="text-xs text-muted-foreground">Tanya Likkutei Amarim - 45 paragraphs processed</p>
-                </div>
-                <span className="text-xs text-muted-foreground">2 hours ago</span>
+                <h3 className="font-semibold text-foreground">Books</h3>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Manage seforim and sources in your library
+              </p>
+            </Link>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10 text-green-500">
-                  <FileText className="h-4 w-4" />
+            <Link
+              href="/admin/authors"
+              className="rounded-xl border bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/20 transition-colors">
+                  <User className="h-5 w-5" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Document updated</p>
-                  <p className="text-xs text-muted-foreground">Metadata updated for "Shulchan Aruch"</p>
-                </div>
-                <span className="text-xs text-muted-foreground">1 day ago</span>
+                <h3 className="font-semibold text-foreground">Authors</h3>
               </div>
-            </div>
+              <p className="text-sm text-muted-foreground">
+                Manage authors and biographical info
+              </p>
+            </Link>
+
+            <Link
+              href="/admin/topic-collections"
+              className="rounded-xl border bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20 transition-colors">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-foreground">Collections</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Organize topics into collections
+              </p>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="rounded-xl border bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-500/10 text-slate-500 group-hover:bg-slate-500/20 transition-colors">
+                  <Settings className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-foreground">Admin</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Full admin dashboard & stats
+              </p>
+            </Link>
           </div>
         </div>
       </main>

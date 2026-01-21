@@ -141,6 +141,15 @@ export interface Source {
     document_id?: number | Document; // Direct link to associated document
     author?: string; // Mapped from author_id.canonical_name
     relationships?: any[]; // Array of relationship details (page numbers, verses)
+    // Junction metadata from source_links
+    link_id?: number;
+    relationship_type?: string;
+    page_number?: string;
+    verse_reference?: string;
+    section_reference?: string;
+    notes?: string;
+    is_primary?: boolean;
+    statement_id?: number; // For inline citations
 }
 
 export interface SourceLink {

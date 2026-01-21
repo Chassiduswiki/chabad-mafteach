@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createClient } from "@/lib/directus";
-const directus = createClient();
 import { createItem, readItems } from "@directus/sdk";
 import { Author, Source, Document } from "@/lib/types";
 import Fuse from "fuse.js";
@@ -36,6 +35,8 @@ export function useCreateSource() {
     setError(null);
     setMatchedAuthor(null);
     setMatchedDocument(null);
+
+    const directus = createClient();
 
     try {
       let authorId: number | undefined;
