@@ -22,7 +22,7 @@ import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationH
 import { GlobalNav } from '@/components/layout/GlobalNav';
 
 // Types
-type SectionType = 'definition' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'charts' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -123,6 +123,22 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-primary/5',
         borderColor: 'border-primary/20'
     },
+    overview: {
+        title: 'Overview',
+        shortTitle: 'Overview',
+        icon: BookOpen,
+        color: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-500/5',
+        borderColor: 'border-blue-500/20'
+    },
+    article: {
+        title: 'In-Depth Article',
+        shortTitle: 'Article',
+        icon: BookOpen,
+        color: 'text-indigo-600 dark:text-indigo-400',
+        bgColor: 'bg-indigo-500/5',
+        borderColor: 'border-indigo-500/20'
+    },
     mashal: {
         title: 'Analogy',
         shortTitle: 'Mashal',
@@ -146,6 +162,14 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         color: 'text-emerald-600 dark:text-emerald-400',
         bgColor: 'bg-emerald-500/5',
         borderColor: 'border-emerald-500/20'
+    },
+    historical_context: {
+        title: 'Historical Context',
+        shortTitle: 'History',
+        icon: BookOpen,
+        color: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-orange-500/5',
+        borderColor: 'border-orange-500/20'
     },
     charts: {
         title: 'Charts & Tables',
@@ -218,9 +242,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
 
     const sectionRefs = useRef<Record<SectionType, HTMLElement | null>>({
         definition: null,
+        overview: null,
+        article: null,
         mashal: null,
         personal_nimshal: null,
         global_nimshal: null,
+        historical_context: null,
         charts: null,
         sources: null
     });
@@ -287,31 +314,49 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                 </div>
             `)
         }] : []),
+        // Overview section
+        ...(topic.overview && isSectionVisible('overview', topic.overview) ? [{
+            type: 'overview' as SectionType,
+            order: 2,
+            content: highlightTerms(topic.overview)
+        }] : []),
+        // Article section  
+        ...(topic.article && isSectionVisible('article', topic.article) ? [{
+            type: 'article' as SectionType,
+            order: 3,
+            content: highlightTerms(topic.article)
+        }] : []),
         // Optional sections: check both content existence AND smart visibility
         ...(topic.mashal && isSectionVisible('mashal', topic.mashal) ? [{
             type: 'mashal' as SectionType,
-            order: 2,
+            order: 4,
             content: highlightTerms(topic.mashal)
         }] : []),
         ...(topic.practical_takeaways && isSectionVisible('practical_takeaways', topic.practical_takeaways) ? [{
             type: 'personal_nimshal' as SectionType,
-            order: 3,
+            order: 5,
             content: highlightTerms(topic.practical_takeaways)
         }] : []),
         ...(topic.global_nimshal && isSectionVisible('global_nimshal', topic.global_nimshal) ? [{
             type: 'global_nimshal' as SectionType,
-            order: 4,
+            order: 6,
             content: highlightTerms(topic.global_nimshal)
+        }] : []),
+        // Historical context section
+        ...(topic.historical_context && isSectionVisible('historical_context', topic.historical_context) ? [{
+            type: 'historical_context' as SectionType,
+            order: 7,
+            content: highlightTerms(topic.historical_context)
         }] : []),
         ...(topic.charts && isSectionVisible('charts', topic.charts) ? [{
             type: 'charts' as SectionType,
-            order: 5,
+            order: 8,
             content: highlightTerms(topic.charts)
         }] : []),
         // Always include sources
         {
             type: 'sources',
-            order: 6,
+            order: 9,
             content: ''
         }
     ];
