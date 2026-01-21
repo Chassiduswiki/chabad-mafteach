@@ -68,7 +68,8 @@ export async function PATCH(
             'name_hebrew', 'slug', 'topic_type', 'description', 'description_en',
             'practical_takeaways', 'historical_context', 'content_status',
             'status_label', 'badge_color', 'mashal', 'global_nimshal', 'charts',
-            'metadata', 'original_lang', 'sources_count', 'documents_count'
+            'metadata', 'original_lang', 'sources_count', 'documents_count',
+            'display_config'
         ];
 
         // Filter to only allowed fields and remove empty strings (except canonical_title)

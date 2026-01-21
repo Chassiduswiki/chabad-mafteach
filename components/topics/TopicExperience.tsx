@@ -12,6 +12,7 @@ import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndic
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Topic, Source } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
+import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
@@ -255,12 +256,22 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
         return enhanced;
     };
 
-    // Construct Sections from Topic Data
+    // Get display config from topic (if stored in database)
+    const displayConfig = topic.display_config as Record<string, { visible?: boolean; format?: string }> | undefined;
+    
+    // Helper to check if a section should be visible using smart visibility
+    const isSectionVisible = (sectionId: string, fieldValue: any): boolean => {
+        const manualVisibility = displayConfig?.[sectionId]?.visible;
+        const result = computeSmartVisibility(fieldValue, manualVisibility);
+        return result.isVisible;
+    };
+
+    // Construct Sections from Topic Data with smart visibility
     const sections: ArticleSection[] = [
-        {
-            type: 'definition',
+        // Definition is always shown if it has content
+        ...((topic.definition_positive || topic.description) && isSectionVisible('description', topic.definition_positive || topic.description) ? [{
+            type: 'definition' as SectionType,
             order: 1,
-            // Combine short description and detailed definition
             content: highlightTerms(`
                 <div class="space-y-4">
                     ${topic.definition_positive
@@ -275,24 +286,24 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
                     ` : ''}
                 </div>
             `)
-        },
-        // Only include optional sections if content exists
-        ...(topic.mashal ? [{
+        }] : []),
+        // Optional sections: check both content existence AND smart visibility
+        ...(topic.mashal && isSectionVisible('mashal', topic.mashal) ? [{
             type: 'mashal' as SectionType,
             order: 2,
             content: highlightTerms(topic.mashal)
         }] : []),
-        ...(topic.practical_takeaways ? [{
+        ...(topic.practical_takeaways && isSectionVisible('practical_takeaways', topic.practical_takeaways) ? [{
             type: 'personal_nimshal' as SectionType,
             order: 3,
             content: highlightTerms(topic.practical_takeaways)
         }] : []),
-        ...(topic.global_nimshal ? [{
+        ...(topic.global_nimshal && isSectionVisible('global_nimshal', topic.global_nimshal) ? [{
             type: 'global_nimshal' as SectionType,
             order: 4,
             content: highlightTerms(topic.global_nimshal)
         }] : []),
-        ...(topic.charts ? [{
+        ...(topic.charts && isSectionVisible('charts', topic.charts) ? [{
             type: 'charts' as SectionType,
             order: 5,
             content: highlightTerms(topic.charts)
@@ -300,7 +311,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations }: To
         // Always include sources
         {
             type: 'sources',
-            order: 5,
+            order: 6,
             content: ''
         }
     ];

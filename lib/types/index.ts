@@ -215,6 +215,9 @@ export interface Topic {
     badge_color?: string;
     sources_count?: number;
     documents_count?: number;
+    
+    // Display configuration for section visibility and format
+    display_config?: Record<string, { visible?: boolean; format?: string; [key: string]: unknown }>;
 }
 
 export interface Citation {

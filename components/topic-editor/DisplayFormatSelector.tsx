@@ -3,12 +3,20 @@
 import React, { useState } from 'react';
 import { 
   AlignLeft, List, Table, ChevronDown, LayoutGrid, 
-  Clock, GitBranch, Eye, EyeOff, Settings, GripVertical 
+  Clock, GitBranch, Eye, EyeOff, Settings, GripVertical,
+  Circle, CheckCircle, MinusCircle
 } from 'lucide-react';
 import { DisplayFormat, DisplayConfig, SectionConfig } from './types';
+import { 
+  computeSmartVisibility, 
+  getVisibilityStatusText, 
+  getVisibilityStatusColor,
+  SmartVisibilityResult 
+} from '@/lib/utils/smart-visibility';
 
 interface DisplayFormatSelectorProps {
   sections: SectionConfig[];
+  formData?: Record<string, any>; // Topic form data to check content
   onUpdateSection: (sectionId: string, config: Partial<DisplayConfig>) => void;
   onReorderSections?: (sectionIds: string[]) => void;
 }
@@ -25,11 +33,18 @@ const FORMAT_OPTIONS: { value: DisplayFormat; label: string; icon: React.Element
 
 export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
   sections,
+  formData = {},
   onUpdateSection,
   onReorderSections,
 }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
+
+  // Compute smart visibility for each section
+  const getVisibility = (section: SectionConfig): SmartVisibilityResult => {
+    const fieldValue = formData[section.field];
+    return computeSmartVisibility(fieldValue, section.displayConfig.visible);
+  };
 
   const handleDragStart = (sectionId: string) => {
     setDraggedSection(sectionId);
@@ -77,7 +92,9 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
         {sections.map((section) => {
           const isExpanded = expandedSection === section.id;
           const FormatIcon = getFormatIcon(section.displayConfig.format);
-          const isVisible = section.displayConfig.visible !== false;
+          const visibility = getVisibility(section);
+          const statusText = getVisibilityStatusText(visibility);
+          const statusColor = getVisibilityStatusColor(visibility);
 
           return (
             <div
@@ -90,7 +107,7 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
                 draggedSection === section.id
                   ? 'opacity-50 border-primary'
                   : 'border-border hover:border-primary/50'
-              } ${!isVisible ? 'opacity-60' : ''}`}
+              } ${!visibility.isVisible ? 'opacity-60' : ''}`}
             >
               {/* Section Header */}
               <div
@@ -110,19 +127,28 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Visibility Toggle */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onUpdateSection(section.id, { visible: !isVisible });
-                    }}
-                    className={`p-1.5 rounded hover:bg-muted transition-colors ${
-                      isVisible ? 'text-foreground' : 'text-muted-foreground'
-                    }`}
-                    title={isVisible ? 'Hide section' : 'Show section'}
-                  >
-                    {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </button>
+                  {/* Smart Visibility Status */}
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs ${statusColor}`}>
+                      {statusText}
+                    </span>
+                    {/* Manual Hide Toggle (only for filled fields) */}
+                    {visibility.hasContent && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Toggle manual hide - if currently visible, hide it; if manually hidden, show it
+                          onUpdateSection(section.id, { visible: !visibility.isVisible });
+                        }}
+                        className={`p-1.5 rounded hover:bg-muted transition-colors ${
+                          visibility.isVisible ? 'text-foreground' : 'text-muted-foreground'
+                        }`}
+                        title={visibility.isVisible ? 'Hide this section' : 'Show this section'}
+                      >
+                        {visibility.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                    )}
+                  </div>
 
                   {/* Format Badge */}
                   <span className="text-xs bg-muted px-2 py-1 rounded">

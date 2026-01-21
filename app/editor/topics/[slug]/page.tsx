@@ -82,6 +82,7 @@ export default function TopicEditorPage() {
   const [linkedSources, setLinkedSources] = useState<Source[]>([]);
   const [concepts, setConcepts] = useState<ConceptTag[]>([]);
   const [sections, setSections] = useState<SectionConfig[]>(CONTENT_SECTIONS);
+  const [displayConfigChanged, setDisplayConfigChanged] = useState(false);
 
   // Editor references - use ref to avoid re-render loops
   const editorsRef = useRef<Record<string, any>>({});
@@ -149,6 +150,22 @@ export default function TopicEditorPage() {
       const topicData = data.topic || data;
 
       setTopic(topicData);
+      
+      // Initialize sections from stored display_config if available
+      if (topicData.display_config) {
+        const storedConfig = topicData.display_config;
+        setSections(prev => prev.map(section => {
+          const sectionConfig = storedConfig[section.id];
+          if (sectionConfig) {
+            return {
+              ...section,
+              displayConfig: { ...section.displayConfig, ...sectionConfig }
+            };
+          }
+          return section;
+        }));
+      }
+      
       setFormData({
         canonical_title: topicData.canonical_title || '',
         canonical_title_en: topicData.canonical_title_en || '',
@@ -212,7 +229,13 @@ export default function TopicEditorPage() {
         }
       });
 
-      const saveData = { ...formData, ...editorContent };
+      // Include display_config if it was changed
+      const displayConfig = displayConfigChanged ? buildDisplayConfigForSave() : undefined;
+      const saveData = { 
+        ...formData, 
+        ...editorContent,
+        ...(displayConfig && { display_config: displayConfig })
+      };
 
       // Use slug for API call, not ID
       const token = localStorage.getItem('auth_token');
@@ -337,6 +360,16 @@ export default function TopicEditorPage() {
         ? { ...s, displayConfig: { ...s.displayConfig, ...config } }
         : s
     ));
+    setDisplayConfigChanged(true);
+  };
+
+  // Build display_config object for saving to database
+  const buildDisplayConfigForSave = () => {
+    const config: Record<string, Partial<DisplayConfig>> = {};
+    sections.forEach(section => {
+      config[section.id] = section.displayConfig;
+    });
+    return config;
   };
 
   // Form field update handler
@@ -858,6 +891,7 @@ export default function TopicEditorPage() {
                 <div className="bg-card border border-border rounded-lg p-6">
                   <DisplayFormatSelector
                     sections={sections}
+                    formData={formData}
                     onUpdateSection={handleUpdateDisplayConfig}
                   />
                 </div>
