@@ -95,6 +95,7 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
           const visibility = getVisibility(section);
           const statusText = getVisibilityStatusText(visibility);
           const statusColor = getVisibilityStatusColor(visibility);
+          const isVisible = visibility?.isVisible ?? true;
 
           return (
             <div
@@ -107,7 +108,7 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
                 draggedSection === section.id
                   ? 'opacity-50 border-primary'
                   : 'border-border hover:border-primary/50'
-              } ${!visibility.isVisible ? 'opacity-60' : ''}`}
+              } ${!isVisible ? 'opacity-60' : ''}`}
             >
               {/* Section Header */}
               <div
@@ -138,14 +139,14 @@ export const DisplayFormatSelector: React.FC<DisplayFormatSelectorProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           // Toggle manual hide - if currently visible, hide it; if manually hidden, show it
-                          onUpdateSection(section.id, { visible: !visibility.isVisible });
+                          onUpdateSection(section.id, { visible: !isVisible });
                         }}
                         className={`p-1.5 rounded hover:bg-muted transition-colors ${
-                          visibility.isVisible ? 'text-foreground' : 'text-muted-foreground'
+                          isVisible ? 'text-foreground' : 'text-muted-foreground'
                         }`}
-                        title={visibility.isVisible ? 'Hide this section' : 'Show this section'}
+                        title={isVisible ? 'Hide this section' : 'Show this section'}
                       >
-                        {visibility.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </button>
                     )}
                   </div>

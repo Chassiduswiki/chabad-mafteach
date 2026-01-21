@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
       } as any)
     );
 
-    // Transform to include author name if available
+    // Transform to include author info (author_id is not expanded, just the raw ID)
     const transformedSources = (sources as any[]).map((source) => ({
       id: source.id,
       title: source.title,
-      author: source.author_id?.canonical_name || null,
+      author_id: source.author_id || null,
       publication_year: source.publication_year,
       publisher: source.publisher,
       external_system: source.external_system,

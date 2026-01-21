@@ -19,7 +19,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
         notFound();
     }
 
-    const { topic, relatedTopics, sources, citations } = topicData;
+    const { topic, relatedTopics, sources, citations, inlineCitations } = topicData;
 
     return (
         <>
@@ -32,6 +32,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
                 relatedTopics={relatedTopics}
                 sources={sources}
                 citations={citations}
+                inlineCitations={inlineCitations || []}
             />
         </>
     );

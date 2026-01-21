@@ -186,20 +186,26 @@ export async function getTopicBySlug(slug: string) {
             // Continue without related topics - this is not critical
         }
 
-        // Get linked sources via topic_sources junction table
+        // Get linked sources from unified source_links table
+        // Fetches both topic-level bibliography (statement_id is null) and statement-level citations
         let sources: any[] = [];
+        let inlineCitations: any[] = [];
         try {
-            // Fetch topic_sources with expanded source data
-            const topicSources = await directus.request(readItems('topic_sources' as any, {
-                filter: { topic_id: { _eq: topic.id } } as any,
+            // Fetch topic-level sources (bibliography)
+            const topicSources = await directus.request(readItems('source_links' as any, {
+                filter: { 
+                    _and: [
+                        { topic_id: { _eq: topic.id } },
+                        { statement_id: { _null: true } }
+                    ]
+                } as any,
                 fields: [
                     'id',
                     'relationship_type',
                     'page_number',
                     'verse_reference',
+                    'section_reference',
                     'notes',
-                    'is_primary',
-                    'sort',
                     {
                         source_id: [
                             'id',
@@ -208,19 +214,22 @@ export async function getTopicBySlug(slug: string) {
                             'external_url',
                             'external_system',
                             'citation_text',
-                            { author_id: ['canonical_name'] }
+                            {
+                                author_id: ['id', 'canonical_name', 'birth_year', 'death_year']
+                            }
                         ]
                     }
                 ] as any,
-                sort: ['sort', '-is_primary'] as any
+                sort: ['id'] as any
             })) as any[];
 
-            console.log(`Found ${topicSources.length} linked sources for topic ${topic.id}`);
+            console.log(`Found ${topicSources.length} topic-level sources for topic ${topic.id}`);
 
             // Transform to a cleaner format
             sources = topicSources.map(ts => ({
                 id: ts.source_id?.id,
                 title: ts.source_id?.title,
+                author_id: ts.source_id?.author_id?.id,
                 author: ts.source_id?.author_id?.canonical_name,
                 publication_year: ts.source_id?.publication_year,
                 external_url: ts.source_id?.external_url,
@@ -231,8 +240,9 @@ export async function getTopicBySlug(slug: string) {
                 relationship_type: ts.relationship_type,
                 page_number: ts.page_number,
                 verse_reference: ts.verse_reference,
+                section_reference: ts.section_reference,
                 notes: ts.notes,
-                is_primary: ts.is_primary,
+                is_primary: ts.notes?.includes('Primary'), // Infer from notes for now
                 // Keep relationships array for backward compatibility
                 relationships: [{
                     relationship_type: ts.relationship_type,
@@ -240,9 +250,62 @@ export async function getTopicBySlug(slug: string) {
                     verse_reference: ts.verse_reference
                 }]
             })).filter(s => s.id); // Filter out any with missing source data
+
+            // Fetch statement-level citations (inline citations)
+            // Get all statements for this topic first
+            const statementIds = validStatementTopics.map(st => st.statement_id).filter(Boolean);
+            
+            if (statementIds.length > 0) {
+                const citationLinks = await directus.request(readItems('source_links' as any, {
+                    filter: { 
+                        statement_id: { _in: statementIds }
+                    } as any,
+                    fields: [
+                        'id',
+                        'statement_id',
+                        'relationship_type',
+                        'page_number',
+                        'verse_reference',
+                        'section_reference',
+                        'notes',
+                        {
+                            source_id: [
+                                'id',
+                                'title',
+                                'publication_year',
+                                'external_url',
+                                'external_system',
+                                {
+                                    author_id: ['id', 'canonical_name', 'birth_year', 'death_year']
+                                }
+                            ]
+                        }
+                    ] as any
+                })) as any[];
+
+                console.log(`Found ${citationLinks.length} inline citations for topic ${topic.id}`);
+
+                inlineCitations = citationLinks.map(cl => ({
+                    id: cl.source_id?.id,
+                    title: cl.source_id?.title,
+                    author_id: cl.source_id?.author_id?.id,
+                    author: cl.source_id?.author_id?.canonical_name,
+                    publication_year: cl.source_id?.publication_year,
+                    external_url: cl.source_id?.external_url,
+                    external_system: cl.source_id?.external_system,
+                    // Citation metadata
+                    link_id: cl.id,
+                    statement_id: cl.statement_id,
+                    relationship_type: cl.relationship_type,
+                    page_number: cl.page_number,
+                    verse_reference: cl.verse_reference,
+                    section_reference: cl.section_reference,
+                    notes: cl.notes
+                })).filter(c => c.id);
+            }
         } catch (error) {
-            console.error('Error fetching topic sources:', error);
-            // Continue without sources
+            console.warn('Could not fetch sources/citations (likely permissions):', error instanceof Error ? error.message : 'Unknown error');
+            // Continue without sources - this is not critical
         }
 
         return {
@@ -252,7 +315,8 @@ export async function getTopicBySlug(slug: string) {
             },
             citations: validStatementTopics,
             relatedTopics,
-            sources
+            sources,
+            inlineCitations
         };
     } catch (error) {
         console.error('Topic fetch error:', error);
