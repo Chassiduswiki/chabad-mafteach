@@ -38,6 +38,11 @@ export default function AdminDashboardPage() {
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [contentHealth, setContentHealth] = useState<{
+    score: number;
+    metrics: { topicsWithSources: number; statementsTagged: number };
+    issues: { topicsWithoutSources: number; untaggedStatements: number };
+  } | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -57,6 +62,7 @@ export default function AdminDashboardPage() {
           topics: data.counts.topics || 0,
           statements: data.counts.statements || 0,
         });
+        setContentHealth(data.contentHealth);
         // Store additional metrics for future use
         (window as any).__dashboardMetrics = data;
       }
