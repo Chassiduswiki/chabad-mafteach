@@ -67,9 +67,15 @@ The frontend TypeScript types now match the new Directus schema:
 > Functional unblocking requires Directus permission update for `statement_topics` collection fields (`statement_id`, `topic_id`).
 
 ### Phase 1e: Content Model Clarity (NEW)
-- [ ] **Data Model Definitions**: Define usage of short vs. long descriptions (popups vs. headers).
+- [x] **Data Model Definitions**: Define usage of short vs. long descriptions (popups vs. headers).
 - [ ] **Source Linking**: Determine optimal display and linking strategy for sources.
 - [ ] **Smart Glossary Refinement**: Fix parse failures for standalone numbered lists.
+
+### Phase 1f: Topic Display Enhancements (COMPLETED - Jan 21, 2026)
+- [x] **Transliteration as Main Title**: Updated topic pages to use `canonical_title_transliteration` from database as main title instead of English title
+- [x] **Hebrew Watermark Optimization**: Adjusted background watermark blur and opacity for better visual balance (reduced from blur-xl to blur-lg, opacity 0.08)
+- [x] **Short Description Separation**: Implemented auto-generated short descriptions for hero section (first paragraph only, numbering removed) to eliminate duplication with full definition section
+- [x] **Database Schema Update**: Added `canonical_title_transliteration` field to TypeScript Topic interface
 
 ---
 

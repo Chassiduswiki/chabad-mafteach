@@ -170,6 +170,7 @@ export interface SourceLink {
 export interface Topic {
     id: number;
     canonical_title: string;
+    canonical_title_transliteration?: string;
     original_lang?: string;
     slug: string;
     topic_type?: 'person' | 'concept' | 'place' | 'event' | 'mitzvah' | 'sefirah';

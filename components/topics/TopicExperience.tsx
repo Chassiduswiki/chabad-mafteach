@@ -563,8 +563,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                 <ImmersiveHero
                     title={topic.canonical_title}
                     titleHebrew={topic.name_hebrew || ''}
+                    titleTransliteration={topic.canonical_title_transliteration}
                     category={topic.topic_type || 'Concept'}
-                    definitionShort={topic.description}
+                    definitionShort={topic.description ? topic.description.split('</p>')[0].replace(/^\s*<strong>\d+\.\s*/, '').replace(/^\s*\d+\.\s*/, '') + '</p>' : ''}
                     topicSlug={topic.slug}
                 />
             </div>
