@@ -38,6 +38,7 @@ import {
 } from '@/components/topic-editor';
 import { SaveStatusToast } from '@/components/ui/SaveStatusToast';
 import { useSmartSlug } from '@/hooks/useSmartSlug';
+import { useAIFieldAutoComplete } from '@/hooks/useAIFieldAutoComplete';
 
 // Content sections configuration
 const CONTENT_SECTIONS: SectionConfig[] = [
@@ -159,6 +160,31 @@ export default function TopicEditorPage() {
       }
     }
   }, [formData.canonical_title_transliteration, formData.canonical_title_en, formData.slug]);
+
+  // AI Field Auto-Complete - invisible AI assistance
+  const { 
+    suggestions: aiSuggestions, 
+    isLoading: isAICompleting,
+    applySuggestion,
+    dismissSuggestion,
+  } = useAIFieldAutoComplete(
+    {
+      canonical_title: formData.canonical_title,
+      canonical_title_en: formData.canonical_title_en,
+      canonical_title_transliteration: formData.canonical_title_transliteration,
+      topic_type: formData.topic_type,
+      description: formData.description,
+    },
+    (field, value) => updateFormField(field as keyof TopicFormData, value),
+    {
+      enabled: !!topic && !isLoading,
+      autoApply: true,
+      confidenceThreshold: 0.75,
+      onAutoApplied: (applied) => {
+        console.log('AI auto-filled fields:', applied.map(s => s.field).join(', '));
+      },
+    }
+  );
 
   // Keyboard shortcut for save
   useSaveShortcut(() => {
@@ -735,7 +761,51 @@ export default function TopicEditorPage() {
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6 mt-6">
                 <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-                  <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+                    {isAICompleting && (
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                        <span className="h-2 w-2 bg-primary rounded-full animate-ping" />
+                        AI completing fields...
+                      </span>
+                    )}
+                  </div>
+
+                  {/* AI Suggestions Banner */}
+                  {aiSuggestions.length > 0 && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm text-primary mb-2">
+                        <span className="font-medium">AI Suggestions Available</span>
+                      </div>
+                      <div className="space-y-2">
+                        {aiSuggestions.map((suggestion) => (
+                          <div key={suggestion.field} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              <span className="font-medium">{suggestion.field.replace(/_/g, ' ')}:</span>{' '}
+                              <span className="text-foreground">{suggestion.value}</span>
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({Math.round(suggestion.confidence * 100)}% confident)
+                              </span>
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => applySuggestion(suggestion.field as any)}
+                                className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                              >
+                                Apply
+                              </button>
+                              <button
+                                onClick={() => dismissSuggestion(suggestion.field as any)}
+                                className="text-xs px-2 py-1 text-muted-foreground hover:text-foreground"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>

@@ -727,6 +727,71 @@ html {
   animation: slide-up 0.3s ease-out;
 }
 
+/* Citation Styles - Academic Superscript Format */
+.citation-node {
+  position: relative;
+  cursor: pointer;
+}
+
+.citation-node sup {
+  color: hsl(var(--primary));
+  font-weight: 600;
+  font-size: 0.75em;
+  vertical-align: super;
+  margin-left: 1px;
+  transition: all 0.15s ease;
+}
+
+.citation-node:hover sup {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+/* Citation Tooltip */
+.citation-tooltip {
+  position: relative;
+}
+
+.citation-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid hsl(var(--border));
+  z-index: 100;
+  pointer-events: none;
+}
+
+.citation-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Frontend Citation Display */
+.prose .citation-node {
+  font-style: normal;
+}
+
+.prose .citation-node sup {
+  color: hsl(var(--primary));
+  font-weight: 500;
+}
+
 .interactive-term {
   cursor: pointer;
   border-bottom: 1px dotted var(--primary);

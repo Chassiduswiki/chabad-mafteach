@@ -43,9 +43,10 @@ export function RelationshipPredictionsPanel({ topicId, content, onAddRelationsh
     }
   };
 
-  useEffect(() => {
-    handleFindRelationships();
-  }, [topicId, content]);
+  // Don't auto-trigger on mount - wait for user to click refresh
+  // useEffect(() => {
+  //   handleFindRelationships();
+  // }, [topicId, content]);
 
   return (
     <Card>
@@ -60,6 +61,10 @@ export function RelationshipPredictionsPanel({ topicId, content, onAddRelationsh
         {loading ? (
           <div className="flex justify-center items-center h-40">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : predictions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">Click "Find Relationships" to discover related topics</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -78,8 +83,8 @@ export function RelationshipPredictionsPanel({ topicId, content, onAddRelationsh
             ))}
           </div>
         )}
-        <Button variant="ghost" size="sm" onClick={handleFindRelationships} disabled={loading} className="w-full mt-4">
-          Refresh Predictions
+        <Button variant="outline" size="sm" onClick={handleFindRelationships} disabled={loading} className="w-full mt-4">
+          {predictions.length === 0 ? 'Find Relationships' : 'Refresh Predictions'}
         </Button>
       </CardContent>
     </Card>

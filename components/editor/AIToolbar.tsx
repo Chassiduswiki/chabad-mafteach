@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor } from '@tiptap/react';
-import { Sparkles, Languages, Link2, BookOpen } from 'lucide-react';
+import { Sparkles, Languages, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AIToolbarProps {
@@ -48,17 +48,6 @@ export function AIToolbar({ editor }: AIToolbarProps) {
         <Link2 className="h-4 w-4" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent('ai-find-citations'));
-        }}
-        className="h-8 px-2"
-        title="Find citations"
-      >
-        <BookOpen className="h-4 w-4" />
-      </Button>
     </div>
   );
 }

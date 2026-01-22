@@ -13,7 +13,7 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 export default function AISettingsPage() {
   const [provider, setProvider] = useState('openrouter');
   const [apiKey, setApiKey] = useState('');
-  const [primaryModel, setPrimaryModel] = useState('qwen/qwen3-next-80b-a3b-instruct:free');
+  const [primaryModel, setPrimaryModel] = useState('allenai/olmo-3.1-32b-think');
   const [fallbackModel, setFallbackModel] = useState('anthropic/claude-3.5-sonnet');
   const [customPrimaryModel, setCustomPrimaryModel] = useState('');
   const [customFallbackModel, setCustomFallbackModel] = useState('');
@@ -32,7 +32,7 @@ export default function AISettingsPage() {
           const data = await response.json();
           setProvider(data.provider || 'openrouter');
           setApiKey(data.api_key || '');
-          setPrimaryModel(data.primary_model || 'google/gemini-2.0-flash-exp:free');
+          setPrimaryModel(data.primary_model || 'allenai/olmo-3.1-32b-think');
           setFallbackModel(data.fallback_model || 'anthropic/claude-3.5-sonnet');
           setQualityThreshold(data.quality_threshold || 0.8);
           setAutoApprovalThreshold(data.auto_approval_threshold || 0.95);
@@ -191,6 +191,7 @@ export default function AISettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="allenai/olmo-3.1-32b-think">Olmo 3.1 32B Think</SelectItem>
                     <SelectItem value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 Next 80B (Free)</SelectItem>
                     <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
                     <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>

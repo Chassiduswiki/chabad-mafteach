@@ -49,8 +49,15 @@ Respond in JSON format with an array of citations:
 
     // Fallback if json_object is not supported
     if (!response.ok) {
-      const errorBody = await response.json();
-      if (errorBody.error?.message.includes('response_format')) {
+      const errorText = await response.text();
+      let errorBody;
+      try {
+        errorBody = JSON.parse(errorText);
+      } catch {
+        throw new Error(`OpenRouter API failed with status ${response.status}: ${errorText}`);
+      }
+      
+      if (errorBody.error?.message?.includes('response_format')) {
         console.log('Retrying without json_object response_format...');
         response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
@@ -63,13 +70,16 @@ Respond in JSON format with an array of citations:
             messages: [{ role: 'user', content: prompt }],
           }),
         });
+        
+        if (!response.ok) {
+          const retryError = await response.text();
+          console.error('OpenRouter API Error on retry:', retryError);
+          throw new Error(`OpenRouter API failed with status ${response.status}: ${retryError}`);
+        }
+      } else {
+        console.error('OpenRouter API Error:', errorText);
+        throw new Error(`OpenRouter API failed with status ${response.status}: ${errorText}`);
       }
-    }
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('OpenRouter API Error:', errorBody);
-      throw new Error(`OpenRouter API failed with status ${response.status}: ${errorBody}`);
     }
 
     const data = await response.json();

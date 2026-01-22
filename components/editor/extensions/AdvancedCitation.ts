@@ -91,7 +91,8 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const citationText = `[${node.attrs.sourceTitle}${node.attrs.reference ? `, ${node.attrs.reference}` : ''}]`;
+    // Superscript style citation number like academic papers
+    const citationText = node.attrs.reference || node.attrs.sourceTitle?.slice(0, 15) || '†';
 
     return [
       'span',
@@ -101,9 +102,10 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
         'data-source-title': node.attrs.sourceTitle,
         'data-reference': node.attrs.reference,
         'data-url': node.attrs.url,
-        class: 'citation-node cursor-pointer bg-accent/20 hover:bg-accent/40 px-2 py-1 rounded border border-accent/30 transition-colors duration-200 inline-block mx-1 select-none',
+        class: 'citation-node cursor-pointer text-primary font-medium hover:underline decoration-dotted underline-offset-2 transition-all duration-200',
+        style: 'font-size: 0.85em;',
       }),
-      citationText,
+      ['sup', { class: 'text-[0.7em] align-super ml-0.5' }, `[${citationText}]`],
     ];
   },
 
@@ -114,7 +116,7 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
   addNodeView() {
     return ({ node, getPos, editor }) => {
       const dom = document.createElement('span');
-      dom.className = 'citation-node cursor-pointer bg-accent/20 hover:bg-accent/40 px-2 py-1 rounded border border-accent/30 transition-colors duration-200 inline-block mx-1 select-none';
+      dom.className = 'citation-node cursor-pointer inline-flex items-baseline group';
       dom.setAttribute('data-citation-id', node.attrs.citationId);
       dom.setAttribute('data-source-id', node.attrs.sourceId);
       dom.setAttribute('data-source-title', node.attrs.sourceTitle);
@@ -124,11 +126,12 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
         dom.setAttribute('data-url', node.attrs.url);
       }
 
-      // Citation text
-      const citationText = node.textContent ||
-        `[${node.attrs.sourceTitle}${node.attrs.reference ? `, ${node.attrs.reference}` : ''}]`;
-
-      dom.textContent = citationText;
+      // Create superscript citation marker
+      const sup = document.createElement('sup');
+      sup.className = 'text-primary font-semibold text-[0.7em] ml-0.5 hover:underline decoration-dotted cursor-pointer transition-all';
+      const citationText = node.attrs.reference || node.attrs.sourceTitle?.slice(0, 12) || '†';
+      sup.textContent = `[${citationText}]`;
+      dom.appendChild(sup);
 
       // Click handler
       dom.addEventListener('click', (e) => {
