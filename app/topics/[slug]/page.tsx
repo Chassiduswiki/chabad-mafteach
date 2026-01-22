@@ -5,12 +5,19 @@ import { TopicExperience } from '@/components/topics/TopicExperience';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TopicDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function TopicDetailPage({ 
+    params,
+    searchParams 
+}: { 
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ lang?: string }>;
+}) {
     const { slug } = await params;
+    const { lang = 'en' } = await searchParams;
 
     let topicData = null;
     try {
-        topicData = await getTopicBySlug(slug);
+        topicData = await getTopicBySlug(slug, lang);
     } catch (error) {
         console.error('Error fetching topic data:', error);
     }

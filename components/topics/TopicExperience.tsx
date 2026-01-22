@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
 import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
@@ -20,6 +21,7 @@ import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent
 import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { GlobalNav } from '@/components/layout/GlobalNav';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 // Types
 type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
@@ -112,6 +114,26 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
     }
     
     return parts.length > 0 ? <>{parts}</> : text;
+}
+
+// Language Selector Wrapper Component
+function LanguageSelectorWrapper({ topicSlug }: { topicSlug: string }) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const currentLang = searchParams.get('lang') || 'en';
+
+    const handleLanguageChange = (newLang: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('lang', newLang);
+        router.push(`/topics/${topicSlug}?${params.toString()}`);
+    };
+
+    return (
+        <LanguageSelector 
+            value={currentLang} 
+            onChange={handleLanguageChange}
+        />
+    );
 }
 
 // Config
@@ -574,11 +596,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             <div className="sticky top-[56px] z-40 bg-background border-b border-border shadow-sm">
                 {/* Topic Title - shows when scrolled past hero */}
                 <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-3">
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                            {topic.topic_type || 'Concept'}
-                        </span>
-                        <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                {topic.topic_type || 'Concept'}
+                            </span>
+                            <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                        </div>
+                        <LanguageSelectorWrapper topicSlug={topic.slug} />
                     </div>
                 </div>
                 
