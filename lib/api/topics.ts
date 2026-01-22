@@ -33,7 +33,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
         // Fetch translation for requested language
         let translation: any = null;
         try {
-            const translations = await directus.request(readItems('topic_translations', {
+            const translations = await directus.request(readItems('topic_translations' as any, {
                 filter: {
                     _and: [
                         { topic_id: { _eq: topic.id } },
@@ -48,9 +48,9 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                 translation = translations[0];
             } else {
                 // Fallback to default language if requested language not found
-                const defaultLang = topic.default_language || 'he';
+                const defaultLang = (topic as any).default_language || 'he';
                 if (lang !== defaultLang) {
-                    const fallbackTranslations = await directus.request(readItems('topic_translations', {
+                    const fallbackTranslations = await directus.request(readItems('topic_translations' as any, {
                         filter: {
                             _and: [
                                 { topic_id: { _eq: topic.id } },

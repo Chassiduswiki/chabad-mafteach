@@ -112,7 +112,7 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
       {activeCitation && (
         <CitationViewerModal
           open={Boolean(activeCitation)}
-          citation={activeCitation}
+          citation={activeCitation as any}
           onClose={() => setActiveCitation(null)}
         />
       )}

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         }
 
         const translations = await directus.request(
-            readItems('topic_translations', {
+            readItems('topic_translations' as any, {
                 filter,
                 fields: ['*']
             })
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
 
         const translation = await directus.request(
-            createItem('topic_translations', data)
+            createItem('topic_translations' as any, data)
         );
 
         return NextResponse.json(translation, { status: 201 });
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
         const updates = await request.json();
 
         const translation = await directus.request(
-            updateItem('topic_translations', parseInt(id), updates)
+            updateItem('topic_translations' as any, parseInt(id), updates)
         );
 
         return NextResponse.json(translation);
@@ -141,7 +141,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         await directus.request(
-            deleteItem('topic_translations', parseInt(id))
+            deleteItem('topic_translations' as any, parseInt(id))
         );
 
         return NextResponse.json({ success: true });
