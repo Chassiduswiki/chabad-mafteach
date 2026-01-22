@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Upload, FileText, User, Settings, Edit3, Search, Layers, BarChart3 } from 'lucide-react';
+import { BookOpen, Upload, FileText, User, Settings, Edit3, Search, Layers, BarChart3, Sparkles, Brain } from 'lucide-react';
 import Link from "next/link";
 
 export default function EditorPage() {
@@ -141,6 +141,54 @@ export default function EditorPage() {
             </Link>
           </div>
 
+        </div>
+
+        {/* AI Tools */}
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            AI-Powered Tools
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Link
+              href="/admin/ai-settings"
+              className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 p-5 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 text-primary group-hover:bg-primary/30 transition-colors">
+                  <Settings className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-foreground">AI Settings</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Configure OpenRouter API and translation models
+              </p>
+            </Link>
+
+            <div className="rounded-xl border bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20 p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/20 text-purple-500">
+                  <Brain className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-foreground">AI Translation</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Available in topic editors and writing tools
+              </p>
+            </div>
+
+            <div className="rounded-xl border bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20 p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/20 text-blue-500">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <h3 className="font-semibold text-foreground">Content Enhancement</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                AI-powered writing assistance and improvements
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Library Management */}

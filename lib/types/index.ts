@@ -5,7 +5,7 @@
  * Matches the new data model from Documentation/New-directus-data-model.md
  */
 
-// ============ Core Collections ============
+// ============ Core Collections =============
 
 export interface Author {
     id: number;
@@ -32,7 +32,7 @@ export interface Document {
     parent_id?: number | Document;
 
     // Relations
-    contentBlocks?: ContentBlock[]; // **[CHANGED]** from paragraphs?: Paragraph[];
+    contentBlocks?: ContentBlock[];
 
     // Topic association
     topic?: string | Topic;
@@ -95,7 +95,7 @@ export interface Statement {
     importance_score?: number;
     metadata?: Record<string, unknown>;
     deleted_at?: string;
-    block_id?: number; // Changed from paragraph_id
+    block_id?: number; 
     deleted_by?: string;
 }
 
@@ -116,12 +116,12 @@ export interface BlockCommentary {
     rejection_reason?: string;
 
     // Citation support for rabbit hole following
-    citation_source?: number | Source; // Link to source document
-    citation_page?: string; // Page reference in source
-    citation_reference?: string; // Full citation string
+    citation_source?: number | Source; 
+    citation_page?: string; 
+    citation_reference?: string; 
 
     // Relations
-    source_links?: SourceLink[]; // Citations within this commentary
+    source_links?: SourceLink[]; 
 }
 
 export interface Source {
@@ -138,10 +138,9 @@ export interface Source {
     citation_text?: string;
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
-    document_id?: number | Document; // Direct link to associated document
-    author?: string; // Mapped from author_id.canonical_name
-    relationships?: any[]; // Array of relationship details (page numbers, verses)
-    // Junction metadata from source_links
+    document_id?: number | Document; 
+    author?: string; 
+    relationships?: any[]; 
     link_id?: number;
     relationship_type?: string;
     page_number?: string;
@@ -149,7 +148,7 @@ export interface Source {
     section_reference?: string;
     notes?: string;
     is_primary?: boolean;
-    statement_id?: number; // For inline citations
+    statement_id?: number; 
 }
 
 export interface SourceLink {
@@ -178,20 +177,20 @@ export interface Topic {
     metadata?: Record<string, unknown>;
 
     // Legacy compatibility fields (mapped from new schema)
-    name?: string; // Alias for canonical_title
+    name?: string; 
     name_hebrew?: string;
     name_transliteration?: string;
     alternate_names?: string[];
-    category?: string; // Alias for topic_type
-    definition_short?: string; // Alias for description
+    category?: string; 
+    definition_short?: string; 
 
     // Content fields (can be stored in metadata or separate content table)
     definition_positive?: string;
     definition_negative?: string;
     overview?: string;
     article?: string;
-    practical_takeaways?: string; // **[NEW]** Rich text field for practical applications
-    historical_context?: string; // **[NEW]** Rich text field for historical background
+    practical_takeaways?: string; 
+    historical_context?: string; 
     mashal?: string;
     global_nimshal?: string;
     charts?: string;
@@ -284,7 +283,30 @@ export interface Translation {
     verified_by?: string;
 }
 
-// ============ Directus SDK Schema ============
+export interface TopicTranslation {
+    id: number;
+    topics_id: number;
+    languages_code: string;
+    [key: string]: any;
+}
+
+export interface TranslationHistory {
+    id: string; // uuid
+    topic_id: string;
+    source_language: string;
+    target_language: string;
+    field: string;
+    translation: string;
+    quality_score: number;
+    quality_explanation: string;
+    model: string;
+    is_fallback: boolean;
+    status: 'pending' | 'approved' | 'rejected';
+    user_created?: string; // uuid of a directus_user
+    date_created?: string; // timestamp
+}
+
+// ============ Directus SDK Schema =============
 
 export interface Schema {
     authors: Author[];
@@ -299,9 +321,11 @@ export interface Schema {
     topic_relationships: TopicRelationship[];
     statement_topics: StatementTopic[];
     translations: Translation[];
+    topic_translations: TopicTranslation[];
+    translation_history: TranslationHistory[];
 }
 
-// ============ Legacy Type Aliases ============
+// ============ Legacy Type Aliases =============
 // These provide backward compatibility with old code that used different type names
 
 /** @deprecated Use Document instead */

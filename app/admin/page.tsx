@@ -16,7 +16,9 @@ import {
   Eye,
   Clock,
   Download,
-  Network
+  Network,
+  Sparkles,
+  Brain
 } from 'lucide-react';
 
 interface Stats {
@@ -168,6 +170,7 @@ export default function AdminDashboardPage() {
     { label: 'Add New Book', href: '/admin/books/new', icon: BookOpen },
     { label: 'Add New Author', href: '/admin/authors/new', icon: User },
     { label: 'Create Topic', href: '/editor/topics/new', icon: FileText },
+    { label: 'AI Settings', href: '/admin/ai-settings', icon: Sparkles },
     { label: 'Import Content', href: '/editor/import', icon: Plus },
     { label: 'Import/Export Data', href: '/editor/import-export', icon: Download },
     { label: 'View Topic Graph', href: '/graph', icon: Network },
