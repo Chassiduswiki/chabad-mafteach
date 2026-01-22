@@ -1,6 +1,9 @@
 import { createDirectus, rest, staticToken, readItems } from '@directus/sdk';
-import type { Schema, Topic } from './types';
+import type { Topic } from './types';
 import { safeDirectusCall, directusPool } from './integration-hardening';
+
+// Directus client uses untyped schema for flexibility
+// Collection-specific types are defined in ./types
 
 // Re-export types for convenience
 export * from './types';
@@ -28,12 +31,12 @@ const createClient = () => {
         try {
             // Verify it's a valid URL before passing to SDK
             new URL(directusUrl);
-            return createDirectus<Schema>(directusUrl).with(rest());
+            return createDirectus(directusUrl).with(rest());
         } catch (e) {
             console.error('[Directus Client] Invalid Client URL:', directusUrl);
             // Fallback to absolute URL if proxy construction failed
             const fallback = window.location.origin + '/api/directus-proxy';
-            return createDirectus<Schema>(fallback).with(rest());
+            return createDirectus(fallback).with(rest());
         }
     } else {
         // Server-side: use static token
@@ -45,16 +48,16 @@ const createClient = () => {
             console.error('[Directus Client] Invalid Server URL:', directusUrl);
             // Use a safe fallback
             const safeUrl = 'http://localhost:8055';
-            return createDirectus<Schema>(safeUrl).with(staticToken(directusToken || '')).with(rest());
+            return createDirectus(safeUrl).with(rest()).with(staticToken(directusToken || ''));
         }
 
         if (!directusToken && process.env.NODE_ENV === 'production') {
             console.warn('DIRECTUS_STATIC_TOKEN is not set for server-side operations in production.');
         }
 
-        return createDirectus<Schema>(directusUrl)
-            .with(staticToken(directusToken || ''))
-            .with(rest());
+        return createDirectus(directusUrl)
+            .with(rest())
+            .with(staticToken(directusToken || ''));
     }
 };
 
@@ -70,12 +73,12 @@ const getDirectusSingleton = () => {
 // Helper function to get all topics with retry logic and graceful degradation
 export const getAllTopics = async (): Promise<Topic[]> => {
     const directus = getDirectusSingleton();
-    return safeDirectusCall(
+    const result = await safeDirectusCall(
         () => directusPool.acquire(() =>
             directus.request(readItems('topics', {
                 fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                 limit: -1,
-            })) as Promise<Topic[]>
+            }))
         ),
         {
             retries: 3,
@@ -83,6 +86,7 @@ export const getAllTopics = async (): Promise<Topic[]> => {
             fallback: [], // Return empty array if all retries fail
         }
     );
+    return result as Topic[];
 };
 
 export { createClient, getDirectusSingleton as getDirectus };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDirectus } from '@/lib/directus';
+import { DEFAULT_AI_MODEL } from '@/lib/ai/config';
 import { readSingleton, updateSingleton } from '@directus/sdk';
 
 // This endpoint manages AI settings stored in Directus
@@ -9,6 +10,7 @@ export async function GET() {
   try {
     const directus = getDirectus();
     
+    // @ts-ignore - Directus SDK typing issue with untyped client
     const settings = await directus.request(
       readSingleton('ai_settings')
     );
@@ -17,7 +19,7 @@ export async function GET() {
     return NextResponse.json({
       provider: settings.provider || 'openrouter',
       api_key: settings.api_key || process.env.OPENROUTER_API_KEY || '',
-      primary_model: settings.primary_model || 'qwen/qwen3-next-80b-a3b-instruct:free',
+      primary_model: settings.primary_model || DEFAULT_AI_MODEL,
       fallback_model: settings.fallback_model || 'anthropic/claude-3.5-sonnet',
       quality_threshold: settings.quality_threshold ?? 0.8,
       auto_approval_threshold: settings.auto_approval_threshold ?? 0.95,
@@ -34,6 +36,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // For singleton collections, we always update (no need to check if exists)
+    // @ts-ignore - Directus SDK typing issue with untyped client
     const result = await directus.request(
       updateSingleton('ai_settings', body)
     );

@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { HebrewLanguage } from './HebrewLanguage';
 import { HebrewOCR } from './HebrewOCR';
 import { AdvancedCitation } from './AdvancedCitation';
+import { AIEnhancementExtension } from './AIEnhancementExtension';
 
 export const createTipTapExtensions = (options?: {
   onCitationClick?: (citation: any) => void;
@@ -41,5 +42,8 @@ export const createTipTapExtensions = (options?: {
       onCitationEdit: options?.onCitationEdit,
       citations: [], // Will be populated from external data
     }),
+
+    // AI Enhancement extension
+    AIEnhancementExtension,
   ];
 };

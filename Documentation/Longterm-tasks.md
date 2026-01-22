@@ -42,6 +42,11 @@
 - [ ] **AI Translation System** - Backend API for automated translations
 - [ ] **AI Writing Assistant** - Content creation assistance tools
 - [ ] **Inline Citation Enhancement** - Cooler citation management system
+- [ ] **AI-Enhanced Topic Editor** - Transform editor into intelligent assistant (8-12 weeks)
+  - Phase 1: Smart field auto-fill, Tiptap AI toolbar, proactive suggestions (Weeks 1-2)
+  - Phase 2: Content completeness actions, relationship predictions, citation assistant (Weeks 3-5)
+  - Phase 3: Floating AI chat, bulk operations, smart workflows (Weeks 6-8)
+  - Phase 4: Performance optimization, UX polish, analytics (Weeks 9-12)
 
 ### 📋 Planned (Future Phases)
 - [ ] **Content Ingestion Pipeline** - Automated import from external sources

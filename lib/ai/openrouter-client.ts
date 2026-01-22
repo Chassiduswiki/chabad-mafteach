@@ -1,4 +1,5 @@
 // lib/ai/openrouter-client.ts
+import { DEFAULT_AI_MODEL } from './config';
 
 interface TranslationQuality {
   score: number;
@@ -45,7 +46,7 @@ class OpenRouterClient {
 
       const settings: AISettings = await response.json();
       this.apiKey = settings.api_key || process.env.OPENROUTER_API_KEY || '';
-      this.primaryModel = settings.primary_model || 'qwen/qwen3-next-80b-a3b-instruct:free';
+      this.primaryModel = settings.primary_model || DEFAULT_AI_MODEL;
       this.fallbackModel = settings.fallback_model || 'anthropic/claude-3.5-sonnet';
       this.settingsLoaded = true;
 

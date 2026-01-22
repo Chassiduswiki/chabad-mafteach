@@ -1,4 +1,5 @@
 import OpenRouterClient from './openrouter-client';
+import { DEFAULT_AI_MODEL } from './config';
 
 export interface AIAssistantOptions {
   model?: string;
@@ -24,7 +25,7 @@ export class AIAssistant {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: options?.model || 'google/gemini-2.0-flash-exp:free',
+        model: options?.model || DEFAULT_AI_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: options?.temperature || 0.7,
         max_tokens: options?.maxTokens || 2000,
