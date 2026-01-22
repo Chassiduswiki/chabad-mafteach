@@ -14,7 +14,9 @@ import {
   Loader2,
   TrendingUp,
   Eye,
-  Clock
+  Clock,
+  Download,
+  Network
 } from 'lucide-react';
 
 interface Stats {
@@ -167,6 +169,8 @@ export default function AdminDashboardPage() {
     { label: 'Add New Author', href: '/admin/authors/new', icon: User },
     { label: 'Create Topic', href: '/editor/topics/new', icon: FileText },
     { label: 'Import Content', href: '/editor/import', icon: Plus },
+    { label: 'Import/Export Data', href: '/editor/import-export', icon: Download },
+    { label: 'View Topic Graph', href: '/graph', icon: Network },
   ];
 
   return (
