@@ -259,6 +259,9 @@ export default function TopicEditorPage() {
       setManualSaveStatus('success');
       markAsSaved();
 
+      // Reload topic data to reflect saved changes
+      await loadTopic();
+
       setTimeout(() => setManualSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Save error:', error);
