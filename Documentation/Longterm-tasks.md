@@ -120,12 +120,41 @@
 - Batch translation operations
 - Translation history tracking
 - Human-in-the-loop review system
+- **OpenRouter API Integration** - Support for multiple AI models
 
 **Practical Implementation:**
-- Use OpenAI GPT-4 or similar for high-quality translations
-- Implement context-aware translation (understand Chassidic concepts)
-- Add Hebrew-specific language models for better accuracy
-- Create translation templates for common Chassidic terms
+- **OpenRouter Integration:**
+  - Environment variable: `OPENROUTER_API_KEY`
+  - Admin UI for API key management in Directus settings
+  - Support for multiple models: GPT-4, Claude-3, Gemini, Llama
+  - Fallback system if primary model unavailable
+- **Context-Aware Translation:**
+  - Understand Chassidic concepts and terminology
+  - Hebrew-specific language models for better accuracy
+  - Translation templates for common Chassidic terms
+- **System Integration:**
+  - Directus settings panel for AI configuration
+  - Translation quality metrics stored in database
+  - Batch processing for multiple topics
+  - Translation history and version control
+
+**API Key Management:**
+```typescript
+// Environment variables
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=anthropic/claude-3-opus  // Default model
+OPENROUTER_BACKUP_MODEL=openai/gpt-4-turbo  // Fallback model
+
+// Directus settings collection
+{
+  "ai_config": {
+    "openrouter_api_key": "encrypted_key",
+    "preferred_model": "anthropic/claude-3-opus",
+    "translation_quality_threshold": 0.8,
+    "auto_approve_threshold": 0.95
+  }
+}
+```
 
 ### Phase 2: AI Writing Assistant
 **Editor Integration**
