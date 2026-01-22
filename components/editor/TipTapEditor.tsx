@@ -14,7 +14,7 @@ interface TipTapEditorProps {
   placeholder?: string;
   characterLimit?: number;
   initialContent?: string;
-  onUpdate?: (content: string) => void;
+  onUpdate?: (newContent: string) => void;
   showToolbar?: boolean;
 }
 

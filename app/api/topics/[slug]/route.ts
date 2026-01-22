@@ -86,12 +86,19 @@ export async function PATCH(
         const allAllowedFields = [...allowedFields, ...legacyFields];
 
         // Filter to only allowed fields and remove empty strings
+        // Filter to only allowed fields and preserve HTML content (which may look empty but contain tags)
+        console.log('Raw updates received by API:', Object.keys(updates));
+
         const cleanedUpdates = Object.fromEntries(
             Object.entries(updates)
-                .filter(([key, v]) => allAllowedFields.includes(key) && v !== '')
+                .filter(([key, v]) => {
+                    if (!allAllowedFields.includes(key)) return false;
+                    // Keep non-empty values and HTML content (which contains tags like <p></p>)
+                    return v !== '' || (typeof v === 'string' && v.includes('<'));
+                })
         );
 
-        console.log('Cleaned updates:', Object.keys(cleanedUpdates));
+        console.log('Cleaned updates being sent to Directus:', cleanedUpdates);
 
         const updatedTopic = await updateTopic(slug, cleanedUpdates);
 

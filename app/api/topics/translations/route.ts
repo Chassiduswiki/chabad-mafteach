@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// PATCH - Update translation
+// PATCH - Upsert a translation field
 export async function PATCH(request: NextRequest) {
     try {
         const auth = verifyAuth(request);
@@ -91,27 +91,49 @@ export async function PATCH(request: NextRequest) {
             );
         }
 
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
+        const { topicId, language, field, value } = await request.json();
 
-        if (!id) {
+        if (!topicId || !language || !field) {
             return NextResponse.json(
-                { error: 'id parameter required' },
+                { error: 'topicId, language, and field are required' },
                 { status: 400 }
             );
         }
 
-        const updates = await request.json();
-
-        const translation = await directus.request(
-            updateItem('topic_translations' as any, parseInt(id), updates)
+        // Find existing translation
+        const existing = await directus.request(
+            readItems('topic_translations' as any, {
+                filter: {
+                    topic_id: { _eq: topicId },
+                    language_code: { _eq: language },
+                },
+                limit: 1,
+            })
         );
 
-        return NextResponse.json(translation);
+        let result;
+        if (existing && existing.length > 0) {
+            // Update existing translation
+            const translationId = existing[0].id;
+            result = await directus.request(
+                updateItem('topic_translations' as any, translationId, { [field]: value })
+            );
+        } else {
+            // Create new translation
+            result = await directus.request(
+                createItem('topic_translations' as any, {
+                    topic_id: topicId,
+                    language_code: language,
+                    [field]: value,
+                })
+            );
+        }
+
+        return NextResponse.json(result);
     } catch (error: any) {
-        console.error('Translation update error:', error);
+        console.error('Translation upsert error:', error);
         return NextResponse.json(
-            { error: error?.message || 'Failed to update translation' },
+            { error: error?.message || 'Failed to upsert translation' },
             { status: 500 }
         );
     }

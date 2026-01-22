@@ -57,17 +57,17 @@ export function useAutoSave(
   }, [hasUnsavedChanges]);
 
   // Perform save
-  const performSave = useCallback(async (dataToSave: TopicFormData) => {
+  const performSave = useCallback(async () => {
     if (!isMountedRef.current) return;
 
     setIsSaving(true);
     setSaveStatus('saving');
 
     try {
-      await onSave(dataToSave);
+      await onSave(data);
       
       if (isMountedRef.current) {
-        lastSavedDataRef.current = JSON.stringify(dataToSave);
+        lastSavedDataRef.current = JSON.stringify(data);
         setLastSaved(new Date());
         setSaveStatus('success');
         setHasUnsavedChanges(false);
@@ -89,7 +89,7 @@ export function useAutoSave(
         setIsSaving(false);
       }
     }
-  }, [onSave]);
+  }, [onSave, data]);
 
   // Debounced auto-save effect
   useEffect(() => {
@@ -109,7 +109,7 @@ export function useAutoSave(
 
     // Set new debounce timer
     debounceTimerRef.current = setTimeout(() => {
-      performSave(data);
+      performSave();
     }, debounceMs);
 
     return () => {
@@ -125,7 +125,7 @@ export function useAutoSave(
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    await performSave(data);
+    await performSave();
   }, [data, performSave]);
 
   // Mark as saved (for external save operations)

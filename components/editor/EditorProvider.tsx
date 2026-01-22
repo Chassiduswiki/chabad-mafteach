@@ -38,7 +38,7 @@ interface EditorProviderProps {
   docId?: string | null;
   placeholder?: string;
   characterLimit?: number;
-  onUpdate?: (content: string) => void;
+  onUpdate?: (newContent: string) => void;
   initialContent?: string;
 }
 
@@ -105,7 +105,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       // Handle content changes
       const html = editor.getHTML();
       console.log('Content updated:', html);
-      onUpdate?.(html);
+      if (onUpdate) {
+        onUpdate(html);
+      }
     },
     editorProps: {
       attributes: {

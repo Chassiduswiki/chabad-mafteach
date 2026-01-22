@@ -25,8 +25,19 @@ import {
   ConceptTag,
   SectionConfig,
   DisplayConfig,
+  SmartFieldInput,
+  ProactiveSuggestionsPanel,
+  AIContentGeneratorDialog,
+  AIRelationshipFinderDialog,
+  AICitationSuggestorDialog,
+  isRelationType,
+  RelationshipPredictionsPanel,
+  SmartCitationFinder,
+  FloatingAIChatButton,
+  AIChatPanel,
 } from '@/components/topic-editor';
 import { SaveStatusToast } from '@/components/ui/SaveStatusToast';
+import { useSmartSlug } from '@/hooks/useSmartSlug';
 
 // Content sections configuration
 const CONTENT_SECTIONS: SectionConfig[] = [
@@ -85,6 +96,12 @@ export default function TopicEditorPage() {
   const [sections, setSections] = useState<SectionConfig[]>(CONTENT_SECTIONS);
   const [displayConfigChanged, setDisplayConfigChanged] = useState(false);
 
+  // AI Dialog states
+  const [showContentGenerator, setShowContentGenerator] = useState(false);
+  const [showRelationshipFinder, setShowRelationshipFinder] = useState(false);
+  const [showCitationSuggestor, setShowCitationSuggestor] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
+
   // Editor references - use ref to avoid re-render loops
   const editorsRef = useRef<Record<string, any>>({});
 
@@ -126,10 +143,44 @@ export default function TopicEditorPage() {
     enabled: !!topic,
   });
 
+  const { isAvailable, alternatives, loading: slugLoading, generateSlug } = useSmartSlug(
+    formData.slug,
+    originalSlug,
+    formData.canonical_title_transliteration || formData.canonical_title_en || '',
+    !formData.slug // auto-generate only if slug is empty
+  );
+
+  useEffect(() => {
+    const sourceText = formData.canonical_title_transliteration || formData.canonical_title_en || '';
+    if (sourceText && !formData.slug) {
+      const generated = generateSlug(sourceText);
+      if (generated) {
+        updateFormField('slug', generated);
+      }
+    }
+  }, [formData.canonical_title_transliteration, formData.canonical_title_en, formData.slug]);
+
   // Keyboard shortcut for save
   useSaveShortcut(() => {
     handleManualSave();
   });
+
+  // AI Event Listeners
+  useEffect(() => {
+    const handleGenerateArticle = () => setShowContentGenerator(true);
+    const handleFindRelationships = () => setShowRelationshipFinder(true);
+    const handleSuggestCitations = () => setShowCitationSuggestor(true);
+
+    window.addEventListener('ai-generate-article', handleGenerateArticle);
+    window.addEventListener('ai-find-relationships', handleFindRelationships);
+    window.addEventListener('ai-suggest-citations', handleSuggestCitations);
+
+    return () => {
+      window.removeEventListener('ai-generate-article', handleGenerateArticle);
+      window.removeEventListener('ai-find-relationships', handleFindRelationships);
+      window.removeEventListener('ai-suggest-citations', handleSuggestCitations);
+    };
+  }, []);
 
   // Load topic data
   useEffect(() => {
@@ -218,26 +269,21 @@ export default function TopicEditorPage() {
 
   // Manual save handler
   const handleManualSave = async () => {
+    setFormData(currentFormData => {
+      // Perform the save operation within the functional update to ensure latest state
+      (async () => {
     if (!topic) return;
 
     setManualSaveStatus('saving');
 
     try {
-      // Extract content from TipTap editors
-      const editorContent: Partial<TopicFormData> = {};
-      Object.entries(editorsRef.current).forEach(([field, editor]) => {
-        if (editor?.getHTML) {
-          editorContent[field as keyof TopicFormData] = editor.getHTML();
-        }
-      });
-
       // Include display_config if it was changed
       const displayConfig = displayConfigChanged ? buildDisplayConfigForSave() : undefined;
       const saveData = {
-        ...formData,
-        ...editorContent,
+        ...currentFormData,
         ...(displayConfig && { display_config: displayConfig })
       };
+
 
       // Use slug for API call, not ID
       const token = localStorage.getItem('auth_token');
@@ -267,6 +313,9 @@ export default function TopicEditorPage() {
       console.error('Save error:', error);
       setManualSaveStatus('error');
     }
+  })();
+  return currentFormData; // Return the state for the updater
+  });
   };
 
   // Relationship handlers
@@ -430,6 +479,38 @@ export default function TopicEditorPage() {
   };
 
   // Form field update handler
+  const handleTranslationSave = useCallback(async (field: keyof TopicFormData, content: string) => {
+    if (!topic) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch(`/api/topics/translations`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+          },
+          body: JSON.stringify({
+            topicId: topic.id,
+            language: 'en', // Or the current language
+            field,
+            value: content,
+          }),
+        }
+      );
+    } catch (error) {
+      console.error(`Failed to save translation for ${field}:`, error);
+    }
+  }, [topic]);
+
+  const handleEditorUpdate = (field: keyof TopicFormData, content: string) => {
+    setFormData(prev => ({ ...prev, [field]: content }));
+    if (['description', 'overview', 'article', 'definition_positive', 'definition_negative', 'practical_takeaways', 'historical_context', 'mashal', 'global_nimshal', 'charts'].includes(field)) {
+      handleTranslationSave(field, content);
+    }
+  };
+
   const updateFormField = (field: keyof TopicFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -483,10 +564,55 @@ export default function TopicEditorPage() {
     return null;
   };
 
+  const handleContentGenerated = (content: string) => {
+    // For now, let's just log it. In a real implementation, we'd update the editor.
+    console.log('Generated content:', content);
+    // A more robust solution would be to find the 'article' editor instance and set its content.
+    const articleEditor = editorsRef.current['article'];
+    if (articleEditor) {
+      articleEditor.commands.setContent(content);
+    }
+  };
+
   const saveStatusDisplay = getSaveStatusDisplay();
 
   return (
     <div className="min-h-screen bg-background">
+      <AIContentGeneratorDialog 
+        open={showContentGenerator}
+        onOpenChange={setShowContentGenerator}
+        topicTitle={formData.canonical_title}
+        onContentGenerated={handleContentGenerated}
+      />
+      <AIRelationshipFinderDialog 
+        open={showRelationshipFinder}
+        onOpenChange={setShowRelationshipFinder}
+        topicId={topic.id}
+        content={Object.values(formData).join(' ')}
+        onAddRelationship={(p) => {
+          const relationType = isRelationType(p.relationship_type) ? p.relationship_type : 'related_to';
+          handleAddRelationship({ 
+            relatedTopicId: p.topic_id, 
+            relationType: relationType, 
+            direction: 'child', 
+            strength: p.confidence, 
+            description: p.explanation 
+          });
+        }}
+      />
+      <AICitationSuggestorDialog
+        open={showCitationSuggestor}
+        onOpenChange={setShowCitationSuggestor}
+        query={formData.canonical_title}
+        context={Object.values(formData).join(' ')}
+        onInsertCitation={(c) => console.log('Insert citation:', c) /* Placeholder */}
+      />
+      <AIChatPanel 
+        open={showChatPanel}
+        onOpenChange={setShowChatPanel}
+        topicTitle={formData.canonical_title}
+      />
+      <FloatingAIChatButton onClick={() => setShowChatPanel(true)} />
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3">
@@ -558,6 +684,11 @@ export default function TopicEditorPage() {
                 formData={formData}
                 relationshipCount={relationships.length}
                 sourceCount={linkedSources.length}
+              />
+
+              <ProactiveSuggestionsPanel 
+                topicId={topic.id} 
+                content={Object.values(formData).join(' ')} 
               />
 
               {/* Keyboard shortcuts hint */}
@@ -632,18 +763,14 @@ export default function TopicEditorPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Transliteration
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.canonical_title_transliteration || ''}
-                        onChange={(e) => updateFormField('canonical_title_transliteration', e.target.value)}
-                        placeholder="e.g., Ahavas Yisroel"
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
+                    <SmartFieldInput
+                      label="Transliteration"
+                      value={formData.canonical_title_transliteration || ''}
+                      onChange={(value) => updateFormField('canonical_title_transliteration', value)}
+                      sourceValue={formData.canonical_title}
+                      placeholder="e.g., Ahavas Yisroel"
+                      autoTransliterate={true}
+                    />
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">
@@ -674,7 +801,6 @@ export default function TopicEditorPage() {
                       type="text"
                       value={formData.slug}
                       onChange={(e) => {
-                        // Validate and sanitize slug: lowercase, alphanumeric + hyphens only
                         const sanitized = e.target.value
                           .toLowerCase()
                           .replace(/\s+/g, '-')
@@ -684,24 +810,25 @@ export default function TopicEditorPage() {
                       placeholder="e.g., ahavas-yisroel"
                       className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This will be the URL: <span className="font-mono">/topics/{formData.slug || 'slug'}</span>
-                    </p>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {slugLoading && <span>Checking availability...</span>}
+                      {isAvailable === true && <span className='text-green-600'>Slug is available!</span>}
+                      {isAvailable === false && (
+                        <div className='text-red-600'>
+                          Slug is taken. Suggestions:{' '}
+                          {alternatives.map((alt, i) => (
+                            <button key={i} onClick={() => updateFormField('slug', alt)} className='underline mx-1'>{alt}</button>
+                          ))}
+                        </div>
+                      )}
+                      {!slugLoading && isAvailable === null && <span>This will be the URL: <span className="font-mono">/topics/{formData.slug || 'slug'}</span></span>}
+                    </div>
                     {formData.slug && formData.slug !== originalSlug && (
                       <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
                         <div className="flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
                           <div className="text-xs text-yellow-800 dark:text-yellow-200">
                             <p className="font-medium mb-1">⚠️ Warning: Changing the slug will break existing URLs</p>
-                            <p className="mb-1">
-                              Old URL: <span className="font-mono bg-yellow-500/20 px-1 rounded">/topics/{originalSlug}</span>
-                            </p>
-                            <p>
-                              New URL: <span className="font-mono bg-yellow-500/20 px-1 rounded">/topics/{formData.slug}</span>
-                            </p>
-                            <p className="mt-2 text-yellow-700 dark:text-yellow-300">
-                              Any bookmarks or external links to the old URL will return 404 errors.
-                            </p>
                           </div>
                         </div>
                       </div>
@@ -720,8 +847,9 @@ export default function TopicEditorPage() {
                           if (formData.description && editor) {
                             editor.commands.setContent(formData.description);
                           }
-                          editorsRef.current = { ...editorsRef.current, description: editor };
+                          editorsRef.current['description'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('description', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -806,8 +934,9 @@ export default function TopicEditorPage() {
                           if (formData.definition_positive && editor) {
                             editor.commands.setContent(formData.definition_positive);
                           }
-                          editorsRef.current = { ...editorsRef.current, definition_positive: editor };
+                          editorsRef.current['definition_positive'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('definition_positive', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -825,8 +954,9 @@ export default function TopicEditorPage() {
                           if (formData.definition_negative && editor) {
                             editor.commands.setContent(formData.definition_negative);
                           }
-                          editorsRef.current = { ...editorsRef.current, definition_negative: editor };
+                          editorsRef.current['definition_negative'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('definition_negative', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -849,8 +979,9 @@ export default function TopicEditorPage() {
                           if (formData.overview && editor) {
                             editor.commands.setContent(formData.overview);
                           }
-                          editorsRef.current = { ...editorsRef.current, overview: editor };
+                          editorsRef.current['overview'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('overview', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -868,8 +999,9 @@ export default function TopicEditorPage() {
                           if (formData.article && editor) {
                             editor.commands.setContent(formData.article);
                           }
-                          editorsRef.current = { ...editorsRef.current, article: editor };
+                          editorsRef.current['article'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('article', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -892,8 +1024,9 @@ export default function TopicEditorPage() {
                           if (formData.practical_takeaways && editor) {
                             editor.commands.setContent(formData.practical_takeaways);
                           }
-                          editorsRef.current = { ...editorsRef.current, practical_takeaways: editor };
+                          editorsRef.current['practical_takeaways'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('practical_takeaways', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -911,8 +1044,9 @@ export default function TopicEditorPage() {
                           if (formData.historical_context && editor) {
                             editor.commands.setContent(formData.historical_context);
                           }
-                          editorsRef.current = { ...editorsRef.current, historical_context: editor };
+                          editorsRef.current['historical_context'] = editor;
                         }}
+                        onUpdate={(newContent) => handleEditorUpdate('historical_context', newContent)}
                         onBreakStatements={async () => { }}
                       />
                     </div>
@@ -931,8 +1065,9 @@ export default function TopicEditorPage() {
                             if (formData.mashal && editor) {
                               editor.commands.setContent(formData.mashal);
                             }
-                            editorsRef.current = { ...editorsRef.current, mashal: editor };
+                            editorsRef.current['mashal'] = editor;
                           }}
+                          onUpdate={(newContent) => handleEditorUpdate('mashal', newContent)}
                           onBreakStatements={async () => { }}
                         />
                       </div>
@@ -950,8 +1085,9 @@ export default function TopicEditorPage() {
                             if (formData.global_nimshal && editor) {
                               editor.commands.setContent(formData.global_nimshal);
                             }
-                            editorsRef.current = { ...editorsRef.current, global_nimshal: editor };
+                            editorsRef.current['global_nimshal'] = editor;
                           }}
+                          onUpdate={(newContent) => handleEditorUpdate('global_nimshal', newContent)}
                           onBreakStatements={async () => { }}
                         />
                       </div>
@@ -961,7 +1097,7 @@ export default function TopicEditorPage() {
               </TabsContent>
 
               {/* Relationships Tab */}
-              <TabsContent value="relationships" className="mt-6">
+              <TabsContent value="relationships" className="space-y-6 mt-6">
                 <div className="bg-card border border-border rounded-lg p-6">
                   <TopicRelationshipManager
                     topicId={topic.id}
@@ -971,10 +1107,24 @@ export default function TopicEditorPage() {
                     onRemoveRelationship={handleRemoveRelationship}
                   />
                 </div>
+                <RelationshipPredictionsPanel 
+                  topicId={topic.id} 
+                  content={Object.values(formData).join(' ')} 
+                  onAddRelationship={(p) => {
+                    const relationType = isRelationType(p.relationship_type) ? p.relationship_type : 'related_to';
+                    handleAddRelationship({ 
+                      relatedTopicId: p.topic_id, 
+                      relationType: relationType, 
+                      direction: 'child', 
+                      strength: p.confidence, 
+                      description: p.explanation 
+                    });
+                  }}
+                />
               </TabsContent>
 
               {/* Sources Tab */}
-              <TabsContent value="sources" className="mt-6">
+              <TabsContent value="sources" className="space-y-6 mt-6">
                 <div className="bg-card border border-border rounded-lg p-6">
                   <SourceLinker
                     topicId={topic.id}
@@ -984,6 +1134,17 @@ export default function TopicEditorPage() {
                     onCreateSource={handleCreateSource}
                   />
                 </div>
+                <SmartCitationFinder 
+                  context={Object.values(formData).join(' ')} 
+                  onInsertCitation={(c) => {
+                    const articleEditor = editorsRef.current['article'];
+                    if (articleEditor) {
+                      articleEditor.chain().focus().insertContent(
+                        `<citation sourceId="${c.sourceId}" sourceTitle="${c.sourceTitle}" reference="${c.reference}"></citation> `
+                      ).run();
+                    }
+                  }}
+                />
               </TabsContent>
 
               {/* Display Tab */}
