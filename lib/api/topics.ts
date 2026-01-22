@@ -7,9 +7,10 @@ import { readItems, updateItem } from '@directus/sdk';
  * OPTIMIZED: Uses deep queries to reduce N+1 query problems
  * 
  * @param slug Topic slug
+ * @param lang Language code (default: 'en')
  * @returns Topic with content_blocks containing statements
  */
-export async function getTopicBySlug(slug: string) {
+export async function getTopicBySlug(slug: string, lang: string = 'en') {
     try {
         const directus = createClient();
 
@@ -28,6 +29,46 @@ export async function getTopicBySlug(slug: string) {
         }
 
         const topic = topics[0];
+
+        // Fetch translation for requested language
+        let translation: any = null;
+        try {
+            const translations = await directus.request(readItems('topic_translations', {
+                filter: {
+                    _and: [
+                        { topic_id: { _eq: topic.id } },
+                        { language_code: { _eq: lang } }
+                    ]
+                } as any,
+                fields: ['*'],
+                limit: 1
+            }));
+
+            if (translations && translations.length > 0) {
+                translation = translations[0];
+            } else {
+                // Fallback to default language if requested language not found
+                const defaultLang = topic.default_language || 'he';
+                if (lang !== defaultLang) {
+                    const fallbackTranslations = await directus.request(readItems('topic_translations', {
+                        filter: {
+                            _and: [
+                                { topic_id: { _eq: topic.id } },
+                                { language_code: { _eq: defaultLang } }
+                            ]
+                        } as any,
+                        fields: ['*'],
+                        limit: 1
+                    }));
+                    if (fallbackTranslations && fallbackTranslations.length > 0) {
+                        translation = fallbackTranslations[0];
+                    }
+                }
+            }
+        } catch (translationError) {
+            console.warn('Failed to fetch translation:', translationError);
+            // Continue without translation - will use legacy fields
+        }
 
         let contentBlocks: any[] = [];
         let validStatementTopics: any[] = [];
@@ -308,11 +349,31 @@ export async function getTopicBySlug(slug: string) {
             // Continue without sources - this is not critical
         }
 
+        // Merge translation data with topic, preferring translation fields over legacy fields
+        const mergedTopic = {
+            ...topic,
+            // Override with translation data if available
+            title: translation?.title || topic.canonical_title || topic.name_hebrew,
+            transliteration: translation?.transliteration || topic.canonical_title_transliteration,
+            description: translation?.description || topic.description,
+            overview: translation?.overview || topic.overview,
+            article: translation?.article || topic.article,
+            definition_positive: translation?.definition_positive || topic.definition_positive,
+            definition_negative: translation?.definition_negative || topic.definition_negative,
+            practical_takeaways: translation?.practical_takeaways || topic.practical_takeaways,
+            historical_context: translation?.historical_context || topic.historical_context,
+            mashal: translation?.mashal || topic.mashal,
+            global_nimshal: translation?.global_nimshal || topic.global_nimshal,
+            charts: translation?.charts || topic.charts,
+            // Add translation metadata
+            current_language: translation?.language_code || lang,
+            translation_quality: translation?.translation_quality,
+            is_machine_translated: translation?.is_machine_translated,
+            contentBlocks // **[CHANGED]** from paragraphs
+        };
+
         return {
-            topic: {
-                ...topic,
-                contentBlocks // **[CHANGED]** from paragraphs
-            },
+            topic: mergedTopic,
             citations: validStatementTopics,
             relatedTopics,
             sources,

@@ -8,8 +8,12 @@ export async function GET(
 ) {
     try {
         const { slug } = await params;
+        
+        // Get language from query params (default to 'en')
+        const { searchParams } = new URL(request.url);
+        const lang = searchParams.get('lang') || 'en';
 
-        const data = await getTopicBySlug(slug);
+        const data = await getTopicBySlug(slug, lang);
 
         if (!data) {
             return NextResponse.json(
@@ -63,19 +67,28 @@ export async function PATCH(
         }
 
         // Only include fields that exist in the topics table schema
+        // Note: Translation fields (description, overview, etc.) should be updated via translations API
         const allowedFields = [
-            'canonical_title', 'canonical_title_en', 'canonical_title_transliteration',
-            'name_hebrew', 'slug', 'topic_type', 'description', 'description_en',
-            'practical_takeaways', 'historical_context', 'content_status',
-            'status_label', 'badge_color', 'mashal', 'global_nimshal', 'charts',
-            'metadata', 'original_lang', 'sources_count', 'documents_count',
+            'slug', 'topic_type', 'default_language',
+            'content_status', 'status_label', 'badge_color',
+            'metadata', 'sources_count', 'documents_count',
             'display_config'
         ];
+        
+        // Legacy fields still supported for backward compatibility during migration
+        const legacyFields = [
+            'canonical_title', 'canonical_title_en', 'canonical_title_transliteration',
+            'name_hebrew', 'description', 'description_en',
+            'practical_takeaways', 'historical_context', 'mashal', 'global_nimshal', 'charts',
+            'original_lang'
+        ];
+        
+        const allAllowedFields = [...allowedFields, ...legacyFields];
 
-        // Filter to only allowed fields and remove empty strings (except canonical_title)
+        // Filter to only allowed fields and remove empty strings
         const cleanedUpdates = Object.fromEntries(
             Object.entries(updates)
-                .filter(([key, v]) => allowedFields.includes(key) && (v !== '' || key === 'canonical_title'))
+                .filter(([key, v]) => allAllowedFields.includes(key) && v !== '')
         );
 
         console.log('Cleaned updates:', Object.keys(cleanedUpdates));

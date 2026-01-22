@@ -21,7 +21,7 @@ type ViewState = "search" | "reference" | "create";
 interface CitationCommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: (source: { id: number; title: string }, reference: string) => void;
+  onComplete: (source: { id: number; title: string }, citationData: { citation_type?: string; page_number?: string; reference?: string; [key: string]: any }) => void;
   onFeedback?: (payload: { type: "success" | "error"; message: string }) => void;
 }
 
@@ -174,7 +174,7 @@ export function CitationCommandPalette({
     const cleaned = reference.trim();
     if (!cleaned) return;
 
-    onComplete(selectedSource, cleaned);
+    onComplete(selectedSource, { citation_type: 'page', page_number: cleaned, reference: cleaned });
     onFeedback?.({
       type: "success",
       message: `Inserted citation from ${selectedSource.title}`,
@@ -199,7 +199,7 @@ export function CitationCommandPalette({
         externalSource: externalSourceData || undefined, // Include external source data if available
       });
 
-      onComplete({ id: source.id, title: source.title }, cleanedReference);
+      onComplete({ id: source.id, title: source.title }, { citation_type: 'page', page_number: cleanedReference, reference: cleanedReference });
       onFeedback?.({
         type: "success",
         message: `Created “${source.title}” and inserted citation`,

@@ -2,16 +2,11 @@
 
 import React from "react";
 import { useSefariaText } from "@/lib/hooks/useSefariaText";
-
-interface Citation {
-  source_id: number | string | null;
-  source_title: string | null;
-  reference: string | null;
-}
+import { CitationAttrs } from "./plugins/citations/comprehensiveCitationPlugin";
 
 interface CitationViewerModalProps {
   open: boolean;
-  citation: Citation | null;
+  citation: CitationAttrs | null;
   citationContent?: string; // HTML content of the citation
   onClose: () => void;
 }
