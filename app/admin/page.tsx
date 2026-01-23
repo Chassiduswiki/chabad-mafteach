@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -46,10 +47,11 @@ import {
 import { cn } from '@/lib/utils';
 
 interface Stats {
-  books: number;
+  sources: number;
   authors: number;
   topics: number;
   statements: number;
+  documents: number;
 }
 
 interface PopularTopic {
@@ -101,30 +103,30 @@ const MetricCard = ({ title, value, change, icon: Icon, trend, color = 'blue' }:
   color?: string;
 }) => (
   <div className={cn(
-    "p-6 rounded-xl border bg-card hover:shadow-lg transition-all duration-300",
-    "group cursor-pointer"
+    "p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300",
+    "hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer"
   )}>
     <div className="flex items-start justify-between mb-4">
       <div className={cn(
-        "p-3 rounded-lg group-hover:scale-110 transition-transform",
-        `bg-${color}-500/10`
+        "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+        `bg-primary/5`
       )}>
-        <Icon className={cn("w-6 h-6", `text-${color}-500`)} />
+        <Icon className={cn("w-5 h-5", `text-primary/70`)} />
       </div>
       {change !== undefined && (
         <div className={cn(
-          "flex items-center gap-1 text-sm font-medium",
-          trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-muted-foreground'
+          "flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full",
+          trend === 'up' ? 'bg-emerald-500/10 text-emerald-600' : trend === 'down' ? 'bg-rose-500/10 text-rose-600' : 'bg-muted text-muted-foreground'
         )}>
-          {trend === 'up' && <TrendingUp className="w-4 h-4" />}
-          {trend === 'down' && <TrendingDown className="w-4 h-4" />}
+          {trend === 'up' && <TrendingUp className="w-3 h-3" />}
+          {trend === 'down' && <TrendingDown className="w-3 h-3" />}
           {change > 0 ? '+' : ''}{change}%
         </div>
       )}
     </div>
     <div>
-      <div className="text-2xl font-bold text-foreground mb-1">{value}</div>
-      <div className="text-sm text-muted-foreground">{title}</div>
+      <div className="text-3xl font-serif italic text-foreground mb-1">{value}</div>
+      <div className="text-[12px] font-medium uppercase tracking-[0.1em] text-muted-foreground/70">{title}</div>
     </div>
   </div>
 );
@@ -269,7 +271,7 @@ const MiniChart = ({ data, label }: { data: number[]; label: string }) => {
 };
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<Stats>({ books: 0, authors: 0, topics: 0, statements: 0 });
+  const [stats, setStats] = useState<Stats>({ sources: 0, authors: 0, topics: 0, statements: 0, documents: 0 });
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [contentHealth, setContentHealth] = useState<ContentHealth | null>(null);
   const [realTimeMetrics, setRealTimeMetrics] = useState<RealTimeMetrics | null>(null);
@@ -295,15 +297,16 @@ export default function AdminDashboardPage() {
       if (response.ok) {
         const data = await response.json();
         setStats({
-          books: data.counts.sources || 0,
-          authors: data.counts.authors || 0,
-          topics: data.counts.topics || 0,
-          statements: data.counts.statements || 0,
+          sources: data?.counts?.sources || 0,
+          authors: data?.counts?.authors || 0,
+          topics: data?.counts?.topics || 0,
+          statements: data?.counts?.statements || 0,
+          documents: data?.counts?.documents || 0,
         });
-        setContentHealth(data.contentHealth);
-        setPopularTopics(data.popularTopics || []);
-        setRealTimeMetrics(data.realTime);
-        setUserAnalytics(data.userAnalytics);
+        setContentHealth(data?.contentHealth || null);
+        setPopularTopics(data?.popularTopics || []);
+        setRealTimeMetrics(data?.realTime || null);
+        setUserAnalytics(data?.userAnalytics || null);
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -387,151 +390,194 @@ export default function AdminDashboardPage() {
 
   const sections = [
     {
-      title: 'Books',
-      description: 'Manage your library of seforim and sources',
-      icon: BookOpen,
-      href: '/admin/books',
-      newHref: '/admin/books/new',
-      count: stats.books,
-      color: 'blue',
+      title: 'Content',
+      items: [
+        {
+          title: 'Sources',
+          description: 'Manage citations & references',
+          icon: BookMarked,
+          href: '/admin/sources',
+          count: stats.sources,
+        },
+        {
+          title: 'Documents',
+          description: 'Manage seforim & texts',
+          icon: BookOpen,
+          href: '/admin/books',
+          count: stats.documents,
+        },
+        {
+          title: 'Authors',
+          description: 'Manage biographical info',
+          icon: User,
+          href: '/admin/authors',
+          count: stats.authors,
+        },
+        {
+          title: 'Topics',
+          description: 'Manage topic entries',
+          icon: FileText,
+          href: '/editor/topics',
+          count: stats.topics,
+        },
+        {
+          title: 'Collections',
+          description: 'Organize into collections',
+          icon: Layers,
+          href: '/admin/topic-collections',
+        },
+      ]
     },
     {
-      title: 'Authors',
-      description: 'Manage authors and their biographical info',
-      icon: User,
-      href: '/admin/authors',
-      newHref: '/admin/authors/new',
-      count: stats.authors,
-      color: 'purple',
-    },
-    {
-      title: 'Topics',
-      description: 'Browse and manage topic entries',
-      icon: FileText,
-      href: '/editor/topics',
-      newHref: '/editor/topics/new',
-      count: stats.topics,
-      color: 'green',
-    },
-    {
-      title: 'Collections',
-      description: 'Organize topics into collections',
-      icon: Layers,
-      href: '/admin/topic-collections',
-      newHref: null,
-      count: null,
-      color: 'amber',
-    },
+      title: 'Configuration',
+      items: [
+        {
+          title: 'AI Settings',
+          description: 'Configure intelligence models',
+          icon: Sparkles,
+          href: '/admin/ai-settings',
+        },
+        {
+          title: 'Import',
+          description: 'Bulk data ingestion',
+          icon: Plus,
+          href: '/editor/import',
+        },
+        {
+          title: 'System Settings',
+          description: 'Platform configuration',
+          icon: Settings,
+          href: '/admin/settings',
+        },
+      ]
+    }
   ];
 
   const quickLinks = [
-    { label: 'Add New Book', href: '/admin/books/new', icon: BookOpen },
-    { label: 'Add New Author', href: '/admin/authors/new', icon: User },
+    { label: 'Add Book', href: '/admin/books/new', icon: BookOpen },
+    { label: 'Add Author', href: '/admin/authors/new', icon: User },
     { label: 'Create Topic', href: '/editor/topics/new', icon: FileText },
-    { label: 'AI Settings', href: '/admin/ai-settings', icon: Sparkles },
-    { label: 'Import Content', href: '/editor/import', icon: Plus },
-    { label: 'Export Data', href: '/admin/export', icon: Download },
-    { label: 'Topic Graph', href: '/graph', icon: Network },
+    { label: 'Import', href: '/editor/import', icon: Plus },
+    { label: 'Export', href: '/admin/export', icon: Download },
+    { label: 'Graph', href: '/graph', icon: Network },
   ];
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex relative selection:bg-primary/10">
+      {/* Subtle Texture/Grain */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
+
       {/* Left Sidebar */}
       <div className={cn(
-        "bg-card border-r border-border transition-all duration-300",
+        "bg-card/50 backdrop-blur-xl border-r border-border/50 transition-all duration-300 relative z-20",
         isSidebarCollapsed ? "w-16" : "w-64"
       )}>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-8">
+        <div className="p-4 h-full flex flex-col">
+          <div className="flex items-center justify-between mb-10 px-2">
             {!isSidebarCollapsed && (
-              <h1 className="text-lg font-semibold flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+              <h1 className="text-xl font-serif italic tracking-tight flex items-center gap-2">
                 Admin
               </h1>
             )}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              className="p-2 hover:bg-muted/50 rounded-full transition-colors"
             >
-              <Menu className="w-4 h-4" />
+              <Menu className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
           
-          {!isSidebarCollapsed && (
-            <nav className="space-y-2">
-              {sections.map((section) => (
-                <Link
-                  key={section.title}
-                  href={section.href}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <section.icon className="w-4 h-4" />
-                  <span className="text-sm">{section.title}</span>
-                  {section.count && (
-                    <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                      {section.count}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </nav>
-          )}
+          <nav className="flex-1 space-y-8">
+            {sections.map((section) => (
+              <div key={section.title}>
+                {!isSidebarCollapsed && (
+                  <h2 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold mb-4 px-3">
+                    {section.title}
+                  </h2>
+                )}
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group",
+                        "hover:bg-primary/5 hover:text-primary"
+                      )}
+                    >
+                      <item.icon className="w-4 h-4 text-muted-foreground/70 group-hover:text-primary transition-colors" />
+                      {!isSidebarCollapsed && (
+                        <>
+                          <span className="text-[14px] font-medium">{item.title}</span>
+                          {item.count !== undefined && item.count !== null && (
+                            <span className="ml-auto text-[10px] font-bold text-muted-foreground/40 bg-muted/50 px-2 py-0.5 rounded-full">
+                              {item.count}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
-        <div className="flex-1 p-8">
+      <div className="flex-1 flex relative z-10">
+        <div className="flex-1 p-10 overflow-y-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
+          <div className="mb-12">
+            <div className="flex items-end justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                  <BarChart3 className="w-8 h-8" />
+                <h1 className="text-4xl font-serif italic tracking-tight text-foreground flex items-center gap-4">
                   Analytics Dashboard
                 </h1>
-                <p className="text-muted-foreground mt-2">
-                  Real-time insights and performance metrics
+                <p className="text-muted-foreground font-light text-lg mt-2">
+                  Real-time insights and performance metrics.
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <select
-                  value={selectedTimeRange}
-                  onChange={(e) => setSelectedTimeRange(e.target.value as any)}
-                  className="px-3 py-2 bg-card border border-border rounded-lg text-sm"
-                >
-                  <option value="24h">Last 24 hours</option>
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                </select>
+                <div className="flex bg-muted/30 p-1 rounded-full border border-border/50">
+                  {(['24h', '7d', '30d'] as const).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setSelectedTimeRange(range)}
+                      className={cn(
+                        "px-4 py-1.5 rounded-full text-xs font-medium transition-all",
+                        selectedTimeRange === range 
+                          ? "bg-foreground text-background shadow-sm" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {range.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                
                 <button
                   onClick={() => setAutoRefresh(!autoRefresh)}
                   className={cn(
-                    "p-2 rounded-lg border transition-colors",
-                    autoRefresh ? "bg-primary text-primary-foreground" : "bg-card border-border"
+                    "p-2.5 rounded-full border border-border/50 transition-all",
+                    autoRefresh ? "bg-primary/10 text-primary border-primary/20" : "bg-card hover:bg-muted/50"
                   )}
                 >
                   <RefreshCw className={cn("w-4 h-4", autoRefresh && "animate-spin")} />
-                </button>
-                <button
-                  onClick={() => setIsAnalyticsPanelOpen(!isAnalyticsPanelOpen)}
-                  className="p-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
-                >
-                  <BarChart3 className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Real-time Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <MetricCard
               title="Active Users"
               value={realTimeMetrics?.activeUsers || 0}
               change={12}
               icon={Users}
               trend="up"
-              color="green"
             />
             <MetricCard
               title="Today's Views"
@@ -539,7 +585,6 @@ export default function AdminDashboardPage() {
               change={8}
               icon={Eye}
               trend="up"
-              color="blue"
             />
             <MetricCard
               title="Avg Session"
@@ -547,7 +592,6 @@ export default function AdminDashboardPage() {
               change={-5}
               icon={Timer}
               trend="down"
-              color="purple"
             />
             <MetricCard
               title="New Users"
@@ -555,50 +599,46 @@ export default function AdminDashboardPage() {
               change={15}
               icon={UserPlus}
               trend="up"
-              color="amber"
             />
           </div>
 
           {/* Content Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
             {/* Popular Topics */}
-            <div className="p-6 bg-card border border-border rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
                   Popular Topics
                 </h2>
-                <Link href="/analytics/topics" className="text-sm text-primary hover:underline">
+                <Link href="/analytics/topics" className="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
                   View all
                 </Link>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {popularTopics.slice(0, 5).map((topic, index) => (
                   <Link
                     key={topic.id}
                     href={`/topics/${topic.slug}`}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    className="flex items-center justify-between p-4 rounded-2xl hover:bg-muted/30 transition-all group"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono text-muted-foreground w-6">
-                        {index + 1}.
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] font-bold text-muted-foreground/30 w-4">
+                        0{index + 1}
                       </span>
                       <div>
-                        <h3 className="font-medium group-hover:text-primary transition-colors">
+                        <h3 className="text-[15px] font-medium group-hover:text-primary transition-colors">
                           {topic.canonical_title}
                         </h3>
                         {topic.topic_type && (
-                          <span className="text-xs text-muted-foreground capitalize">
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold">
                             {topic.topic_type}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {topic.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
-                      {topic.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Eye className="w-4 h-4" />
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/60">
+                        <Eye className="w-3.5 h-3.5" />
                         <span>{topic.views}</span>
                       </div>
                     </div>
@@ -608,19 +648,20 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="p-6 bg-card border border-border rounded-xl">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" />
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <h2 className="text-xl font-serif italic mb-8 flex items-center gap-3">
                 Quick Actions
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {quickLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors text-sm"
+                    className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-border/60 hover:bg-muted/50 transition-all text-[14px] font-medium group"
                   >
-                    <link.icon className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
                     {link.label}
                   </Link>
                 ))}
@@ -630,45 +671,44 @@ export default function AdminDashboardPage() {
 
           {/* Content Health */}
           {contentHealth && (
-            <div className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 rounded-xl">
-              <div className="flex items-center justify-between mb-6">
+            <div className="p-10 rounded-3xl border border-primary/10 bg-primary/[0.02] relative overflow-hidden group hover:border-primary/20 transition-all duration-500">
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6">
                 <div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
+                  <h2 className="text-2xl font-serif italic flex items-center gap-3">
                     Content Health Score
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Overall quality and completeness
+                  <p className="text-muted-foreground font-light mt-1">
+                    An assessment of platform quality and completeness.
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-4xl font-bold text-primary">
+                  <div className="text-6xl font-serif italic text-primary drop-shadow-sm">
                     {contentHealth.score}
-                    <span className="text-lg text-muted-foreground">/100</span>
+                    <span className="text-xl font-sans text-muted-foreground/40 not-italic ml-1">/100</span>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm">Topics with Sources</span>
-                    <span className="text-sm font-medium">{contentHealth.metrics.topicsWithSources}%</span>
+              <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Topics with Sources</span>
+                    <span className="text-sm font-serif italic text-foreground">{contentHealth.metrics.topicsWithSources}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted/50 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-green-500 h-2 rounded-full"
+                      className="bg-primary h-full rounded-full transition-all duration-1000"
                       style={{ width: `${contentHealth.metrics.topicsWithSources}%` }}
                     />
                   </div>
                 </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm">Statements Tagged</span>
-                    <span className="text-sm font-medium">{contentHealth.metrics.statementsTagged}%</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Statements Tagged</span>
+                    <span className="text-sm font-serif italic text-foreground">{contentHealth.metrics.statementsTagged}%</span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted/50 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
+                      className="bg-primary h-full rounded-full transition-all duration-1000"
                       style={{ width: `${contentHealth.metrics.statementsTagged}%` }}
                     />
                   </div>
@@ -680,43 +720,54 @@ export default function AdminDashboardPage() {
 
         {/* Right Analytics Panel */}
         {isAnalyticsPanelOpen && (
-          <div className="w-80 bg-card border-l border-border overflow-y-auto">
-            <div className="p-4 border-b border-border">
+          <div className="w-96 bg-card/50 backdrop-blur-xl border-l border-border/50 overflow-y-auto relative z-20">
+            <div className="p-6 border-b border-border/50 sticky top-0 bg-card/80 backdrop-blur-xl z-10">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  Live Analytics
+                <h2 className="font-serif italic text-lg flex items-center gap-2">
+                  Live Stream
                 </h2>
                 <button
                   onClick={() => setIsAnalyticsPanelOpen(false)}
-                  className="p-1 hover:bg-muted rounded transition-colors"
+                  className="p-2 hover:bg-muted/50 rounded-full transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-8 space-y-10">
               {/* Activity Chart */}
-              <MiniChart 
-                data={realTimeMetrics?.hourlyActivity.slice(-12).map(h => h.views) || []}
-                label="Views (Last 12h)"
-              />
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Volume (Last 12h)</h3>
+                <MiniChart 
+                  data={realTimeMetrics?.hourlyActivity.slice(-12).map(h => h.views) || []}
+                  label=""
+                />
+              </div>
 
               {/* Countries */}
-              <CountryList countries={realTimeMetrics?.topCountries || []} />
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Demographics</h3>
+                <CountryList countries={realTimeMetrics?.topCountries || []} />
+              </div>
 
               {/* Search Terms */}
-              <SearchAnalytics terms={realTimeMetrics?.searchTerms || []} />
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Queries</h3>
+                <SearchAnalytics terms={realTimeMetrics?.searchTerms || []} />
+              </div>
 
               {/* User Journey */}
-              <UserJourneyFlow journey={userAnalytics?.userJourney || []} />
+              <div className="space-y-4">
+                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Navigation Flow</h3>
+                <UserJourneyFlow journey={userAnalytics?.userJourney || []} />
+              </div>
 
               {/* Export Options */}
-              <div className="pt-4 border-t border-border">
-                <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+              <div className="pt-10 border-t border-border/50">
+                <button className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-foreground text-background rounded-2xl font-medium hover:opacity-90 transition-all shadow-lg shadow-foreground/5">
                   <FileDown className="w-4 h-4" />
-                  Export Report
+                  Generate Archive
                 </button>
               </div>
             </div>

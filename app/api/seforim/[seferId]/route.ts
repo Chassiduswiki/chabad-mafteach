@@ -162,8 +162,8 @@ export async function GET(
                 return NextResponse.json({ error: 'Document not found' }, { status: 404 });
             }
 
-            const contentBlocksArray = Array.isArray(blockResult) ? blockResult :
-                (blockResult ? [blockResult] : []);
+            const contentBlocksArray = (Array.isArray(blockResult) ? blockResult :
+                (blockResult ? [blockResult] : [])) as ContentBlock[];
             console.log('Found', contentBlocksArray.length, 'content blocks');
             doc.contentBlocks = contentBlocksArray;
 

@@ -7,6 +7,7 @@ import { SearchProvider } from "@/lib/search-context";
 import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { AnalyticsTrackerComp } from "@/lib/analytics-tracker";
 
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
@@ -90,7 +91,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+      <body className={inter.variable}>
+        <AnalyticsTrackerComp />
         {/* Skip to content link for accessibility */}
         <a 
           href="#main-content" 

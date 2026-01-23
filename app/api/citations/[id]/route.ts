@@ -8,10 +8,10 @@ import { readItems } from '@directus/sdk';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const citationId = params.id;
+    const { id: citationId } = await params;
     
     if (!citationId) {
       return NextResponse.json(

@@ -1,14 +1,27 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { 
+  CheckCircle2, 
+  XCircle, 
+  Loader2, 
+  ArrowLeft, 
+  Sparkles, 
+  Zap, 
+  Shield, 
+  Brain,
+  Sliders,
+  Terminal,
+  Save,
+  Activity
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 export default function AISettingsPage() {
   const [provider, setProvider] = useState('openrouter');
@@ -24,7 +37,6 @@ export default function AISettingsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Load settings from API
     const loadSettings = async () => {
       try {
         const response = await fetch('/api/ai/settings');
@@ -117,222 +129,216 @@ export default function AISettingsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">AI Translation Settings</h1>
-        <p className="text-muted-foreground">
-          Configure OpenRouter API settings for AI-powered translations
-        </p>
-      </div>
+    <div className="min-h-screen bg-background relative selection:bg-primary/10">
+      {/* Subtle Texture/Grain */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
 
-      <div className="space-y-6">
-        {/* API Configuration */}
-        <Card>
-          <CardHeader>
-            <CardTitle>API Configuration</CardTitle>
-            <CardDescription>
-              Configure your OpenRouter API credentials and model preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="provider">AI Provider</Label>
-              <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger id="provider">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openrouter">OpenRouter (Recommended)</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="google">Google AI</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                Choose your AI provider. OpenRouter gives access to multiple models with one API key.
-              </p>
+      <div className="max-w-4xl mx-auto px-8 py-12 relative z-10">
+        {/* Header */}
+        <div className="mb-16">
+          <Link 
+            href="/admin" 
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Dashboard
+          </Link>
+          
+          <h1 className="text-5xl font-serif italic tracking-tight text-foreground flex items-center gap-4">
+            Intelligence Settings
+          </h1>
+          <p className="text-muted-foreground font-light text-xl mt-3">
+            Configure linguistic models and cognitive parameters for the platform.
+          </p>
+        </div>
+
+        <div className="space-y-12">
+          {/* API Configuration */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center border border-border/50">
+                <Terminal className="w-5 h-5 text-muted-foreground/60" />
+              </div>
+              <h2 className="text-2xl font-serif italic">Model Orchestration</h2>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={
-                  provider === 'openrouter' ? 'sk-or-v1-...' :
-                  provider === 'openai' ? 'sk-...' :
-                  provider === 'anthropic' ? 'sk-ant-...' :
-                  'API key...'
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                {provider === 'openrouter' && (
-                  <>Get your API key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openrouter.ai</a></>
-                )}
-                {provider === 'openai' && (
-                  <>Get your API key at <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">platform.openai.com</a></>
-                )}
-                {provider === 'anthropic' && (
-                  <>Get your API key at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">console.anthropic.com</a></>
-                )}
-                {provider === 'google' && (
-                  <>Get your API key at <a href="https://makersuite.google.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">makersuite.google.com</a></>
-                )}
-              </p>
-            </div>
+            <div className="grid grid-cols-1 gap-8 p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="provider" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold px-1">
+                    Intelligence Provider
+                  </Label>
+                  <Select value={provider} onValueChange={setProvider}>
+                    <SelectTrigger id="provider" className="h-12 bg-muted/30 border-border/60 rounded-xl focus:ring-primary/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/50">
+                      <SelectItem value="openrouter">OpenRouter (Unified)</SelectItem>
+                      <SelectItem value="openai">OpenAI (Direct)</SelectItem>
+                      <SelectItem value="anthropic">Anthropic (Direct)</SelectItem>
+                      <SelectItem value="google">Google AI (Direct)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="primaryModel">Primary Model</Label>
-                <Select value={primaryModel} onValueChange={setPrimaryModel}>
-                  <SelectTrigger id="primaryModel">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="allenai/olmo-3.1-32b-think">Olmo 3.1 32B Think</SelectItem>
-                    <SelectItem value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 Next 80B (Free)</SelectItem>
-                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
-                    <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
-                    <SelectItem value="anthropic/claude-3-opus">Claude 3 Opus</SelectItem>
-                    <SelectItem value="openai/gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                    <SelectItem value="openai/gpt-4">GPT-4</SelectItem>
-                    <SelectItem value="custom">Custom Model...</SelectItem>
-                  </SelectContent>
-                </Select>
-                {primaryModel === 'custom' && (
+                <div className="space-y-3">
+                  <Label htmlFor="apiKey" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold px-1">
+                    API Credentials
+                  </Label>
                   <Input
-                    placeholder="Enter custom model ID (e.g., provider/model-name)"
-                    value={customPrimaryModel}
-                    onChange={(e) => setCustomPrimaryModel(e.target.value)}
-                    className="mt-2"
+                    id="apiKey"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
+                    placeholder="Enter sk-..."
+                    className="h-12 bg-muted/30 border-border/60 rounded-xl focus:ring-primary/20"
                   />
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {primaryModel === 'custom' 
-                    ? 'Enter the full model ID from OpenRouter (e.g., qwen/qwen3-next-80b-a3b-instruct:free)'
-                    : 'Select a model or choose "Custom Model..." to enter your own'}
-                </p>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fallbackModel">Fallback Model</Label>
-                <Select value={fallbackModel} onValueChange={setFallbackModel}>
-                  <SelectTrigger id="fallbackModel">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
-                    <SelectItem value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 Next 80B (Free)</SelectItem>
-                    <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
-                    <SelectItem value="openai/gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                    <SelectItem value="openai/gpt-4">GPT-4</SelectItem>
-                    <SelectItem value="anthropic/claude-3-opus">Claude 3 Opus</SelectItem>
-                    <SelectItem value="custom">Custom Model...</SelectItem>
-                  </SelectContent>
-                </Select>
-                {fallbackModel === 'custom' && (
-                  <Input
-                    placeholder="Enter custom model ID (e.g., provider/model-name)"
-                    value={customFallbackModel}
-                    onChange={(e) => setCustomFallbackModel(e.target.value)}
-                    className="mt-2"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                <div className="space-y-3">
+                  <Label htmlFor="primaryModel" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold px-1">
+                    Primary Reasoning Model
+                  </Label>
+                  <Select value={primaryModel} onValueChange={setPrimaryModel}>
+                    <SelectTrigger id="primaryModel" className="h-12 bg-muted/30 border-border/60 rounded-xl focus:ring-primary/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/50">
+                      <SelectItem value="allenai/olmo-3.1-32b-think">Olmo 3.1 32B Think</SelectItem>
+                      <SelectItem value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 Next 80B (Free)</SelectItem>
+                      <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
+                      <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                      <SelectItem value="openai/gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                      <SelectItem value="custom">Custom ID...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {primaryModel === 'custom' && (
+                    <Input
+                      placeholder="e.g. anthropic/claude-3-opus"
+                      value={customPrimaryModel}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomPrimaryModel(e.target.value)}
+                      className="h-10 bg-muted/30 border-border/60 rounded-xl mt-2"
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="fallbackModel" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold px-1">
+                    Fallback Intelligence
+                  </Label>
+                  <Select value={fallbackModel} onValueChange={setFallbackModel}>
+                    <SelectTrigger id="fallbackModel" className="h-12 bg-muted/30 border-border/60 rounded-xl focus:ring-primary/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-border/50">
+                      <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                      <SelectItem value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 Next 80B (Free)</SelectItem>
+                      <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Free)</SelectItem>
+                      <SelectItem value="openai/gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                      <SelectItem value="custom">Custom ID...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {fallbackModel === 'custom' && (
+                    <Input
+                      placeholder="e.g. openai/gpt-4"
+                      value={customFallbackModel}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomFallbackModel(e.target.value)}
+                      className="h-10 bg-muted/30 border-border/60 rounded-xl mt-2"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-6 border-t border-border/40">
+                <button 
+                  onClick={testConnection} 
+                  disabled={!apiKey || testing}
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
+                    testing ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary hover:bg-primary/15"
+                  )}
+                >
+                  {testing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
+                  {testing ? 'Verifying...' : 'Verify Connection'}
+                </button>
+
+                {testResult && (
+                  <div className={cn(
+                    "flex items-center gap-2 text-xs font-medium",
+                    testResult.success ? "text-emerald-600" : "text-rose-600"
+                  )}>
+                    {testResult.success ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {testResult.message}
+                  </div>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  {fallbackModel === 'custom' 
-                    ? 'Enter the full model ID from OpenRouter (e.g., anthropic/claude-3.5-sonnet)'
-                    : 'Fallback model used if primary model fails'}
-                </p>
               </div>
             </div>
+          </section>
 
-            <div className="flex gap-2">
-              <Button onClick={testConnection} disabled={!apiKey || testing}>
-                {testing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  'Test Connection'
-                )}
-              </Button>
-            </div>
-
-            {testResult && (
-              <Alert>
-                {testResult.success ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                <AlertDescription>{testResult.message}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quality Thresholds */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quality Thresholds</CardTitle>
-            <CardDescription>
-              Configure quality scoring thresholds for translations
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="qualityThreshold">Minimum Quality Threshold</Label>
-                <span className="text-sm text-muted-foreground">{qualityThreshold.toFixed(2)}</span>
+          {/* Cognitive Parameters */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center border border-border/50">
+                <Sliders className="w-5 h-5 text-muted-foreground/60" />
               </div>
-              <Slider
-                id="qualityThreshold"
-                min={0}
-                max={1}
-                step={0.05}
-                value={[qualityThreshold]}
-                onValueChange={(value: number[]) => setQualityThreshold(value[0])}
-              />
-              <p className="text-sm text-muted-foreground">
-                Translations below this score will not be saved
-              </p>
+              <h2 className="text-2xl font-serif italic">Heuristic Thresholds</h2>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="autoApprovalThreshold">Auto-Approval Threshold</Label>
-                <span className="text-sm text-muted-foreground">{autoApprovalThreshold.toFixed(2)}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm space-y-6">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Linguistic Accuracy</Label>
+                    <p className="text-xs text-muted-foreground font-light">Minimum confidence required for saving.</p>
+                  </div>
+                  <span className="text-sm font-serif italic">{qualityThreshold.toFixed(2)}</span>
+                </div>
+                <Slider
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={[qualityThreshold]}
+                  onValueChange={(v: number[]) => setQualityThreshold(v[0])}
+                  className="py-4"
+                />
               </div>
-              <Slider
-                id="autoApprovalThreshold"
-                min={0}
-                max={1}
-                step={0.05}
-                value={[autoApprovalThreshold]}
-                onValueChange={(value: number[]) => setAutoApprovalThreshold(value[0])}
-              />
-              <p className="text-sm text-muted-foreground">
-                Translations above this score will be automatically approved
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={saveSettings} size="lg" disabled={saving || !apiKey}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Settings'
-            )}
-          </Button>
+              <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm space-y-6">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Autonomous Approval</Label>
+                    <p className="text-xs text-muted-foreground font-light">Score threshold for direct publishing.</p>
+                  </div>
+                  <span className="text-sm font-serif italic">{autoApprovalThreshold.toFixed(2)}</span>
+                </div>
+                <Slider
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={[autoApprovalThreshold]}
+                  onValueChange={(v: number[]) => setAutoApprovalThreshold(v[0])}
+                  className="py-4"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Action Footer */}
+          <div className="pt-12 border-t border-border/40 flex justify-end gap-4">
+            <button
+              onClick={saveSettings}
+              disabled={saving || !apiKey}
+              className={cn(
+                "flex items-center gap-3 px-8 py-4 rounded-2xl font-medium transition-all shadow-lg",
+                saving ? "bg-muted text-muted-foreground" : "bg-foreground text-background hover:opacity-90 shadow-foreground/5"
+              )}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? 'Synchronizing...' : 'Commit Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
