@@ -6,9 +6,29 @@ import { BookOpen, Upload, User, Settings, Edit3, Search, Layers, Sparkles, Brai
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+// --- Type Definitions ---
+interface DashboardHeaderProps {
+  user: any;
+  onLogout: () => void;
+}
+
+interface DashboardCardProps {
+  href: string;
+  icon: React.ComponentType<any>;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  iconClassName: string;
+}
+
+interface SectionHeaderProps {
+  icon: React.ComponentType<any>;
+  title: string;
+}
+
 // --- Refactored Components ---
 
-const DashboardHeader = ({ user, onLogout }) => (
+const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => (
   <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
     <div className="max-w-7xl mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
@@ -59,7 +79,7 @@ const HeroAction = () => (
   </div>
 );
 
-const DashboardCard = ({ href, icon: Icon, title, children, className, iconClassName }) => (
+const DashboardCard = ({ href, icon: Icon, title, children, className, iconClassName }: DashboardCardProps) => (
   <Link
     href={href}
     className={cn(
@@ -79,7 +99,7 @@ const DashboardCard = ({ href, icon: Icon, title, children, className, iconClass
   </Link>
 );
 
-const SectionHeader = ({ icon: Icon, title }) => (
+const SectionHeader = ({ icon: Icon, title }: SectionHeaderProps) => (
   <div className="flex items-center gap-3 mb-5">
     <Icon className="w-5 h-5 text-primary/80" />
     <h2 className="text-xl font-semibold text-foreground tracking-tight">{title}</h2>
@@ -135,10 +155,10 @@ export default function EditorPage() {
           <section className="space-y-6">
             <HeroAction />
             <div className="grid gap-6 md:grid-cols-2">
-              <DashboardCard href="/editor/topics" icon={Search} title="Research Topics" iconClassName="bg-green-500/10 text-green-600">
+              <DashboardCard href="/editor/topics" icon={Search} title="Research Topics" iconClassName="bg-green-500/10 text-green-600" className="">
                 Explore and improve topic definitions, boundaries, and explanations.
               </DashboardCard>
-              <DashboardCard href="/editor/import" icon={Upload} title="Import Content" iconClassName="bg-orange-500/10 text-orange-600">
+              <DashboardCard href="/editor/import" icon={Upload} title="Import Content" iconClassName="bg-orange-500/10 text-orange-600" className="">
                 Add seforim from Sefaria, upload PDFs, or import text files.
               </DashboardCard>
             </div>
@@ -148,13 +168,13 @@ export default function EditorPage() {
           <section>
             <SectionHeader icon={Sparkles} title="AI-Powered Tools" />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <DashboardCard href="/admin/ai-settings" icon={Settings} title="AI Settings" iconClassName="bg-blue-500/10 text-blue-600">
+              <DashboardCard href="/admin/ai-settings" icon={Settings} title="AI Settings" iconClassName="bg-blue-500/10 text-blue-600" className="">
                 Configure OpenRouter API and translation models.
               </DashboardCard>
-              <DashboardCard href="#" icon={Brain} title="AI Translation" iconClassName="bg-purple-500/10 text-purple-600">
+              <DashboardCard href="#" icon={Brain} title="AI Translation" iconClassName="bg-purple-500/10 text-purple-600" className="">
                 Available in topic editors and writing tools.
               </DashboardCard>
-              <DashboardCard href="#" icon={Sparkles} title="Content Enhancement" iconClassName="bg-teal-500/10 text-teal-600">
+              <DashboardCard href="#" icon={Sparkles} title="Content Enhancement" iconClassName="bg-teal-500/10 text-teal-600" className="">
                 AI-powered writing assistance and improvements.
               </DashboardCard>
             </div>
@@ -164,16 +184,16 @@ export default function EditorPage() {
           <section>
             <SectionHeader icon={BookOpen} title="Library Management" />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <DashboardCard href="/admin/books" icon={BookOpen} title="Books" iconClassName="bg-sky-500/10 text-sky-600">
+              <DashboardCard href="/admin/books" icon={BookOpen} title="Books" iconClassName="bg-sky-500/10 text-sky-600" className="">
                 Manage seforim and sources in your library.
               </DashboardCard>
-              <DashboardCard href="/admin/authors" icon={User} title="Authors" iconClassName="bg-indigo-500/10 text-indigo-600">
+              <DashboardCard href="/admin/authors" icon={User} title="Authors" iconClassName="bg-indigo-500/10 text-indigo-600" className="">
                 Manage authors and biographical info.
               </DashboardCard>
-              <DashboardCard href="/admin/topic-collections" icon={Layers} title="Collections" iconClassName="bg-amber-500/10 text-amber-600">
+              <DashboardCard href="/admin/topic-collections" icon={Layers} title="Collections" iconClassName="bg-amber-500/10 text-amber-600" className="">
                 Organize topics into collections.
               </DashboardCard>
-              <DashboardCard href="/admin" icon={Settings} title="Admin" iconClassName="bg-slate-500/10 text-slate-600">
+              <DashboardCard href="/admin" icon={Settings} title="Admin" iconClassName="bg-slate-500/10 text-slate-600" className="">
                 Full admin dashboard & stats.
               </DashboardCard>
             </div>
