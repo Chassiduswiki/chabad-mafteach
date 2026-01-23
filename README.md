@@ -1,31 +1,31 @@
-# Chabad Mafteach - Chassidic Concepts Research Platform (Frontend)
+# Chabad Mafteach - Digital Chassidus Encyclopedia
 
-> A comprehensive digital index connecting Chassidic concepts across all Chabad seforim
+> A comprehensive research platform for exploring Chassidic concepts with full source citations and interconnected relationships.
 
-**Note**: This repository contains the **frontend application only** (Next.js). The backend CMS (Directus) is hosted separately.
-
-[![Production Build](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
+**Status**: Beta v1.0 | **Build**: ✅ Passing | **License**: MIT
 
 ---
 
-## 🎯 Vision
+## 🎯 Mission
 
-Chabad Mafteach (Master Index) is a research platform designed to make Chassidic wisdom accessible, searchable, and deeply interconnected. Think of it as a "Wikipedia meets Sefaria" for Chabad philosophy.
+Chabad Mafteach (Master Index) transforms how people learn Chassidus by creating a searchable, interconnected encyclopedia of Chassidic concepts. Every topic is:
+- **Source-backed**: Citations from original seforim
+- **Interconnected**: Relationships show how concepts relate
+- **Bilingual**: Full Hebrew and English support
+- **Accessible**: Works beautifully on all devices
 
-### The Problem We Solve
-- **Scattered Knowledge**: Concepts appear across dozens of seforim with no unified index
-- **No Cross-Referencing**: Hard to see how the Alter Rebbe's definition relates to the Rebbe's explanation
-- **Language Barriers**: Same concept has different names in Hebrew, English, Yiddish
-- **Lost Context**: Citations without understanding the broader conceptual framework
+### The Problem
+- Concepts scattered across dozens of seforim with no unified index
+- No way to see how different sources explain the same idea
+- Language barriers between Hebrew, English, Yiddish terminology
+- Citations without broader conceptual context
 
 ### Our Solution
-A living encyclopedia where:
-- ✅ Every concept has **multiple source-backed definitions**
-- ✅ **Boundaries** clarify what a concept IS and ISN'T
-- ✅ **Relationships** show how concepts interconnect
-- ✅ **Search** works in Hebrew, English, and transliteration
-- ✅ **Citations** link directly to source texts
+A living encyclopedia connecting:
+- **Concepts** (Topics) - Ahavas Yisroel, Teshuvah, Tefillah, etc.
+- **Sources** (Seforim) - Tanya, Likkutei Torah, Sichos, etc.
+- **Relationships** - How concepts interconnect and build on each other
+- **Search** - Fuzzy search across Hebrew, English, transliteration
 
 ---
 
@@ -104,21 +104,53 @@ npm run dev
 5. **Open** [http://localhost:3000](http://localhost:3000)
 
 ### Environment Variables
+
+Create `.env.local` with the following variables:
+
 ```env
-NEXT_PUBLIC_DIRECTUS_URL=http://localhost:8055
-DIRECTUS_STATIC_TOKEN=your_static_token_here
+# Directus Backend
+NEXT_PUBLIC_DIRECTUS_URL=https://directus-production-20db.up.railway.app
+DIRECTUS_URL=https://directus-production-20db.up.railway.app
+DIRECTUS_STATIC_TOKEN=your_directus_static_token
+
+# Session Management
+JWT_SECRET=your_jwt_secret_here
+
+# AI Services (Optional)
+OPENROUTER_API_KEY=your_openrouter_api_key
+
+# App URLs
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+**⚠️ Security**: Never commit `.env.local` or `.env.production`. Use `.env.production.example` as a template.
+
+---
+
+## 🔐 Authentication
+
+### User Roles
+- **Admin**: Full access to `/admin` dashboard and `/editor`
+- **Editor**: Access to `/editor` for content creation
+- **Public**: Read-only access to `/topics`, `/seforim`, `/explore`
+
+### How to Log In
+1. Go to `/auth/signin`
+2. Enter your Directus email and password
+3. You'll be redirected to `/editor` (editors) or `/admin` (admins)
+
+**See [AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md) for complete authentication documentation.**
 
 ---
 
 ## 📚 Documentation
 
-- [TorahReader Component Guide](TORAH_READER_DOCUMENTATION.md) - Complete guide for the generalized Torah reading component
-- [Deployment Guide](Documentation/implementation_plan.md)
-- [Beta Launch Status](Documentation/BETA_LAUNCH_STATUS_DEC2.md)
-- [Comprehensive Task List](Documentation/Comprehensive%20Task%20list.md)
-- [Design Philosophy](Documentation/Design-guide.md)
-- [UX Flow](Documentation/UX%20flow.md)
+- **[AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md)** - Complete authentication system documentation
+- **[TORAH_READER_DOCUMENTATION.md](TORAH_READER_DOCUMENTATION.md)** - TorahReader component guide
+- **[Documentation/Longterm-tasks](Documentation/Longterm-tasks)** - Comprehensive roadmap and task list
+- **[Documentation/Design-guide.md](Documentation/Design-guide.md)** - Design philosophy and principles
+- **[Documentation/Use%20cases%20and%20persona.MD](Documentation/Use%20cases%20and%20persona.MD)** - User research and personas
 
 ---
 
@@ -142,30 +174,37 @@ We welcome contributions! Whether you're:
 
 ## 📊 Project Status
 
-**Current Phase**: Beta Development  
-**Topics**: 10 complete, 40+ planned  
-**Status**: Production build passing ✅  
-**Deployment**: Pending team approval  
+**Current Phase**: Foundation & Security (Jan 23, 2026)  
+**Build Status**: ✅ Passing  
+**Authentication**: ✅ Implemented with role-based access control  
+**Topics**: 131+ in database, content being populated  
 
-### Roadmap
+### Current Development Phases
 
-#### Phase 1: Beta Launch (Current)
-- ✅ Core 10 topics
-- ✅ Search functionality
-- ✅ Citation system
-- ⏳ Deployment to production
+#### Phase 1: Foundation & Security (Week 1-2) ✅ IN PROGRESS
+- ✅ Authentication & access control (locked editor/admin)
+- ✅ Remove sensitive data from git
+- ⏳ Update GitHub README (this file)
+- ⏳ Test authentication end-to-end
 
-#### Phase 2: Content Expansion (Next 3 months)
-- [ ] 50+ topics across Kabbalah, Chassidus, Avodah
-- [ ] Advanced search filters
-- [ ] Topic relationships visualization
-- [ ] User accounts and bookmarking
+#### Phase 2: User Experience Improvements (Week 3-4)
+- [ ] Translations feature visibility
+- [ ] Consultation graph centering
+- [ ] Topic fields reordering
+- [ ] UI/UX cohesion
 
-#### Phase 3: Community Features (6+ months)
-- [ ] User-contributed annotations
-- [ ] Discussion forums per topic
-- [ ] Scholar verification system
-- [ ] API for third-party apps
+#### Phase 3: Content & Discovery (Week 5-6)
+- [ ] TipTap editor enhancements
+- [ ] AI-powered search integration
+- [ ] Edit button on topic fields
+- [ ] User feedback system
+
+#### Phase 4: Community & Collections (Week 7-8)
+- [ ] Public user collections
+- [ ] Beautiful collections UI
+- [ ] Collaborative annotations
+
+**See [Documentation/Longterm-tasks](Documentation/Longterm-tasks) for complete roadmap.**
 
 ---
 
