@@ -4,10 +4,10 @@ import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } f
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
-import { stripHtml } from '@/lib/utils/text';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
 import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
+import { ForceGraph } from '@/components/graph/ForceGraph';
 import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -377,11 +377,11 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             content: highlightTerms(topic.charts)
         }] : []),
         // Always include sources
-        {
-            type: 'sources',
-            order: 9,
-            content: ''
-        }
+        // {
+        //     type: 'sources',
+        //     order: 9,
+        //     content: ''
+        // }
     ];
 
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
@@ -439,81 +439,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
     const [isNavigating, setIsNavigating] = useState(false);
 
-    const getRelationshipIcon = (type: string) => {
-        switch (type) {
-            case 'parent': return <ArrowUp className="w-4 h-4" />;
-            case 'child': return <ArrowDown className="w-4 h-4" />;
-            case 'opposite': return <RefreshCcw className="w-4 h-4" />;
-            default: return <GitBranch className="w-4 h-4" />;
-        }
-    };
-
-    const getRelationshipColor = (type: string) => {
-        switch (type) {
-            case 'parent': return 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20';
-            case 'child': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
-            case 'opposite': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
-            default: return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20';
-        }
-    };
-
-    const handleGraphClick = (node: string, type: string) => {
-        const relatedTopic = relatedTopics.find(t => t.canonical_title === node);
-        const cleanDescription = relatedTopic?.description ? stripHtml(relatedTopic.description) : null;
-
-        setSheetContent({
-            title: node,
-            content: (
-                <div className="space-y-5">
-                    {/* Type Badge with Icon */}
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium ${getRelationshipColor(type)}`}>
-                        {getRelationshipIcon(type)}
-                        <span className="capitalize">{type} Concept</span>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-lg leading-relaxed text-foreground">
-                        {cleanDescription || `A related concept to ${topic.canonical_title}.`}
-                    </p>
-
-                    {/* Relationship Card */}
-                    <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
-                        <div className="flex items-center gap-2 mb-2">
-                            <GitBranch className="w-4 h-4 text-primary" />
-                            <h4 className="font-semibold text-sm text-primary">How They Connect</h4>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                            {relatedTopic?.relationship?.description 
-                                ? stripHtml(relatedTopic.relationship.description)
-                                : `Explore how ${node} relates to ${topic.canonical_title}.`}
-                        </p>
-                    </div>
-
-                    {/* Hebrew Name if available */}
-                    {relatedTopic?.name_hebrew && (
-                        <div className="text-center py-2">
-                            <span className="text-2xl font-hebrew text-muted-foreground">{relatedTopic.name_hebrew}</span>
-                        </div>
-                    )}
-
-                    {/* Action Button */}
-                    {relatedTopic && (
-                        <a 
-                            href={`/topics/${relatedTopic.slug}`}
-                            onClick={() => setIsNavigating(true)}
-                            className="flex items-center justify-center gap-2 w-full py-3.5 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
-                        >
-                            {isNavigating ? (
-                                <><Loader2 className="w-4 h-4 animate-spin" /> Loading...</>
-                            ) : (
-                                <><span>Explore {node}</span> <ChevronRight className="w-4 h-4" /></>
-                            )}
-                        </a>
-                    )}
-                </div>
-            )
-        });
-    };
 
     const scrollToSection = (sectionType: SectionType) => {
         setActiveSection(sectionType);
@@ -560,11 +485,78 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    if (isLoading) {
-        return <TopicSkeleton />;
-    }
+    // Transform related topics for ForceGraph
+    const forceGraphData = useMemo(() => {
+        const nodes = [
+            {
+                id: topic.slug,
+                label: topic.canonical_title,
+                slug: topic.slug,
+                category: topic.topic_type || 'concept',
+                size: 3
+            }
+        ];
+        
+        const edges: any[] = [];
+        
+        // Add parent topic
+        const parentTopic = relatedTopics.find(t => t.relationship.direction === 'child');
+        if (parentTopic) {
+            nodes.push({
+                id: parentTopic.slug,
+                label: parentTopic.canonical_title,
+                slug: parentTopic.slug,
+                category: parentTopic.topic_type || 'concept',
+                size: 2
+            });
+            edges.push({
+                source: topic.slug,
+                target: parentTopic.slug,
+                type: 'parent-child',
+                strength: 0.8
+            });
+        }
+        
+        // Add opposite topic
+        const oppositeTopic = relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'));
+        if (oppositeTopic) {
+            nodes.push({
+                id: oppositeTopic.slug,
+                label: oppositeTopic.canonical_title,
+                slug: oppositeTopic.slug,
+                category: oppositeTopic.topic_type || 'concept',
+                size: 2
+            });
+            edges.push({
+                source: topic.slug,
+                target: oppositeTopic.slug,
+                type: 'opposite',
+                strength: 0.6
+            });
+        }
+        
+        // Add child topics (components)
+        const childTopics = relatedTopics.filter(t => t.relationship.direction === 'parent').slice(0, 3);
+        childTopics.forEach(child => {
+            nodes.push({
+                id: child.slug,
+                label: child.canonical_title,
+                slug: child.slug,
+                category: child.topic_type || 'concept',
+                size: 1
+            });
+            edges.push({
+                source: topic.slug,
+                target: child.slug,
+                type: 'parent-child',
+                strength: 0.7
+            });
+        });
+        
+        return { nodes, edges };
+    }, [topic, relatedTopics]);
 
-    // Extract connected topics for graph
+    // Extract connected topics for graph (kept for reference)
     const graphData = {
         centerConcept: topic.canonical_title,
         relatedConcepts: {
@@ -573,6 +565,10 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             components: relatedTopics.filter(t => t.relationship.direction === 'parent').map(t => t.canonical_title).slice(0, 3)
         }
     };
+
+    if (isLoading) {
+        return <TopicSkeleton />;
+    }
 
     return (
         <div className="min-h-screen bg-background relative">
@@ -872,10 +868,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             <p className="text-sm text-muted-foreground mt-1">Now that you&apos;ve learned about {topic.canonical_title}, explore how it connects to other ideas</p>
                         </div>
                         <ConstellationErrorBoundary>
-                            <ConceptConstellation
-                                centerConcept={graphData.centerConcept}
-                                relatedConcepts={graphData.relatedConcepts}
-                                onNodeClick={handleGraphClick}
+                            <ForceGraph
+                                nodes={forceGraphData.nodes}
+                                edges={forceGraphData.edges}
+                                width={600}
+                                height={320}
+                                interactive={true}
                             />
                         </ConstellationErrorBoundary>
                         <div className="text-center mt-4">

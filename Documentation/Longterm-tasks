@@ -69,7 +69,7 @@ The frontend TypeScript types now match the new Directus schema:
 ### Phase 1e: Content Model Clarity (NEW)
 - [x] **Data Model Definitions**: Define usage of short vs. long descriptions (popups vs. headers).
 - [ ] **Source Linking**: Determine optimal display and linking strategy for sources.
-- [ ] **Smart Glossary Refinement**: Fix parse failures for standalone numbered lists.
+- [x] **Smart Glossary Refinement**: Fix parse failures for standalone numbered lists.
 
 ### Phase 1f: Topic Display Enhancements (COMPLETED - Jan 21, 2026)
 - [x] **Transliteration as Main Title**: Updated topic pages to use `canonical_title_transliteration` from database as main title instead of English title
@@ -526,34 +526,34 @@ The frontend TypeScript types now match the new Directus schema:
 > **Migration Plan:** The demo at `ArticleStructuredView` is a standalone client component. To migrate to production, we must adapt it to accept dynamic data and replace the current `app/topics/[slug]/page.tsx` layout.
 
 #### 1. Component Migration
-- [ ] **Move & Rename Components**:
+- [x] **Move & Rename Components**:
     - `components/topics/article-components/ArticleHero.tsx` -> `components/topics/hero/ImmersiveHero.tsx`
     - `components/topics/article-components/ConceptConstellation.tsx` -> `components/topics/visualization/ConceptConstellation.tsx`
     - `components/topics/article-components/ArticleLoading.tsx` -> `components/topics/loading/TopicSkeleton.tsx`
     - `components/ui/BottomSheet.tsx` -> `components/ui/BottomSheet.tsx` (Shared UI)
-- [ ] **Create New Shell Component**:
+- [x] **Create New Shell Component**:
     - Create `components/topics/TopicExperience.tsx` (Client Component)
     - Adapt `ArticleStructuredView` logic into this new component.
     - Props: `topic: Topic`, `related: Topic[]`, `sources: Source[]` instead of `DEMO_ARTICLE`.
 
 #### 2. Data Wiring
-- [ ] **Map Directus Data to Props**:
+- [x] **Map Directus Data to Props**:
     - Updates `getTopicBySlug` to return data in the shape required by usage.
     - Map `topic.definition` to the "Definition" section.
     - Map `topic.article` content (HTML) to appropriate sections.
     - Map `topic_relationships` to the `ConceptConstellation` graph nodes.
-- [ ] **Dynamic Prerequisite Logic**:
+- [x] **Dynamic Prerequisite Logic**:
     - Check `topic.prerequisites` (new field needed?) or infer from parent topics.
     - Verify "Next Step" suggestion logic based on related topics.
 
 #### 3. Page Replacement
-- [ ] **Update `app/topics/[slug]/page.tsx`**:
+- [x] **Update `app/topics/[slug]/page.tsx`**:
     - Remove `TopicHeader`, `ActionButtons`, `TopicTabs`.
     - Render `<TopicExperience topic={topicData} />`.
     - Keep `TopicTracker` for analytics.
 
 #### 4. Visual Cleanup
-- [ ] **Refine Mobile Focus**:
+- [x] **Refine Mobile Focus**:
     - Ensure the "Action Footer" z-index works with the existing bottom nav (if any).
     - Test "Focus Mode" dimming doesn't break accessibility.
     - Verify `AnimatePresence` for bottom sheets handles route changes correctly.
