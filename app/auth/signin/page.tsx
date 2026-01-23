@@ -147,27 +147,24 @@ export default function SignInPage() {
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border border-primary-foreground border-t-transparent"></div>
-                  Signing in...
+                  Authenticating...
                 </>
               ) : (
                 <>
                   <BookOpen className="h-4 w-4" />
-                  Sign In to Editor
+                  Sign In with Directus
                 </>
               )}
             </button>
           </form>
         </div>
 
-        {/* Demo Credentials */}
+        {/* Info Box */}
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials</h3>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div><strong>Editor:</strong> editor@chabad.org / editor123</div>
-            <div><strong>Admin:</strong> admin@chabad.org / admin123</div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            These are demo credentials for testing the authentication system.
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Directus Authentication</h3>
+          <p className="text-xs text-muted-foreground">
+            Use your standard Directus admin or editor credentials to sign in. 
+            This session is valid for 24 hours.
           </p>
         </div>
 

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
-import { createClient } from '@/lib/directus';
-
-const directus = createClient();
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -83,54 +80,92 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Simple user validation (in production, this would query a proper user database)
-    // This maintains the security improvement of not having hardcoded bcrypt passwords
-    const validUsers: Record<string, { id: string; role: string; name: string }> = {
-      'editor@chabad.org': { id: '1', role: 'editor', name: 'Editor User' },
-      'admin@chabad.org': { id: '2', role: 'admin', name: 'Admin User' }
-    };
-
-    const validPasswords: Record<string, string> = {
-      'editor@chabad.org': 'editor123',
-      'admin@chabad.org': 'admin123'
-    };
-
-    const user = validUsers[email];
-    if (!user) {
-      recordFailedLogin(email);
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    if (password !== validPasswords[email]) {
-      recordFailedLogin(email);
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    // Record successful login (resets lockout counter)
-    recordSuccessfulLogin(email);
-
-    // Create JWT tokens
-    const accessToken = createAuthToken(user.id, user.role);
-    const refreshToken = createRefreshToken(user.id);
-
-    // Return tokens and user info
-    return NextResponse.json({
-      success: true,
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: email,
-        name: user.name,
-        role: user.role
+    // Authenticate with Directus
+    try {
+      // Step 1: Authenticate against Directus to verify credentials
+      const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
+      
+      if (!directusUrl) {
+        console.error('DIRECTUS_URL is not configured');
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        );
       }
-    });
+
+      const loginResponse = await fetch(`${directusUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!loginResponse.ok) {
+        recordFailedLogin(email);
+        const errorData = await loginResponse.json().catch(() => ({}));
+        console.error('Directus login failed:', errorData);
+        return NextResponse.json(
+          { error: 'Invalid email or password' },
+          { status: 401 }
+        );
+      }
+
+      const loginData = await loginResponse.json();
+      const directusAccessToken = loginData.data?.access_token;
+
+      if (!directusAccessToken) {
+        console.error('No access token in Directus response');
+        return NextResponse.json(
+          { error: 'Authentication failed' },
+          { status: 401 }
+        );
+      }
+
+      // Step 2: Fetch user details using the authenticated token
+      const userDetailsResponse = await fetch(`${directusUrl}/users/me?fields=id,email,first_name,last_name,role.name`, {
+        headers: { 'Authorization': `Bearer ${directusAccessToken}` }
+      });
+
+      if (!userDetailsResponse.ok) {
+        console.error('Failed to fetch user details');
+        return NextResponse.json(
+          { error: 'Failed to retrieve user information' },
+          { status: 401 }
+        );
+      }
+
+      const userDetails = await userDetailsResponse.json();
+      const directusUser = userDetails.data;
+
+      // Map Directus roles to app roles
+      const role = directusUser.role?.name?.toLowerCase().includes('admin') ? 'admin' : 'editor';
+
+      // Record successful login (resets lockout counter)
+      recordSuccessfulLogin(email);
+
+      // Create our App JWT tokens
+      const accessToken = createAuthToken(directusUser.id, role);
+      const refreshToken = createRefreshToken(directusUser.id);
+
+      // Return tokens and user info
+      return NextResponse.json({
+        success: true,
+        accessToken,
+        refreshToken,
+        user: {
+          id: directusUser.id,
+          email: directusUser.email,
+          name: `${directusUser.first_name || ''} ${directusUser.last_name || ''}`.trim() || directusUser.email,
+          role: role
+        }
+      });
+    } catch (directusError) {
+      console.error('Directus auth error:', directusError);
+      recordFailedLogin(email);
+      return NextResponse.json(
+        { error: 'Authentication failed' },
+        { status: 401 }
+      );
+    }
 
   } catch (error) {
     console.error('Login error:', error);

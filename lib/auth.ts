@@ -24,6 +24,15 @@ export function verifyAuth(request: NextRequest): { userId?: string; role?: stri
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
+    // Check if it's the Directus Static Token (used as a master key)
+    const staticToken = process.env.DIRECTUS_STATIC_TOKEN;
+    if (staticToken && token === staticToken) {
+      return {
+        userId: 'admin-static',
+        role: 'admin'
+      };
+    }
+
     if (!JWT_SECRET) {
       throw new Error('JWT_SECRET is not configured');
     }
