@@ -121,6 +121,46 @@ export function ForceGraph({
 
         simulationRef.current = simulation;
 
+        // Run simulation for a bit to stabilize before rendering
+        // This ensures nodes are centered and not randomly positioned
+        for (let i = 0; i < 100; i++) {
+            simulation.tick();
+        }
+
+        // Calculate bounding box of all nodes
+        const getBounds = () => {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            simNodes.forEach(node => {
+                const x = node.x || 0;
+                const y = node.y || 0;
+                const r = 8 + (node.size || 1) * 2;
+                minX = Math.min(minX, x - r);
+                maxX = Math.max(maxX, x + r);
+                minY = Math.min(minY, y - r);
+                maxY = Math.max(maxY, y + r);
+            });
+            return { minX, maxX, minY, maxY };
+        };
+
+        const bounds = getBounds();
+        const nodeWidth = bounds.maxX - bounds.minX;
+        const nodeHeight = bounds.maxY - bounds.minY;
+        
+        // Calculate zoom level to fit all nodes with padding
+        const padding = 40;
+        const scale = Math.min(
+            (width - padding * 2) / nodeWidth,
+            (height - padding * 2) / nodeHeight,
+            3 // Max zoom
+        );
+        
+        // Calculate translation to center nodes
+        const tx = (width - nodeWidth * scale) / 2 - bounds.minX * scale;
+        const ty = (height - nodeHeight * scale) / 2 - bounds.minY * scale;
+
+        // Apply initial zoom/pan to center and fit
+        svg.call(zoom.transform as any, d3.zoomIdentity.translate(tx, ty).scale(scale));
+
         // Draw edges
         const links = container.append('g')
             .attr('class', 'links')
