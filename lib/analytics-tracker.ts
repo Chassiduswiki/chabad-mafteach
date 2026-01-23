@@ -9,7 +9,7 @@ interface AnalyticsEvent {
   timestamp: number;
 }
 
-class AnalyticsTracker {
+class AnalyticsTrackerClass {
   private events: AnalyticsEvent[] = [];
   private sessionId: string | null = null;
   private userId: string | null = null;
@@ -89,7 +89,7 @@ class AnalyticsTracker {
 }
 
 // Create singleton instance
-const analytics = new AnalyticsTracker();
+const analytics = new AnalyticsTrackerClass();
 
 // React hook for analytics
 export function useAnalytics() {
@@ -109,7 +109,7 @@ export function useAnalytics() {
 }
 
 // Analytics component for automatic page tracking
-export function AnalyticsTracker({ path, title }: { path: string; title?: string }) {
+export function AnalyticsTrackerComp({ path, title }: { path: string; title?: string }) {
   useEffect(() => {
     analytics.pageView(path, title);
   }, [path, title]);
