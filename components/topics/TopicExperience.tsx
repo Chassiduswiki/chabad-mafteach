@@ -24,7 +24,7 @@ import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
 // Types
-type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'translations' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -202,6 +202,14 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-sky-500/5',
         borderColor: 'border-sky-500/20'
     },
+    translations: {
+        title: 'Translations',
+        shortTitle: 'Translate',
+        icon: Globe,
+        color: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-500/5',
+        borderColor: 'border-green-500/20'
+    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -217,6 +225,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [isLoading, setIsLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(false);
     const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
+    const [hasTranslations, setHasTranslations] = useState(false);
 
     // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
     useEffect(() => {
@@ -234,6 +243,25 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         }
         fetchAllTopicNames();
     }, [relatedTopics]);
+
+    // Check if topic has translations
+    useEffect(() => {
+        async function checkTranslations() {
+            try {
+                const res = await fetch(`/api/topics/translations?topic_id=${topic.id}`);
+                if (res.ok) {
+                    const translations = await res.json();
+                    setHasTranslations(Array.isArray(translations) && translations.length > 0);
+                }
+            } catch (e) {
+                console.error('Failed to check translations:', e);
+                setHasTranslations(false);
+            }
+        }
+        if (topic.id) {
+            checkTranslations();
+        }
+    }, [topic.id]);
     const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -272,6 +300,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         global_nimshal: null,
         historical_context: null,
         charts: null,
+        translations: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -376,12 +405,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             order: 8,
             content: highlightTerms(topic.charts)
         }] : []),
-        // Always include sources
-        // {
-        //     type: 'sources',
-        //     order: 9,
-        //     content: ''
-        // }
+        // Translations section - only show if translations exist
+        ...(hasTranslations ? [{
+            type: 'translations' as SectionType,
+            order: 9,
+            content: '<div class="text-center text-muted-foreground py-8"><p>Translations for this topic are available. Click the language selector above to view them.</p></div>'
+        }] : [])
     ];
 
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
