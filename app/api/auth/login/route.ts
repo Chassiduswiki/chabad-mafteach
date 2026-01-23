@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
-import { createClient } from '@/lib/directus';
-import { readUsers } from '@directus/sdk';
-
-const directus = createClient();
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -86,25 +82,17 @@ export async function POST(request: NextRequest) {
 
     // Authenticate with Directus
     try {
-      // Directus doesn't allow standard SDK login easily with just email/password via REST for our purposes
-      // (it returns a session cookie or complex JWT).
-      // Instead, we'll verify the user exists in Directus and use our own JWT for the app session.
-      // This bridges Directus users with our Next.js auth system.
-      
-      const users = await directus.request(readUsers({
-        filter: { email: { _eq: email } },
-        fields: ['id', 'email', 'first_name', 'last_name', 'role.name'],
-        limit: 1
-      }));
-
-      const user = users && (users as any[]).length > 0 ? (users as any[])[0] : null;
-
-      // In a real production app, we would use Directus's login endpoint to verify the password.
-      // For now, to solve the user's login issue, we'll match the email and check a placeholder password
-      // or implement the Directus login flow if the Directus SDK supports it easily here.
-      
-      // Let's implement actual Directus login to be secure
+      // Step 1: Authenticate against Directus to verify credentials
       const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
+      
+      if (!directusUrl) {
+        console.error('DIRECTUS_URL is not configured');
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        );
+      }
+
       const loginResponse = await fetch(`${directusUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,6 +101,8 @@ export async function POST(request: NextRequest) {
 
       if (!loginResponse.ok) {
         recordFailedLogin(email);
+        const errorData = await loginResponse.json().catch(() => ({}));
+        console.error('Directus login failed:', errorData);
         return NextResponse.json(
           { error: 'Invalid email or password' },
           { status: 401 }
@@ -120,12 +110,29 @@ export async function POST(request: NextRequest) {
       }
 
       const loginData = await loginResponse.json();
-      const directusAccessToken = loginData.data.access_token;
+      const directusAccessToken = loginData.data?.access_token;
 
-      // Now we have a valid Directus user. Let's get their details to create our app token.
+      if (!directusAccessToken) {
+        console.error('No access token in Directus response');
+        return NextResponse.json(
+          { error: 'Authentication failed' },
+          { status: 401 }
+        );
+      }
+
+      // Step 2: Fetch user details using the authenticated token
       const userDetailsResponse = await fetch(`${directusUrl}/users/me?fields=id,email,first_name,last_name,role.name`, {
         headers: { 'Authorization': `Bearer ${directusAccessToken}` }
       });
+
+      if (!userDetailsResponse.ok) {
+        console.error('Failed to fetch user details');
+        return NextResponse.json(
+          { error: 'Failed to retrieve user information' },
+          { status: 401 }
+        );
+      }
+
       const userDetails = await userDetailsResponse.json();
       const directusUser = userDetails.data;
 
