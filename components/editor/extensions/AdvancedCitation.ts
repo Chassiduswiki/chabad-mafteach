@@ -97,6 +97,7 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
     return [
       'span',
       mergeAttributes(HTMLAttributes, {
+        'data-type': 'citation',
         'data-citation-id': node.attrs.citationId,
         'data-source-id': node.attrs.sourceId,
         'data-source-title': node.attrs.sourceTitle,
@@ -117,6 +118,7 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
     return ({ node, getPos, editor }) => {
       const dom = document.createElement('span');
       dom.className = 'citation-node cursor-pointer inline-flex items-baseline group';
+      dom.setAttribute('data-type', 'citation');
       dom.setAttribute('data-citation-id', node.attrs.citationId);
       dom.setAttribute('data-source-id', node.attrs.sourceId);
       dom.setAttribute('data-source-title', node.attrs.sourceTitle);

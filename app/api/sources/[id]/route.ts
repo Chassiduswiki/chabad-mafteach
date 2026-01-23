@@ -5,6 +5,48 @@ import { handleApiError } from '@/lib/utils/api-errors';
 
 const directus = createClient();
 
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params;
+
+    try {
+        const sources = await directus.request(readItems('sources', {
+            filter: { id: { _eq: parseInt(id) } },
+            fields: [
+                'id',
+                'title',
+                'citation_text',
+                'metadata',
+                'original_lang',
+                'publication_year',
+                'publisher',
+                'isbn',
+                'external_system',
+                'external_url',
+                'author_id',
+                'authors.id',
+                'authors.canonical_name',
+                'authors.birth_year',
+                'authors.death_year',
+                'authors.era',
+                'authors.bio_summary'
+            ],
+            limit: 1
+        }));
+
+        if ((sources as any[]).length === 0) {
+            return NextResponse.json({ error: 'Source not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(sources[0]);
+    } catch (error) {
+        console.error('Failed to fetch source:', error);
+        return handleApiError(error);
+    }
+}
+
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
