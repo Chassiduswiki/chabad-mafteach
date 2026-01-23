@@ -5,12 +5,19 @@ import { TopicExperience } from '@/components/topics/TopicExperience';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TopicDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function TopicDetailPage({ 
+    params,
+    searchParams 
+}: { 
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ lang?: string }>;
+}) {
     const { slug } = await params;
+    const { lang = 'en' } = await searchParams;
 
     let topicData = null;
     try {
-        topicData = await getTopicBySlug(slug);
+        topicData = await getTopicBySlug(slug, lang);
     } catch (error) {
         console.error('Error fetching topic data:', error);
     }
@@ -20,15 +27,18 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ sl
     }
 
     const { topic, relatedTopics, sources, citations, inlineCitations } = topicData;
+    
+    // Cast topic to any to access all properties from the merged topic object
+    const topicAny = topic as any;
 
     return (
         <>
             {/* Track last visited topic for analytics/history */}
-            <TopicTracker slug={topic.slug} name={topic.name || topic.canonical_title} topicId={topic.id} />
+            <TopicTracker slug={slug} name={topicAny.title || topicAny.canonical_title} topicId={topicAny.id} />
 
             {/* Main Interactive Experience */}
             <TopicExperience
-                topic={topic}
+                topic={topicAny}
                 relatedTopics={relatedTopics}
                 sources={sources}
                 citations={citations}

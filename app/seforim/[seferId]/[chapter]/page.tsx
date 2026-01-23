@@ -43,7 +43,7 @@ export default function ChapterPage() {
                 }));
 
                 const docsArray = Array.isArray(docResult) ? docResult : docResult ? [docResult] : [];
-                const doc = docsArray[0] || null;
+                const doc = (docsArray[0] as Document) || null;
 
                 if (doc) {
                     setDocument(doc);
@@ -57,7 +57,7 @@ export default function ChapterPage() {
                         limit: -1
                     }));
 
-                    const paragraphsArray = Array.isArray(paraResult) ? paraResult : paraResult ? [paraResult] : [];
+                    const paragraphsArray = (Array.isArray(paraResult) ? paraResult : paraResult ? [paraResult] : []) as Paragraph[];
                     setParagraphs(paragraphsArray);
                 }
             } catch (error) {

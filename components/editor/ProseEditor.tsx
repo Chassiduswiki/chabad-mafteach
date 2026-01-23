@@ -9,12 +9,13 @@ import { baseKeymap } from "prosemirror-commands";
 import { mySchema } from "./schema";
 import "prosemirror-view/style/prosemirror.css";
 import "./editor-styles.css";
-import { createComprehensiveCitationPlugin, insertCitation } from "./plugins/citations/comprehensiveCitationPlugin";
+import { createComprehensiveCitationPlugin, insertCitation, updateCitation, CitationAttrs } from "./plugins/citations/comprehensiveCitationPlugin";
 import { CitationCommandPalette } from "./CitationCommandPalette";
 import { EditorToolbar } from "./EditorToolbar";
 import { useCitationPalette } from "./hooks/useCitationPalette";
 import { useEditor } from '@/lib/hooks/useEditor';
 import { CitationViewerModal } from "./CitationViewerModal";
+import { CitationEditorDialog } from "./CitationEditorDialog";
 
 interface ProseEditorProps {
   docId: string | null;
@@ -49,13 +50,13 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
   const [feedback, setFeedback] = useState<
     { type: "success" | "error"; message: string } | null
   >(null);
-  const [activeCitation, setActiveCitation] = useState<{
-    source_id: number | string | null;
-    source_title: string | null;
-    reference: string | null;
-    content?: string;
-  } | null>(null);
+  const [activeCitation, setActiveCitation] = useState<CitationAttrs | null>(null);
   const [isModalClosing, setIsModalClosing] = useState(false);
+  
+  // Citation editor state
+  const [editingCitation, setEditingCitation] = useState<CitationAttrs | null>(null);
+  const [editingCitationPos, setEditingCitationPos] = useState<number | null>(null);
+  const [showCitationEditor, setShowCitationEditor] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -132,6 +133,11 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
           },
           onClick: (citation) => {
             setActiveCitation(citation);
+          },
+          onEdit: (citation, pos) => {
+            setEditingCitation(citation);
+            setEditingCitationPos(pos);
+            setShowCitationEditor(true);
           },
         })
       ],
@@ -223,8 +229,8 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
             viewRef.current?.focus();
           }
         }}
-        onComplete={(source, reference) => {
-          insertCitation(viewRef.current, citationRange, source, reference, mySchema);
+        onComplete={(source, citationData) => {
+          insertCitation(viewRef.current, citationRange, source, citationData, mySchema);
           closePalette();
         }}
         onFeedback={(payload) => setFeedback(payload)}
@@ -233,8 +239,22 @@ export const ProseEditor: React.FC<ProseEditorProps> = ({ docId, className, onBr
       <CitationViewerModal
         open={Boolean(activeCitation)}
         citation={activeCitation}
-        citationContent={activeCitation?.content}
         onClose={handleCloseModal}
+      />
+
+      <CitationEditorDialog
+        open={showCitationEditor}
+        citation={editingCitation}
+        onSave={(updatedData) => {
+          if (viewRef.current && editingCitationPos !== null) {
+            updateCitation(viewRef.current, editingCitationPos, updatedData, mySchema);
+          }
+        }}
+        onClose={() => {
+          setShowCitationEditor(false);
+          setEditingCitation(null);
+          setEditingCitationPos(null);
+        }}
       />
     </div>
   );

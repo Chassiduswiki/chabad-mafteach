@@ -8,6 +8,7 @@ import Link from 'next/link';
 interface ArticleHeroProps {
     title: string;
     titleHebrew: string;
+    titleTransliteration?: string;
     category?: string;
     definitionShort?: string;
     topicSlug?: string;
@@ -17,6 +18,7 @@ interface ArticleHeroProps {
 export function ImmersiveHero({
     title,
     titleHebrew,
+    titleTransliteration,
     category = "General Concept",
     definitionShort,
     topicSlug
@@ -109,8 +111,8 @@ export function ImmersiveHero({
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     {/* Hebrew Watermark */}
                     <motion.div
-                        style={{ y: yHero, opacity: 0.1 }}
-                        className="absolute right-[-10%] top-[10%] text-[20vw] sm:text-[15vw] font-hebrew font-bold leading-none text-foreground select-none"
+                        style={{ y: yHero, opacity: 0.08 }}
+                        className="absolute right-[-10%] top-[10%] text-[20vw] sm:text-[15vw] font-hebrew font-bold leading-none text-foreground select-none blur-lg"
                     >
                         {titleHebrew}
                     </motion.div>
@@ -137,7 +139,7 @@ export function ImmersiveHero({
                             {/* Title Block */}
                             <div>
                                 <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-foreground mb-2">
-                                    {title}
+                                    {titleTransliteration || title}
                                 </h1>
                                 <p className="text-3xl sm:text-4xl font-hebrew text-muted-foreground">
                                     {titleHebrew}

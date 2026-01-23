@@ -6,6 +6,7 @@ import { Search, BookOpen, Hash, ArrowRight, Brain, X, History, Sparkles, Chevro
 import { motion, AnimatePresence, useDragControls, useMotionValue } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSearch } from '@/lib/search-context';
+import { useAnalytics } from '@/lib/analytics-tracker';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { rankSearchResults, getSearchQueryVariants } from '@/lib/utils/search-processor';
 
@@ -75,6 +76,7 @@ function clearRecentSearches() {
 
 export function CommandMenu() {
     const { open, setOpen } = useSearch();
+    const { search: trackSearch } = useAnalytics();
     const [search, setSearch] = React.useState('');
     const [results, setResults] = React.useState<SearchResult[]>([]);
     const [loading, setLoading] = React.useState(false);

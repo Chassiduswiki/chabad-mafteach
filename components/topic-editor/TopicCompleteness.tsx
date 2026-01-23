@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, AlertCircle, Circle, TrendingUp } from 'lucide-react';
+import { CheckCircle, AlertCircle, Circle, TrendingUp, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { TopicCompleteness as CompletenessType, TopicFormData } from './types';
 
 interface TopicCompletenessProps {
@@ -163,24 +164,43 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
         </div>
 
         {/* Section Breakdown */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {Object.entries(completeness.sections).map(([section, percentage]) => (
-            <div key={section} className="flex items-center gap-2">
-              {getStatusIcon(percentage)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground truncate">
+        <div className="space-y-3">
+                    {Object.entries(completeness.sections).map(([section, percentage]) => (
+            <div key={section}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(percentage)}
+                  <span className="text-sm font-medium text-foreground">
                     {SECTION_LABELS[section as keyof typeof SECTION_LABELS]}
                   </span>
-                  <span className="text-xs font-medium">{percentage}%</span>
                 </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-                  <div
-                    className={`h-full ${getProgressColor(percentage)}`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
+                <span className="text-sm font-bold">{percentage}%</span>
               </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden mt-1">
+                <div
+                  className={`h-full ${getProgressColor(percentage)}`}
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+              {percentage < 100 && (
+                <div className="mt-2">
+                  {section === 'content' && !formData.article && (
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-generate-article'))}>
+                      <Sparkles className="h-3 w-3 mr-2" /> AI: Generate Article
+                    </Button>
+                  )}
+                  {section === 'relationships' && (
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-find-relationships'))}>
+                      <Sparkles className="h-3 w-3 mr-2" /> AI: Find Related
+                    </Button>
+                  )}
+                  {section === 'sources' && (
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-suggest-citations'))}>
+                      <Sparkles className="h-3 w-3 mr-2" /> AI: Suggest Citations
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

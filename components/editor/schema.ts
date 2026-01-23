@@ -131,16 +131,77 @@ const text: NodeSpec = {
   group: "inline",
 };
 
-// Define the "Citation" node (Inline)
+// Citation formatting helper
+function formatCitation(attrs: any): string {
+  const { source_title, citation_type, page_number, chapter_number, section_number, daf_number, verse_number, halacha_number, custom_reference } = attrs;
+  
+  if (!source_title) return "Unknown Source";
+  
+  let ref = "";
+  
+  switch (citation_type) {
+    case "page":
+      ref = page_number ? ` ${page_number}` : "";
+      break;
+    case "chapter":
+      if (chapter_number) {
+        ref = ` ch. ${chapter_number}`;
+        if (section_number) ref += `:${section_number}`;
+      }
+      break;
+    case "section":
+      if (section_number) {
+        ref = chapter_number ? ` ch. ${chapter_number}, §${section_number}` : ` §${section_number}`;
+      }
+      break;
+    case "daf":
+      ref = daf_number ? ` ${daf_number}` : "";
+      break;
+    case "verse":
+      ref = verse_number ? ` ${verse_number}` : "";
+      break;
+    case "halacha":
+      if (halacha_number) {
+        ref = chapter_number ? ` ${chapter_number}:${halacha_number}` : ` ${halacha_number}`;
+      }
+      break;
+    case "custom":
+      ref = custom_reference ? ` ${custom_reference}` : "";
+      break;
+    default:
+      // Fallback to old reference field if present
+      ref = attrs.reference ? ` (${attrs.reference})` : "";
+  }
+  
+  return `${source_title}${ref}`;
+}
+
+// Define the "Citation" node (Inline) - Enhanced with full citation types
 const citation: NodeSpec = {
   attrs: {
     source_id: { default: null },
     source_title: { default: "Unknown Source" },
-    reference: { default: "" }, // e.g. "p. 42" or "Verse 1"
+    
+    // Citation type determines which fields are relevant
+    citation_type: { default: "page" }, // page|chapter|section|daf|verse|halacha|custom
+    
+    // Flexible reference fields (maps to content_blocks schema)
+    page_number: { default: "" },
+    chapter_number: { default: null },
+    section_number: { default: null },
+    daf_number: { default: "" },
+    halacha_number: { default: null },
+    verse_number: { default: "" },
+    custom_reference: { default: "" },
+    
+    // Legacy field for backward compatibility
+    reference: { default: "" },
   },
   inline: true,
   group: "inline",
   draggable: true,
+  selectable: true, // Make selectable for editing
+  atom: true, // Treat as atomic unit
   parseDOM: [
     {
       tag: "span[data-type='citation']",
@@ -148,23 +209,42 @@ const citation: NodeSpec = {
         return {
           source_id: dom.getAttribute("data-source-id"),
           source_title: dom.getAttribute("data-source-title"),
-          reference: dom.getAttribute("data-reference"),
+          citation_type: dom.getAttribute("data-citation-type") || "page",
+          page_number: dom.getAttribute("data-page-number") || "",
+          chapter_number: dom.getAttribute("data-chapter-number") ? parseInt(dom.getAttribute("data-chapter-number")!) : null,
+          section_number: dom.getAttribute("data-section-number") ? parseInt(dom.getAttribute("data-section-number")!) : null,
+          daf_number: dom.getAttribute("data-daf-number") || "",
+          halacha_number: dom.getAttribute("data-halacha-number") ? parseInt(dom.getAttribute("data-halacha-number")!) : null,
+          verse_number: dom.getAttribute("data-verse-number") || "",
+          custom_reference: dom.getAttribute("data-custom-reference") || "",
+          reference: dom.getAttribute("data-reference") || "",
         };
       },
     },
   ],
   toDOM(node): DOMOutputSpec {
+    const display = formatCitation(node.attrs);
+    
     return [
       "span",
       {
         "data-type": "citation",
         "data-source-id": node.attrs.source_id,
         "data-source-title": node.attrs.source_title,
-        "data-reference": node.attrs.reference,
-        class: "bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium select-none mx-1 border border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors",
-        contenteditable: "false"
+        "data-citation-type": node.attrs.citation_type,
+        "data-page-number": node.attrs.page_number || "",
+        "data-chapter-number": node.attrs.chapter_number || "",
+        "data-section-number": node.attrs.section_number || "",
+        "data-daf-number": node.attrs.daf_number || "",
+        "data-halacha-number": node.attrs.halacha_number || "",
+        "data-verse-number": node.attrs.verse_number || "",
+        "data-custom-reference": node.attrs.custom_reference || "",
+        "data-reference": node.attrs.reference || "",
+        class: "citation-node bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium mx-1 border border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors",
+        contenteditable: "false",
+        title: "Click to edit citation"
       },
-      `${node.attrs.source_title}${node.attrs.reference ? ` (${node.attrs.reference})` : ""}`,
+      display,
     ];
   },
 };

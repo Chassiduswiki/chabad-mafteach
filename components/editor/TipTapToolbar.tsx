@@ -22,6 +22,7 @@ import {
   Check,
   RefreshCw
 } from 'lucide-react';
+import { AIToolbar } from './AIToolbar';
 
 interface TipTapToolbarProps {
   editor: any;
@@ -214,6 +215,7 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
             </button>
           )}
         </div>
+        <AIToolbar editor={editor} />
       </div>
 
       {/* Save Button */}

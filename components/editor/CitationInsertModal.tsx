@@ -19,6 +19,9 @@ interface CitationInsertModalProps {
     sourceId: number | null;
     sourceTitle: string;
     reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
   }) => void;
 }
 
@@ -30,6 +33,9 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
   const [reference, setReference] = useState('');
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [manualTitle, setManualTitle] = useState('');
+  const [quote, setQuote] = useState('');
+  const [note, setNote] = useState('');
+  const [url, setUrl] = useState('');
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -40,6 +46,9 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
       setReference('');
       setIsManualEntry(false);
       setManualTitle('');
+      setQuote('');
+      setNote('');
+      setUrl('');
     }
   }, [open]);
 
@@ -81,6 +90,9 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
         sourceId: null,
         sourceTitle: manualTitle.trim(),
         reference: reference.trim() || manualTitle.trim(),
+        quote: quote.trim() || undefined,
+        note: note.trim() || undefined,
+        url: url.trim() || undefined,
       });
     } else {
       if (!selectedSource) return;
@@ -88,6 +100,9 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
         sourceId: selectedSource.id,
         sourceTitle: selectedSource.title,
         reference: reference.trim() || selectedSource.title,
+        quote: quote.trim() || undefined,
+        note: note.trim() || undefined,
+        url: url.trim() || selectedSource.external_url || undefined,
       });
     }
     onClose();
@@ -278,6 +293,56 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
               className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+
+          {/* Additional fields - collapsible section */}
+          <details className="border border-border rounded-md">
+            <summary className="px-3 py-2 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+              Additional Info (optional)
+            </summary>
+            <div className="px-3 pb-3 space-y-3">
+              {/* Quote field */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Quote from Source
+                </label>
+                <textarea
+                  value={quote}
+                  onChange={(e) => setQuote(e.target.value)}
+                  placeholder="Paste the exact quote..."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                />
+              </div>
+
+              {/* Note field */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Note
+                </label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Your note about this citation..."
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                />
+              </div>
+
+              {/* URL field */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Direct Link (URL)
+                </label>
+                <input
+                  type="url"
+                  value={url || selectedSource?.external_url || ''}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://sefaria.org/..."
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                />
+              </div>
+            </div>
+          </details>
 
           {/* Preview */}
           {(selectedSource || (isManualEntry && manualTitle)) && (

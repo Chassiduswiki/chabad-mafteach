@@ -1,0 +1,89 @@
+/**
+ * Utility functions for handling citation references between the editor,
+ * database, and frontend rendering
+ */
+
+import { nanoid } from 'nanoid';
+
+/**
+ * Generate a unique citation ID
+ * @returns A unique string ID for a citation
+ */
+export function generateCitationId(): string {
+  return `cite_${nanoid(10)}`;
+}
+
+/**
+ * Citation reference data structure
+ */
+export interface CitationReference {
+  id: string;
+  sourceId: string | number;
+  sourceTitle: string;
+  reference?: string;
+  pageNumber?: string;
+  chapterNumber?: number;
+  sectionNumber?: number;
+  verseNumber?: string;
+  dafNumber?: string;
+  halachaNumber?: number;
+  customReference?: string;
+}
+
+/**
+ * Parse HTML content for citation reference spans
+ * @param htmlContent The HTML content to parse
+ * @returns Array of citation references found in the content
+ */
+export function extractCitationReferences(htmlContent: string): CitationReference[] {
+  // Use JSDOM to parse HTML properly (runs on server side only)
+  if (typeof window === 'undefined') {
+    // Only import JSDOM on the server
+    const { JSDOM } = require('jsdom');
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+    
+    // Find all citation reference spans
+    const citationSpans = document.querySelectorAll('span.citation-ref');
+    const citations: CitationReference[] = [];
+    
+    citationSpans.forEach((span: Element) => {
+      const citation: CitationReference = {
+        id: span.getAttribute('data-citation-id') || generateCitationId(),
+        sourceId: span.getAttribute('data-source-id') || '',
+        sourceTitle: span.getAttribute('data-source-title') || 'Unknown Source',
+        reference: span.getAttribute('data-reference') || undefined,
+        pageNumber: span.getAttribute('data-page-number') || undefined,
+        chapterNumber: span.getAttribute('data-chapter-number') ? 
+          parseInt(span.getAttribute('data-chapter-number')!, 10) : undefined,
+        sectionNumber: span.getAttribute('data-section-number') ? 
+          parseInt(span.getAttribute('data-section-number')!, 10) : undefined,
+        verseNumber: span.getAttribute('data-verse-number') || undefined,
+        dafNumber: span.getAttribute('data-daf-number') || undefined,
+        halachaNumber: span.getAttribute('data-halacha-number') ? 
+          parseInt(span.getAttribute('data-halacha-number')!, 10) : undefined,
+        customReference: span.getAttribute('data-custom-reference') || undefined,
+      };
+      
+      citations.push(citation);
+    });
+    
+    return citations;
+  } else {
+    // Fallback for client-side (should not be used)
+    console.warn('extractCitationReferences should only be used on the server');
+    return [];
+  }
+}
+
+/**
+ * Creates a citation map object from an array of citation references
+ * @param citations Array of citation references
+ * @returns Object mapping citation IDs to citation data
+ */
+export function createCitationMap(citations: CitationReference[]): Record<string, CitationReference> {
+  return citations.reduce((map, citation) => {
+    map[citation.id] = citation;
+    return map;
+  }, {} as Record<string, CitationReference>);
+}

@@ -79,11 +79,30 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
           return { 'data-url': attributes.url };
         },
       },
+      quote: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-quote'),
+        renderHTML: (attributes: any) => {
+          if (!attributes.quote) return {};
+          return { 'data-quote': attributes.quote };
+        },
+      },
+      note: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-note'),
+        renderHTML: (attributes: any) => {
+          if (!attributes.note) return {};
+          return { 'data-note': attributes.note };
+        },
+      },
     };
   },
 
   parseHTML() {
     return [
+      {
+        tag: 'span.citation-ref',
+      },
       {
         tag: 'span[data-citation-id]',
       },
@@ -91,19 +110,26 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const citationText = `[${node.attrs.sourceTitle}${node.attrs.reference ? `, ${node.attrs.reference}` : ''}]`;
+    // Generate a citation ID if none exists
+    const citationId = node.attrs.citationId || `cite_${Math.random().toString(36).substring(2, 12)}`;
+    const citationText = node.attrs.reference || node.attrs.sourceTitle?.slice(0, 15) || '†';
 
+    // Use the new citation-ref format for consistency between editor and frontend
     return [
       'span',
       mergeAttributes(HTMLAttributes, {
-        'data-citation-id': node.attrs.citationId,
+        'class': 'citation-ref',
+        'data-citation-id': citationId,
         'data-source-id': node.attrs.sourceId,
         'data-source-title': node.attrs.sourceTitle,
         'data-reference': node.attrs.reference,
         'data-url': node.attrs.url,
-        class: 'citation-node cursor-pointer bg-accent/20 hover:bg-accent/40 px-2 py-1 rounded border border-accent/30 transition-colors duration-200 inline-block mx-1 select-none',
+        'data-quote': node.attrs.quote,
+        'data-note': node.attrs.note,
+        style: 'font-size: 0.85em; color: var(--color-primary); cursor: pointer;',
       }),
-      citationText,
+      // Keep the display format consistent
+      `[${citationText}]`,
     ];
   },
 
@@ -113,22 +139,36 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
 
   addNodeView() {
     return ({ node, getPos, editor }) => {
+      // Generate a citation ID if none exists
+      const citationId = node.attrs.citationId || `cite_${Math.random().toString(36).substring(2, 12)}`;
+      
+      // Create the citation reference span
       const dom = document.createElement('span');
-      dom.className = 'citation-node cursor-pointer bg-accent/20 hover:bg-accent/40 px-2 py-1 rounded border border-accent/30 transition-colors duration-200 inline-block mx-1 select-none';
-      dom.setAttribute('data-citation-id', node.attrs.citationId);
-      dom.setAttribute('data-source-id', node.attrs.sourceId);
-      dom.setAttribute('data-source-title', node.attrs.sourceTitle);
-      dom.setAttribute('data-reference', node.attrs.reference);
+      dom.className = 'citation-ref';
+      dom.setAttribute('data-citation-id', citationId);
+      dom.setAttribute('data-source-id', node.attrs.sourceId || '');
+      dom.setAttribute('data-source-title', node.attrs.sourceTitle || 'Unknown Source');
+      dom.setAttribute('data-reference', node.attrs.reference || '');
 
       if (node.attrs.url) {
         dom.setAttribute('data-url', node.attrs.url);
       }
-
-      // Citation text
-      const citationText = node.textContent ||
-        `[${node.attrs.sourceTitle}${node.attrs.reference ? `, ${node.attrs.reference}` : ''}]`;
-
-      dom.textContent = citationText;
+      if (node.attrs.quote) {
+        dom.setAttribute('data-quote', node.attrs.quote);
+      }
+      if (node.attrs.note) {
+        dom.setAttribute('data-note', node.attrs.note);
+      }
+      
+      // Apply consistent styling
+      dom.style.fontSize = '0.85em';
+      dom.style.color = 'var(--color-primary)';
+      dom.style.cursor = 'pointer';
+      dom.style.fontWeight = '500';
+      
+      // Set the content as simple bracketed text
+      const citationText = node.attrs.reference || node.attrs.sourceTitle?.slice(0, 12) || '†';
+      dom.textContent = `[${citationText}]`;
 
       // Click handler
       dom.addEventListener('click', (e) => {
@@ -136,7 +176,7 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
         e.stopPropagation();
 
         const citationData: CitationData = {
-          id: node.attrs.citationId,
+          id: citationId,
           sourceId: node.attrs.sourceId,
           sourceTitle: node.attrs.sourceTitle,
           reference: node.attrs.reference,
@@ -152,7 +192,7 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
         e.stopPropagation();
 
         const citationData: CitationData = {
-          id: node.attrs.citationId,
+          id: citationId,
           sourceId: node.attrs.sourceId,
           sourceTitle: node.attrs.sourceTitle,
           reference: node.attrs.reference,

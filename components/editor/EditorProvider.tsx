@@ -25,7 +25,7 @@ interface EditorContextType {
   isEditorReady: boolean;
   showCitationModal: boolean;
   setShowCitationModal: (show: boolean) => void;
-  insertCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string }) => void;
+  insertCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string; quote?: string; note?: string; url?: string }) => void;
   showImageModal: boolean;
   setShowImageModal: (show: boolean) => void;
   insertImage: (imageUrl: string, altText: string) => void;
@@ -38,7 +38,7 @@ interface EditorProviderProps {
   docId?: string | null;
   placeholder?: string;
   characterLimit?: number;
-  onUpdate?: (content: string) => void;
+  onUpdate?: (newContent: string) => void;
   initialContent?: string;
 }
 
@@ -105,7 +105,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       // Handle content changes
       const html = editor.getHTML();
       console.log('Content updated:', html);
-      onUpdate?.(html);
+      if (onUpdate) {
+        onUpdate(html);
+      }
     },
     editorProps: {
       attributes: {
@@ -130,7 +132,14 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setShowCitationModal(true);
   };
 
-  const insertCitation = (citation: { sourceId: number | null; sourceTitle: string; reference: string }) => {
+  const insertCitation = (citation: { 
+    sourceId: number | null; 
+    sourceTitle: string; 
+    reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
+  }) => {
     if (!editor) return;
     
     // Insert citation as a formatted node
@@ -140,6 +149,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         sourceTitle: citation.sourceTitle,
         reference: citation.reference,
         sourceId: citation.sourceId,
+        quote: citation.quote,
+        note: citation.note,
+        url: citation.url,
       },
     });
     

@@ -66,7 +66,23 @@ export type RelationType =
   | 'related_to'
   | 'sefirah_hierarchy'
   | 'chronological'
-  | 'conceptual_parent';
+  | 'conceptual_parent'
+  | 'opposite';
+
+export const RELATION_TYPES: RelationType[] = [
+  'subcategory',
+  'instance_of',
+  'part_of',
+  'related_to',
+  'sefirah_hierarchy',
+  'chronological',
+  'conceptual_parent',
+  'opposite',
+];
+
+export const isRelationType = (value: string): value is RelationType => {
+  return RELATION_TYPES.includes(value as RelationType);
+};
 
 export interface TopicRelationshipWithDetails extends TopicRelationship {
   parentTopic?: Topic;
