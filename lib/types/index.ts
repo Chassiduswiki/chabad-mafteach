@@ -175,6 +175,9 @@ export interface Topic {
     topic_type?: 'person' | 'concept' | 'place' | 'event' | 'mitzvah' | 'sefirah';
     description?: string;
     metadata?: Record<string, unknown>;
+    
+    // Citation references for interactive display
+    citationMap?: Record<string, any>;
 
     // Legacy compatibility fields (mapped from new schema)
     name?: string; 

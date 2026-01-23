@@ -9,7 +9,9 @@ import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { SoulLevelsDisplay } from '@/components/topics/custom-content/SoulLevelsDisplay';
 import { TabularDataDisplay } from '@/components/topics/custom-content/TabularDataDisplay';
+import { CitationReference } from '@/components/citations/CitationReference';
 import { Topic, Source } from '@/lib/types';
+import { CitationReference as CitationReferenceType } from '@/lib/citation-utils';
 
 // This is a simplified version of the config. In a real app, this would be shared.
 const sectionConfig: Record<string, { title: string; shortTitle: string; icon: any; color: string; bgColor: string; borderColor: string }> = {
@@ -28,9 +30,10 @@ interface ArticleSectionProps {
 interface ArticleSectionContentProps {
     section: ArticleSectionProps;
     topic: Topic;
+    citationMap?: Record<string, CitationReferenceType>;
 }
 
-export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentProps) => {
+export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSectionContentProps) => {
     const glossaryItems = useMemo(() => {
         if (['definition', 'mashal', 'personal_nimshal', 'global_nimshal'].includes(section.type)) {
             const textContent = section.content.replace(/<[^>]*>/g, ' ');
@@ -89,7 +92,95 @@ export const ArticleSectionContent = ({ section, topic }: ArticleSectionContentP
                 </div>
             ) : (
                 <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline">
-                    {parse(DOMPurify.sanitize(section.content))}
+                    {(() => {
+                        // Track citation index outside the replace function
+                        let citationIndex = 0;
+                        
+                        // Regex to match plain text citations like [section 1], [ch. 5], [p. 23], etc.
+                        const plainCitationRegex = /\[([^\]]+)\]/g;
+                        
+                        return parse(DOMPurify.sanitize(section.content, {
+                            ADD_TAGS: ['span'],
+                            ADD_ATTR: ['class', 'data-citation-id', 'data-source-id', 'data-source-title', 'data-reference', 'data-quote', 'data-note', 'data-url']
+                        }), {
+                            replace: (domNode: DOMNode) => {
+                                // Handle span-based citation references (new format)
+                                if (domNode instanceof Element && 
+                                    domNode.name === 'span' && 
+                                    (domNode.attribs.class === 'citation-ref' || domNode.attribs['data-citation-id'])) {
+                                    
+                                    citationIndex++;
+                                    const id = domNode.attribs['data-citation-id'] || `inline-${citationIndex}`;
+                                    const sourceId = domNode.attribs['data-source-id'];
+                                    const sourceTitle = domNode.attribs['data-source-title'] || 'Source';
+                                    const reference = domNode.attribs['data-reference'];
+                                    const quote = domNode.attribs['data-quote'];
+                                    const note = domNode.attribs['data-note'];
+                                    const url = domNode.attribs['data-url'];
+                                    
+                                    const citation = citationMap?.[id];
+                                    
+                                    return (
+                                        <CitationReference
+                                            key={id}
+                                            id={id}
+                                            sourceId={sourceId || citation?.sourceId || ''}
+                                            sourceTitle={sourceTitle || citation?.sourceTitle || 'Source'}
+                                            reference={reference || citation?.reference}
+                                            quote={quote}
+                                            note={note}
+                                            url={url}
+                                            index={citationIndex}
+                                        />
+                                    );
+                                }
+                                
+                                // Handle plain text nodes that may contain [bracketed citations]
+                                if (domNode.type === 'text' && domNode.data) {
+                                    const text = domNode.data;
+                                    if (plainCitationRegex.test(text)) {
+                                        // Reset regex state
+                                        plainCitationRegex.lastIndex = 0;
+                                        
+                                        const parts: React.ReactNode[] = [];
+                                        let lastIndex = 0;
+                                        let match;
+                                        
+                                        while ((match = plainCitationRegex.exec(text)) !== null) {
+                                            // Add text before the match
+                                            if (match.index > lastIndex) {
+                                                parts.push(text.slice(lastIndex, match.index));
+                                            }
+                                            
+                                            citationIndex++;
+                                            const citationText = match[1]; // The text inside brackets
+                                            const id = `plain-${citationIndex}`;
+                                            
+                                            parts.push(
+                                                <CitationReference
+                                                    key={id}
+                                                    id={id}
+                                                    sourceId=""
+                                                    sourceTitle={citationText}
+                                                    reference={citationText}
+                                                    index={citationIndex}
+                                                />
+                                            );
+                                            
+                                            lastIndex = match.index + match[0].length;
+                                        }
+                                        
+                                        // Add remaining text after last match
+                                        if (lastIndex < text.length) {
+                                            parts.push(text.slice(lastIndex));
+                                        }
+                                        
+                                        return <>{parts}</>;
+                                    }
+                                }
+                            }
+                        });
+                    })()}
                 </div>
             )}
         </>

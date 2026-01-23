@@ -30,6 +30,9 @@ export function CitationEditorDialog({
     halacha_number: null,
     verse_number: "",
     custom_reference: "",
+    quote: "",
+    note: "",
+    url: "",
   });
 
   useEffect(() => {
@@ -43,6 +46,9 @@ export function CitationEditorDialog({
         halacha_number: citation.halacha_number || null,
         verse_number: citation.verse_number || "",
         custom_reference: citation.custom_reference || "",
+        quote: citation.quote || "",
+        note: citation.note || "",
+        url: citation.url || "",
       });
     }
   }, [citation]);
@@ -257,6 +263,44 @@ export function CitationEditorDialog({
               />
             </div>
           )}
+
+          {/* Separator */}
+          <div className="border-t border-border my-4 pt-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Additional Information (Optional)</h3>
+          </div>
+
+          {/* Quote field */}
+          <div>
+            <Label>Quote from Source</Label>
+            <textarea
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={formData.quote || ""}
+              onChange={(e) => updateField('quote', e.target.value)}
+              placeholder="Paste the exact quote from the source..."
+            />
+          </div>
+
+          {/* Note field */}
+          <div>
+            <Label>Note</Label>
+            <textarea
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={formData.note || ""}
+              onChange={(e) => updateField('note', e.target.value)}
+              placeholder="Add any notes about this citation..."
+            />
+          </div>
+
+          {/* URL field */}
+          <div>
+            <Label>Direct Link (URL)</Label>
+            <Input 
+              type="url"
+              value={formData.url || ""} 
+              onChange={(e) => updateField('url', e.target.value)}
+              placeholder="https://sefaria.org/... or other link"
+            />
+          </div>
 
           {/* Preview */}
           <div className="bg-gray-50 p-4 rounded-lg">

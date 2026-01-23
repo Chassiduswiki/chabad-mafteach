@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/directus';
 import { readItems, updateItem } from '@directus/sdk';
+import { extractCitationReferences, createCitationMap, CitationReference } from '@/lib/citation-utils';
 
 /**
  * Get topic by slug with associated content
@@ -372,8 +373,33 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             contentBlocks // **[CHANGED]** from paragraphs
         };
 
+        // Extract citation references from content fields
+        let allCitationRefs: CitationReference[] = [];
+        
+        // Process each content field that might contain citations
+        const contentFields = ['definition_positive', 'definition_negative', 'overview', 'article', 
+            'mashal', 'practical_takeaways', 'global_nimshal', 'historical_context'];
+        
+        contentFields.forEach(field => {
+            if (topic[field]) {
+                try {
+                    const fieldCitations = extractCitationReferences(topic[field]);
+                    allCitationRefs = [...allCitationRefs, ...fieldCitations];
+                } catch (error) {
+                    console.warn(`Error extracting citations from ${field}:`, error);
+                }
+            }
+        });
+        
+        // Create citation map for frontend use
+        const citationMap = createCitationMap(allCitationRefs);
+        
+        // Return enriched topic with related data
         return {
-            topic: mergedTopic,
+            topic: {
+                ...mergedTopic,
+                citationMap
+            },
             citations: validStatementTopics,
             relatedTopics,
             sources,

@@ -14,6 +14,9 @@ export interface CitationAttrs {
   verse_number?: string;
   custom_reference?: string;
   reference?: string; // Legacy
+  quote?: string; // Quoted text from source
+  note?: string; // Editor's note about this citation
+  url?: string; // Direct link to source
 }
 
 interface CitationPluginOptions {
