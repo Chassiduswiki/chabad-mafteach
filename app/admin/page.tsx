@@ -302,8 +302,8 @@ export default function AdminDashboardPage() {
         });
         setContentHealth(data.contentHealth);
         setPopularTopics(data.popularTopics || []);
-        setRealTimeMetrics(data.realTime || generateMockRealTimeData());
-        setUserAnalytics(data.userAnalytics || generateMockUserAnalytics());
+        setRealTimeMetrics(data.realTime);
+        setUserAnalytics(data.userAnalytics);
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
