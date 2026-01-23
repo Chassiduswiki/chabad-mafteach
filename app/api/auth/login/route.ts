@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
 import { createClient } from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+import { readUsers } from '@directus/sdk';
 
 const directus = createClient();
 
@@ -91,13 +91,13 @@ export async function POST(request: NextRequest) {
       // Instead, we'll verify the user exists in Directus and use our own JWT for the app session.
       // This bridges Directus users with our Next.js auth system.
       
-      const users = await directus.request(readItems('directus_users' as any, {
+      const users = await directus.request(readUsers({
         filter: { email: { _eq: email } },
         fields: ['id', 'email', 'first_name', 'last_name', 'role.name'],
         limit: 1
       }));
 
-      const user = users && users.length > 0 ? users[0] : null;
+      const user = users && (users as any[]).length > 0 ? (users as any[])[0] : null;
 
       // In a real production app, we would use Directus's login endpoint to verify the password.
       // For now, to solve the user's login issue, we'll match the email and check a placeholder password

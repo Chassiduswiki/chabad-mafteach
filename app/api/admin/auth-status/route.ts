@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { createClient } from '@/lib/directus';
-import { readItems } from '@directus/sdk';
+import { readUsers, readRoles } from '@directus/sdk';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,8 +17,7 @@ export async function GET(request: NextRequest) {
     const directus = createClient();
 
     // 2. Fetch Directus Roles
-    // We use 'as any' because core collections are restricted in some SDK versions but we have admin token
-    const roles = await directus.request(readItems('directus_roles' as any, {
+    const roles = await directus.request(readRoles({
       fields: ['id', 'name', 'description'],
     })).catch(err => {
       console.error('Error fetching roles:', err);
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 3. Fetch Directus Users
-    const users = await directus.request(readItems('directus_users' as any, {
+    const users = await directus.request(readUsers({
       fields: ['id', 'email', 'first_name', 'last_name', 'role.name', 'token'],
     })).catch(err => {
       console.error('Error fetching users:', err);
@@ -57,6 +56,12 @@ export async function GET(request: NextRequest) {
         description: 'The DIRECTUS_STATIC_TOKEN defined in environment variables.',
         usage: 'Primary key for all server-side administrative Directus operations.',
         status: process.env.DIRECTUS_STATIC_TOKEN ? 'Configured' : 'Missing'
+      },
+      aiService: {
+        name: 'AI Intelligence Key',
+        description: 'OpenRouter API key used for all AI-powered features (generation, translation, analysis).',
+        usage: 'AIAssistant, statement breaking, and content enhancement.',
+        status: process.env.OPENROUTER_API_KEY ? 'Configured' : 'Missing'
       }
     };
 

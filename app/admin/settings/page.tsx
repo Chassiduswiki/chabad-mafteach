@@ -17,7 +17,8 @@ import {
   Info,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,12 @@ interface AuthStatus {
       usersWithToken: Array<{ name: string; role: string }>;
     };
     systemSecret: {
+      name: string;
+      description: string;
+      usage: string;
+      status: string;
+    };
+    aiService: {
       name: string;
       description: string;
       usage: string;
@@ -160,7 +167,7 @@ export default function AdminSettingsPage() {
             ) : authStatus && (
               <div className="grid grid-cols-1 gap-12">
                 {/* Token Types Breakdown */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* App JWT */}
                   <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -176,7 +183,7 @@ export default function AdminSettingsPage() {
                       <div className="pt-4 border-t border-border/20 space-y-2">
                         <div className="flex justify-between text-[11px]">
                           <span className="text-muted-foreground/60">Usage:</span>
-                          <span className="font-medium">{authStatus.tokenBreakdown.appJwt.usage}</span>
+                          <span className="font-medium text-right ml-2">{authStatus.tokenBreakdown.appJwt.usage}</span>
                         </div>
                         <div className="flex justify-between text-[11px]">
                           <span className="text-muted-foreground/60">Expiration:</span>
@@ -202,12 +209,12 @@ export default function AdminSettingsPage() {
                       <p className="text-xs text-muted-foreground leading-relaxed italic">
                         {authStatus.tokenBreakdown.directusStatic.description}
                       </p>
-                      <div className="pt-4 border-t border-border/20 space-y-2">
+                      <div className="pt-4 border-t border-border/20 space-y-2 overflow-y-auto max-h-24">
                         <div className="text-[11px] text-muted-foreground/60 mb-2">Users with Tokens:</div>
                         {authStatus.tokenBreakdown.directusStatic.usersWithToken.length > 0 ? (
                           authStatus.tokenBreakdown.directusStatic.usersWithToken.map(u => (
-                            <div key={u.name} className="flex justify-between text-[11px]">
-                              <span className="font-medium truncate max-w-[120px]">{u.name}</span>
+                            <div key={u.name} className="flex justify-between text-[11px] mb-1">
+                              <span className="font-medium truncate max-w-[100px]">{u.name}</span>
                               <span className="text-muted-foreground/40">{u.role}</span>
                             </div>
                           ))
@@ -244,6 +251,38 @@ export default function AdminSettingsPage() {
                           <span className="text-muted-foreground/60">Primary Usage:</span>
                           <span className="font-light italic leading-tight text-muted-foreground/80">
                             {authStatus.tokenBreakdown.systemSecret.usage}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Intelligence Key */}
+                  <div className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <Sparkles className="w-12 h-12" />
+                    </div>
+                    <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold mb-4">
+                      {authStatus.tokenBreakdown.aiService.name}
+                    </h3>
+                    <div className="space-y-4">
+                      <p className="text-xs text-muted-foreground leading-relaxed italic">
+                        {authStatus.tokenBreakdown.aiService.description}
+                      </p>
+                      <div className="pt-4 border-t border-border/20 space-y-2">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground/60">Status:</span>
+                          <span className={cn(
+                            "font-bold",
+                            authStatus.tokenBreakdown.aiService.status === 'Configured' ? "text-green-500/80" : "text-destructive"
+                          )}>
+                            {authStatus.tokenBreakdown.aiService.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-col text-[11px] gap-1 pt-2">
+                          <span className="text-muted-foreground/60">Usage:</span>
+                          <span className="font-light italic leading-tight text-muted-foreground/80">
+                            {authStatus.tokenBreakdown.aiService.usage}
                           </span>
                         </div>
                       </div>
