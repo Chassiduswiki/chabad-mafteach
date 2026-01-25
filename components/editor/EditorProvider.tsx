@@ -78,6 +78,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       }),
       // Custom extensions for Hebrew and citations
       ...createTipTapExtensions({
+        topicId: docId || undefined,
         onCitationClick: (citation) => {
           setActiveCitation({
             source_id: citation.sourceId,
@@ -97,6 +98,32 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         onOCRError: (error) => {
           console.error('OCR Error:', error);
           setFeedback({ type: "error", message: `OCR failed: ${error}` });
+        },
+        onSuggestCitations: (suggestions) => {
+          console.log('AI Citation Suggestions:', suggestions);
+          // This event will be handled by AICitationSuggestorDialog if it listens for it
+          window.dispatchEvent(new CustomEvent('ai-suggest-citations', { detail: { suggestions } }));
+        },
+        onTranslateText: async (text, targetLang) => {
+          const response = await fetch('/api/ai/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'translate',
+              content: text,
+              targetLanguage: targetLang 
+            }),
+          });
+          const data = await response.json();
+          return data.content || text;
+        },
+        onGetAutocompleteSuggestions: async (text) => {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(text)}`);
+          if (response.ok) {
+            const data = await response.json();
+            return (data.topics || []).map((t: any) => t.name).slice(0, 5);
+          }
+          return [];
         },
       }),
     ],

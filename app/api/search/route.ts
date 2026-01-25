@@ -85,137 +85,105 @@ export async function GET(request: NextRequest) {
 
 
     try {
-        let docs: any[] = [];
-        let topicsRaw: any[] = [];
-
         // Limit search to prevent performance issues
         const MAX_RESULTS_PER_TYPE = 15;
 
-        const searchPromise = (async () => {
-            const [contentBlocksResult, statementsResult] = await Promise.allSettled([
-                directus.request(
-                    readItems('content_blocks', {
-                        search: normalizedQuery,
-                        fields: ['id', 'order_key', 'content', 'page_number', 'chapter_number', 'halacha_number', 'document_id'],
-                        limit: MAX_RESULTS_PER_TYPE,
-                    })
-                ),
-                directus.request(
-                    readItems('statements', {
-                        search: normalizedQuery,
-                        fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
-                        limit: MAX_RESULTS_PER_TYPE,
-                    })
-                )
-            ]);
-
-            // Process results
-            if (contentBlocksResult.status === 'fulfilled') {
-                const results = (contentBlocksResult.value as any[]).map(cb => {
-                    const clean = cb.content?.replace(/<[^>]*>/g, '') || '';
-                    return {
-                        id: `content-${cb.id}`,
-                        title: `Content Block ${cb.order_key}`,
-                        content_preview: clean.substring(0, 150) + (clean.length > 150 ? '...' : ''),
-                        url: `/seforim/${cb.document_id}`,
-                        type: 'content_block'
-                    };
-                });
-                docs = docs.concat(results);
-            }
-
-            if (statementsResult.status === 'fulfilled') {
-                const results = (statementsResult.value as any[]).map(stmt => {
-                    const cleanText = stmt.text?.replace(/<[^>]*>/g, '') || '';
-                    const cleanAppended = stmt.appended_text?.replace(/<[^>]*>/g, '') || '';
-                    return {
-                        id: `statement-${stmt.id}`,
-                        title: cleanText.substring(0, 80) + (cleanText.length > 80 ? '...' : ''),
-                        content_preview: cleanAppended ? `Footnote: ${cleanAppended.substring(0, 100)}` : '',
-                        url: `/seforim/${stmt.block_id}`,
-                        type: 'statement'
-                    };
-                });
-                docs = docs.concat(results);
-            }
-        })();
-
-        const topicsPromise = (async () => {
-            if (normalizedQuery.length > 1) {
-                topicsRaw = await directus.request(
-                    readItems('topics', {
-                        search: normalizedQuery,
-                        fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
-                        limit: 20,
-                    })
-                ) as any[];
-            }
-        })();
-
-        const seforimPromise = (async () => {
-            return await directus.request(
-                readItems('documents', {
+        // Execute all searches in parallel with proper error handling
+        const [contentBlocksRes, statementsRes, topicsRes, seforimRes] = await Promise.allSettled([
+            directus.request(
+                readItems('content_blocks' as any, {
+                    search: normalizedQuery,
+                    fields: ['id', 'order_key', 'content', 'page_number', 'chapter_number', 'halacha_number', 'document_id'],
+                    limit: MAX_RESULTS_PER_TYPE,
+                })
+            ),
+            directus.request(
+                readItems('statements' as any, {
+                    search: normalizedQuery,
+                    fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
+                    limit: MAX_RESULTS_PER_TYPE,
+                })
+            ),
+            directus.request(
+                readItems('topics' as any, {
+                    search: normalizedQuery,
+                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+                    limit: 20,
+                })
+            ),
+            directus.request(
+                readItems('documents' as any, {
                     search: normalizedQuery,
                     fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category'],
                     limit: 15,
                 })
-            ) as any[];
-        })();
+            )
+        ]);
 
-        await Promise.all([searchPromise, topicsPromise, seforimPromise]);
-        const seforimRaw = await seforimPromise;
+        // Process Content Blocks -> locations
+        const locations = contentBlocksRes.status === 'fulfilled' 
+            ? (contentBlocksRes.value as any[]).map(cb => {
+                const clean = cb.content?.replace(/<[^>]*>/g, '') || '';
+                return {
+                    id: `content-${cb.id}`,
+                    title: `Content Block ${cb.order_key}`,
+                    display_name: `Section ${cb.order_key}`,
+                    content_preview: clean.substring(0, 150) + (clean.length > 150 ? '...' : ''),
+                    url: `/seforim/${cb.document_id}`,
+                    page_number: cb.page_number,
+                    chapter_number: cb.chapter_number,
+                    halacha_number: cb.halacha_number,
+                    sefer: cb.document_id,
+                };
+            }) 
+            : [];
 
-        // Format response
-        const documents = docs.filter(d => d.type === 'document' || !d.type).map((d) => ({
-            id: d.id,
-            title: d.title as string,
-            doc_type: d.doc_type as string | undefined,
-        }));
+        // Process Statements -> statements
+        const statements = statementsRes.status === 'fulfilled'
+            ? (statementsRes.value as any[]).map(stmt => {
+                const cleanText = stmt.text?.replace(/<[^>]*>/g, '') || '';
+                const cleanAppended = stmt.appended_text?.replace(/<[^>]*>/g, '') || '';
+                return {
+                    id: `statement-${stmt.id}`,
+                    title: cleanText.substring(0, 80) + (cleanText.length > 80 ? '...' : ''),
+                    content_preview: cleanAppended ? `Footnote: ${cleanAppended.substring(0, 100)}` : '',
+                    url: `/seforim/${stmt.block_id}`,
+                    block_id: stmt.block_id,
+                };
+            })
+            : [];
 
-        const locations = docs.filter(d => d.type === 'content_block').map((d) => ({
-            id: d.id,
-            title: d.title as string,
-            display_name: d.title as string,
-            content_preview: d.content_preview as string,
-            url: d.url,
-            page_number: d.page_number as string,
-            chapter_number: d.chapter_number as number,
-            halacha_number: d.halacha_number as number,
-            sefer: d.document_id as number,
-        }));
+        // Process Topics -> topics
+        const topics = topicsRes.status === 'fulfilled'
+            ? (topicsRes.value as any[]).map(t => ({
+                id: t.id,
+                name: t.canonical_title,
+                slug: t.slug,
+                category: t.topic_type,
+                definition_short: t.description,
+                url: `/topics/${t.slug}`,
+            }))
+            : [];
 
-        const statements = docs.filter(d => d.type === 'statement').map((d) => ({
-            id: d.id,
-            title: d.title as string,
-            content_preview: d.content_preview as string,
-            url: d.url,
-            block_id: d.block_id as number,
-        }));
+        // Process Seforim -> seforim
+        const seforim = seforimRes.status === 'fulfilled'
+            ? (seforimRes.value as any[]).map(s => ({
+                id: s.id,
+                title: s.title,
+                author: s.author,
+                doc_type: s.doc_type,
+                category: s.category,
+                url: `/seforim/${s.id}`,
+            }))
+            : [];
 
-        const topics = (topicsRaw as any[]).map((t) => ({
-            id: t.id,
-            name: t.canonical_title,
-            name_hebrew: undefined,
-            slug: t.slug,
-            category: t.topic_type,
-            definition_short: t.description,
-            url: `/topics/${t.slug}`,
-        }));
-
-        // **[NEW]** Format seforim results
-        const seforim = (seforimRaw as any[]).map((s) => ({
-            id: s.id,
-            title: s.title,
-            description: s.description,
-            author: s.author,
-            doc_type: s.doc_type,
-            language: s.language,
-            publish_year: s.publish_year,
-            slug: s.id.toString(), // Documents don't have slugs currently, fallback to ID
-            url: `/seforim/${s.id}`,
-        }));
-
-        const result = { documents, locations, topics, statements, seforim };
+        const result = { 
+            documents: seforim.filter(s => s.doc_type === 'sefer'), // Alias for backward compatibility
+            locations, 
+            topics, 
+            statements, 
+            seforim 
+        };
 
         // Cache results for 5 minutes
         cache.set(cacheKey, result, 5 * 60 * 1000);
