@@ -191,6 +191,7 @@ export interface Topic {
     definition_positive?: string;
     definition_negative?: string;
     overview?: string;
+    mashal?: string;
     article?: string;
     practical_takeaways?: string; 
     historical_context?: string; 
