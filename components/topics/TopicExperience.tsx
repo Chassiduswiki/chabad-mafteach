@@ -893,7 +893,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             
                             {/* Section Content */}
                             <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
-                               <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
+                                <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
                             </div>
                         </section>
                     );
