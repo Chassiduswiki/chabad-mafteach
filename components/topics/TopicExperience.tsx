@@ -36,6 +36,7 @@ import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
+import { SerendipityCard } from '@/components/features/SerendipityCard';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { TopicAnnotations } from '@/components/annotations/TopicAnnotations';
