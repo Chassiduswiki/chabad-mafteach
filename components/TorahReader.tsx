@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { Topic } from '@/lib/types';
 import { Loader2, BookOpen, Languages, Eye, EyeOff, Settings as SettingsIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ReaderSettingsModal, type ReaderSettings } from './features/reader/ReaderSettings';
 
 interface StatementWithTopics {
@@ -95,7 +96,8 @@ export function TorahReader({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <ErrorBoundary componentName="TorahReader">
+      <div className="min-h-screen bg-background text-foreground">
       {/* Reading Progress Bar - positioned below sticky header */}
       <div className="fixed top-14 left-0 right-0 z-30 h-1 bg-border">
         <div
@@ -515,11 +517,12 @@ export function TorahReader({
       {isSettingsOpen && (
         <ReaderSettingsModal
           settings={settings}
-          onUpdate={(u) => setSettings({ ...settings, ...u })}
+          onUpdate={(u: Partial<ReaderSettings>) => setSettings({ ...settings, ...u })}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
 

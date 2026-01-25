@@ -1,4 +1,6 @@
-# Chabad Mafteach Frontend Roadmap
+## Chabad Mafteach Frontend Roadmap
+
+**Note from critique (Jan 25, 2026):** Infrastructure, Performance, Governance, and SEO are now elevated to first-class priorities to prevent technical debt and ensure public-launch readiness.
 
 ## 🎯 JANUARY 2026 PIVOT: Focus on Digital Chassidus Encyclopedia
 **Goal**: Temporarily hide the "sources" (Seforim/Torah Reader) side of the platform to focus on the core "Digital Chassidus Encyclopedia" (Topics). This ensures a high-quality, focused experience before re-introducing source deep-diving.
@@ -36,6 +38,49 @@ The frontend TypeScript types now match the new Directus schema:
 - **Collections**: `documents`, `paragraphs`, `statements`, `topics`, `statement_topics`, `sources`, `source_links`, `translations`
 - **Removed**: `seforim`, `locations`, `texts`, `topic_citations` (replaced with new collections)
 - **See**: `Documentation/New-directus-data-model.md` for complete schema reference
+
+- [ ] **Accessibility Audit**: Run axe DevTools on every page, fix critical issues. (Blindspot #6)
+- [ ] **Internationalization (i18n)**: Plan for Yiddish text rendering and RTL layout switching. (Blindspot #7)
+- [ ] **Mobile Strategy**: Decide between Native vs PWA (Push notifications, offline-first). (Blindspot #9)
+- [ ] **Content Governance**: Add "draft vs published" status to topics. (Blindspot #4)
+
+## TRACK 17: Infrastructure, Performance & Observability (URGENT)
+
+**Goal**: Ensure the app is fast, reliable, and observable before public launch. (Blindspots #1, #2, #3)
+
+### Phase 17a: Performance & Scalability
+- [ ] **Performance Budgets**: Set targets (API <500ms, Page Load <3s).
+- [ ] **Pagination & Optimization**: Implement query pagination for large collections (topics/sources).
+- [ ] **Caching Layer**: Add Redis caching for Directus queries and AI search.
+- [ ] **Asset Optimization**: Optimize image/font delivery via CDN.
+
+### Phase 17b: Observability & Monitoring
+- [ ] **Error Tracking**: Integrate Sentry/LogRocket for frontend/backend errors.
+- [ ] **Uptime Monitoring**: Set up alerts for Directus API availability.
+- [ ] **Error Boundaries**: Implement React Error Boundaries for major UI sections.
+
+### Phase 17c: Data Migration & Versioning
+- [ ] **Staging Workflow**: Document and enforce Staging → Production sync process.
+- [ ] **Automated Backups**: Implement schema/data backups before migrations.
+- [ ] **Migration Scripts**: Create dry-run scripts for schema changes.
+
+## TRACK 18: Governance, SEO & Legal (URGENT)
+
+**Goal**: Protect the project legally and ensure it is discoverable. (Blindspots #4, #5, #8)
+
+### Phase 18a: SEO Strategy
+- [ ] **Dynamic Metadata**: Implement Next.js Metadata API for all topic pages.
+- [ ] **Sitemap & Structured Data**: Generate `sitemap.xml` and Schema.org Article markup.
+- [ ] **OG Image Generation**: Automated social sharing image generation.
+
+### Phase 18b: Legal & Compliance
+- [ ] **Terms & Privacy**: Draft and implement basic ToS and Privacy Policy pages.
+- [ ] **Cookie Consent**: Add GDPR/CCPA compliant consent banner.
+- [ ] **Attribution Standards**: Enforce source attribution guidelines for all content.
+
+### Phase 18c: Content Quality Control
+- [ ] **Editorial Workflow**: Define roles (Editor → Reviewer → Admin) in Directus.
+- [ ] **Review Queue**: Create "needs review" dashboard for editors.
 
 ---
 
@@ -705,6 +750,13 @@ Two critical questions hidden at bottom that affect everything:
 
 ### Phase 1: Stop the Bleeding (Week 1-2) - CRITICAL
 
+#### Week 0: Infrastructure & Excellence (Blindspots #1, #3)
+1. **Performance Baseline**
+   - Measure current lighthouse scores and API response times.
+   - Set up Sentry for error tracking.
+2. **Error Boundaries**
+   - Implement React Error Boundaries for Topics and Reader.
+
 #### Week 1: Foundation Emergency
 1. **Data Integrity Emergency**
    - Query `statement_topics` for orphaned records
@@ -1011,6 +1063,16 @@ You have an ambitious vision but a broken foundation. The roadmap shows impressi
 - **Daily Status Checks** on foundation fixes
 - **User Testing Integration** for all completed phases
 - **Rollback Planning** for complex changes
+
+---
+
+## Notes for the Team
+
+### 1. Team & Collaboration (Blindspot #10)
+- **Scale**: Solo developer environment (Jan 2026).
+- **Code Review**: Self-review with AI audit before merging major features.
+- **Deployment**: Automatic deployment to staging via GitHub Actions; manual promotion to production.
+- **Workflow**: Commit-per-feature with batch task tracking in `Documentation/Longterm-tasks`.
 
 ---
 
