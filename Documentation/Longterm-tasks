@@ -320,10 +320,6 @@ The frontend TypeScript types now match the new Directus schema:
 - [x] Decide final Directus public-access model: which collections/fields readable by static token. **DONE** (JWT auth implemented)
 - [ ] Implement + test permission changes in staging before production.
 - [x] Add integration tests for topics, search, and TorahReader to catch regressions. **FOUNDATION COMPLETE** (Jest setup ready, complex tests deferred)
-- [x] Document the new topics data model and frontend mapping in repo docs. **DONE** (See `lib/types/index.ts` and `Documentation/New-directus-data-model.md`)
-- [ ] Re-enable term-linking pipeline (`linkTerms`) once topics schema is stable (Phase 1c).
-- [x] Align TypeScript types with new Directus schema. **DONE** (Dec 8, 2025)
-- [x] Set up Jest testing framework with performance monitoring. **DONE** (Bundle: 1.12 MB JS, 1.45 MB total)
 
 ## TRACK 5: Content Editor & Governance (Unified)
 
