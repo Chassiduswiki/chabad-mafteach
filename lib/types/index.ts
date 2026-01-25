@@ -201,6 +201,7 @@ export interface Topic {
     key_concepts?: { concept: string; explanation: string; link?: string }[];
 
     // Related content (document > paragraphs > statements)
+    contentBlocks?: ContentBlock[];
     paragraphs?: {
         id: number;
         text: string;

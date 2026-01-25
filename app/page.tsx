@@ -98,7 +98,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
-            className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.1]"
+            className="max-w-4xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-7xl leading-[1.1]"
           >
             {copy.home.hero.title.split(' ').slice(0, 2).join(' ')}
           </motion.h1>
@@ -106,11 +106,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
-            className="mt-2"
+            className="mt-1 min-h-[1.2em] flex items-center justify-center"
           >
             <WordRotate
               words={copy.home.hero.titleRotatingWords as unknown as string[]}
-              className="text-primary text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl leading-[1.1]"
+              className="text-primary text-4xl font-bold tracking-tight sm:text-5xl lg:text-7xl leading-[1.1]"
             />
           </motion.div>
         </div>
