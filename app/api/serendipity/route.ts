@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     let connections: any[] = [];
 
     if (currentTopicId) {
-      const sharedSourceTopics = await directus.request(readItems('source_links' as any, {
+      const sharedSourceTopics = await directus.request((readItems as any)('source_links', {
         filter: { 
           _and: [
             { topic_id: { _neq: currentTopicId } },
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function getSourceIdsForTopic(directus: any, topicId: number): Promise<number[]> {
-  const links = await directus.request(readItems('source_links' as any, {
+  const links = await directus.request((readItems as any)('source_links', {
     filter: { topic_id: { _eq: topicId } },
     fields: ['source_id'],
     limit: 50
