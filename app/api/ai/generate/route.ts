@@ -13,6 +13,13 @@ export async function POST(req: NextRequest) {
     let result;
 
     switch (action) {
+      case 'generate_outline':
+        if (!data.topicTitle) {
+          return NextResponse.json({ error: 'topicTitle is required' }, { status: 400 });
+        }
+        result = await aiAssistant.generateOutline(data.topicTitle, data.briefDescription);
+        break;
+
       case 'expand_article':
         if (!data.topicTitle || !data.briefDescription) {
           return NextResponse.json({ error: 'topicTitle and briefDescription are required' }, { status: 400 });

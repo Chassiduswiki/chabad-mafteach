@@ -223,6 +223,19 @@
   border-color: rgba(59, 130, 246, 0.3);
 }
 
+/* Unsynced Citation Highlight */
+.citation-unsynced {
+  color: #94a3b8 !important; /* slate-400 */
+  border-bottom: 1px dashed #94a3b8;
+  animation: citation-pulse 2s infinite;
+}
+
+@keyframes citation-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
 .citation-tooltip {
   position: relative;
 }

@@ -231,6 +231,50 @@ export interface Topic {
     
     // Display configuration for section visibility and format
     display_config?: Record<string, { visible?: boolean; format?: string; [key: string]: unknown }>;
+
+    // Collection relations
+    topic_collection_topics?: TopicCollectionTopic[];
+}
+
+export interface TopicCollection {
+    id: number;
+    title: string;
+    slug: string;
+    description?: string;
+    is_featured: boolean;
+    is_public: boolean;
+    curator: string | any; // User ID or User object
+    cover_image?: string;
+    tags?: string[];
+    view_count: number;
+    like_count: number;
+    fork_count: number;
+    status: 'draft' | 'published' | 'archived';
+    date_created: string;
+    date_updated: string;
+    
+    // Relations
+    topic_collection_topics?: TopicCollectionTopic[];
+}
+
+export interface TopicCollectionTopic {
+    id: number;
+    collection_id: number | TopicCollection;
+    topic_id: number | Topic;
+    order_index: number;
+    topic?: Topic;
+}
+
+export interface CollectionLike {
+    id: number;
+    collection_id: number | TopicCollection;
+    user_id: string;
+}
+
+export interface CollectionFollow {
+    id: number;
+    collection_id: number | TopicCollection;
+    user_id: string;
 }
 
 export interface Citation {

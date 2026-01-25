@@ -22,6 +22,10 @@ import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { TopicAnnotations } from '@/components/annotations/TopicAnnotations';
+import { MobileFeedbackButton } from '@/components/feedback/MobileFeedbackButton';
+import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
+import { TranslationSurvey } from '@/components/feedback/TranslationSurvey';
 
 // Types
 type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'translations' | 'sources';
@@ -226,6 +230,44 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [focusMode, setFocusMode] = useState(false);
     const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
     const [hasTranslations, setHasTranslations] = useState(false);
+    const [showStickyTitle, setShowStickyTitle] = useState(false);
+    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
+    const [isTranslationFeedbackOpen, setIsTranslationFeedbackOpen] = useState(false);
+    const [isTranslationSurveyOpen, setIsTranslationSurveyOpen] = useState(false);
+    const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
+    const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+    const [isSourceViewerOpen, setIsSourceViewerOpen] = useState(false);
+    const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('chabad-mafteach:user-id') : null;
+        setCurrentUserId(userId);
+    }, []);
+
+    // Show sticky title when scrolled past hero
+    const heroRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (heroRef.current) {
+                const heroBottom = heroRef.current.getBoundingClientRect().bottom;
+                setShowStickyTitle(heroBottom < 56); // 56px = navbar height
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const handleTutorialClose = () => {
+        setIsTutorialOpen(false);
+        localStorage.setItem('hasSeenFocusModeTutorial', 'true');
+    };
+
+    const handleSourceClick = (source: Source) => {
+        setSelectedSource(source);
+    };
 
     // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
     useEffect(() => {
@@ -262,34 +304,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             checkTranslations();
         }
     }, [topic.id]);
-    const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
-    const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
-    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-    const [selectedSource, setSelectedSource] = useState<Source | null>(null);
-    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
-    const [showStickyTitle, setShowStickyTitle] = useState(false);
-    const heroRef = useRef<HTMLDivElement>(null);
-
-    // Show sticky title when scrolled past hero
-    useEffect(() => {
-        const handleScroll = () => {
-            if (heroRef.current) {
-                const heroBottom = heroRef.current.getBoundingClientRect().bottom;
-                setShowStickyTitle(heroBottom < 56); // 56px = navbar height
-            }
-        };
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    const handleTutorialClose = () => {
-        setIsTutorialOpen(false);
-        localStorage.setItem('hasSeenFocusModeTutorial', 'true');
-    };
-
-    const handleSourceClick = (source: Source) => {
-        setSelectedSource(source);
-    };
 
     const sectionRefs = useRef<Record<SectionType, HTMLElement | null>>({
         definition: null,
@@ -887,57 +901,75 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
                 {/* Concept Constellation - Visual Discovery at Bottom */}
                 {relatedTopics.length > 0 && (
-                    <div className="pt-12 mt-8 border-t border-border">
-                        <div className="text-center mb-6">
-                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-medium mb-3">
-                                <Sparkles className="w-3 h-3" />
-                                See the Connections
+                    <div className="pt-12 mt-12 border-t border-border/50">
+                        <div className="text-center mb-8">
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Interactive Map
                             </span>
-                            <h2 className="text-lg font-semibold text-foreground">How This Concept Connects</h2>
-                            <p className="text-sm text-muted-foreground mt-1">Now that you&apos;ve learned about {topic.canonical_title}, explore how it connects to other ideas</p>
+                            <h2 className="text-3xl font-serif italic text-foreground">How This Concept Connects</h2>
+                            <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between {topic.canonical_title} and other Chassidic ideas.</p>
                         </div>
                         <ConstellationErrorBoundary>
-                            <ForceGraph
-                                nodes={forceGraphData.nodes}
-                                edges={forceGraphData.edges}
-                                width={600}
-                                height={320}
-                                interactive={true}
-                            />
+                            {forceGraphData.nodes.length > 1 ? (
+                                <ForceGraph
+                                    nodes={forceGraphData.nodes}
+                                    edges={forceGraphData.edges}
+                                    width={800}
+                                    height={400}
+                                    interactive={true}
+                                />
+                            ) : (
+                                <div className="h-80 flex flex-col items-center justify-center bg-muted/20 rounded-[2rem] border border-dashed border-border/50 p-8">
+                                    <GitBranch className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                                    <p className="text-sm text-muted-foreground text-center max-w-[280px] italic">
+                                        No connections mapped for this topic yet. Be the first to suggest one!
+                                    </p>
+                                </div>
+                            )}
                         </ConstellationErrorBoundary>
-                        <div className="text-center mt-4">
+                        
+                        <div className="text-center mt-8">
                             <button
                                 onClick={() => setIsDeepDiveOpen(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all hover-lift"
+                                className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
                             >
                                 <Sparkles className="w-4 h-4" />
-                                Open Deep Dive Mode
+                                Enter Deep Dive Mode
                             </button>
-                        </div>
-                        
-                        {/* Quick Links */}
-                        <div className="mt-8 pt-6 border-t border-border/50">
-                            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
-                                <GitBranch className="w-4 h-4 text-primary" />
-                                Continue Exploring
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {relatedTopics.slice(0, 5).map((related) => (
-                                    <Link
-                                        key={related.slug}
-                                        href={`/topics/${related.slug}`}
-                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted text-sm rounded-full transition-colors hover-scale"
-                                    >
-                                        <span>{related.canonical_title}</span>
-                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                                    </Link>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 )}
+
+                {/* Community Annotations Section */}
+                <div className="pt-12 mt-12 border-t border-border/50">
+                    <TopicAnnotations 
+                        topicId={topic.id.toString()} 
+                        currentUserId={currentUserId || undefined} 
+                        className="max-w-4xl mx-auto"
+                    />
+                </div>
+
+                {/* Feedback & Contribution */}
+                <MobileFeedbackButton 
+                    topicId={topic.id.toString()} 
+                    topicTitle={topic.canonical_title} 
+                />
             </main>
 
+            {/* Modals & Overlays */}
+            <TranslationFeedback 
+                isOpen={isTranslationFeedbackOpen}
+                onClose={() => setIsTranslationFeedbackOpen(false)}
+                contentType="topic"
+                contentId={topic.id.toString()}
+                contentName={topic.canonical_title}
+            />
+
+            <TranslationSurvey 
+                isOpen={isTranslationSurveyOpen}
+                onClose={() => setIsTranslationSurveyOpen(false)}
+            />
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet

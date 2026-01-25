@@ -3,12 +3,19 @@ import { HebrewLanguage } from './HebrewLanguage';
 import { HebrewOCR } from './HebrewOCR';
 import { AdvancedCitation } from './AdvancedCitation';
 import { AIEnhancementExtension } from './AIEnhancementExtension';
+import { SmartCitationExtension } from './SmartCitationExtension';
+import { RealTimeTranslationExtension } from './RealTimeTranslationExtension';
+import { AutoCompleteExtension } from '../AutoCompleteExtension';
 
 export const createTipTapExtensions = (options?: {
   onCitationClick?: (citation: any) => void;
   onCitationEdit?: (citation: any) => void;
   onOCRResult?: (text: string) => void;
   onOCRError?: (error: string) => void;
+  onSuggestCitations?: (suggestions: any[]) => void;
+  onTranslateText?: (text: string, targetLang: string) => Promise<string>;
+  onGetAutocompleteSuggestions?: (text: string) => Promise<string[]>;
+  topicId?: string;
 }) => {
   return [
     // Base extensions
@@ -41,6 +48,22 @@ export const createTipTapExtensions = (options?: {
       onCitationClick: options?.onCitationClick,
       onCitationEdit: options?.onCitationEdit,
       citations: [], // Will be populated from external data
+    }),
+
+    // Smart Citation Logic
+    SmartCitationExtension.configure({
+      onSuggestCitations: options?.onSuggestCitations,
+      topicId: options?.topicId,
+    }),
+
+    // Real-time Translation
+    RealTimeTranslationExtension.configure({
+      onTranslateText: options?.onTranslateText,
+    }),
+
+    // Auto-complete
+    AutoCompleteExtension.configure({
+      onGetSuggestions: options?.onGetAutocompleteSuggestions,
     }),
 
     // AI Enhancement extension
