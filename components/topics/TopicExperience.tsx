@@ -950,10 +950,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                                     interactive={true}
                                 />
                             ) : (
-                                <div className="h-80 flex flex-col items-center justify-center bg-muted/20 rounded-[2rem] border border-dashed border-border/50 p-8">
-                                    <GitBranch className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                                    <p className="text-sm text-muted-foreground text-center max-w-[280px] italic">
-                                        No connections mapped for this topic yet. Be the first to suggest one!
+                                <div className="h-64 flex flex-col items-center justify-center bg-muted/10 rounded-[2rem] border border-dashed border-border/40 p-8 transition-all hover:bg-muted/20">
+                                    <GitBranch className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                                    <p className="text-sm text-muted-foreground text-center max-w-[320px] font-light leading-relaxed">
+                                        {isAuthorized 
+                                            ? "This concept hasn't been connected to others yet. Use the relationship tool in the admin panel to map its place in the system."
+                                            : "We are currently mapping the relationships for this concept. Explore other topics to see the connected web of Chassidus."}
                                     </p>
                                 </div>
                             )}
