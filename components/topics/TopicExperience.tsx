@@ -281,15 +281,24 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+    const [userRole, setUserRole] = useState<string | null>(null);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const userId = localStorage.getItem('chabad-mafteach:user-id');
+            const role = localStorage.getItem('chabad-mafteach:user-role');
             if (userId !== currentUserId) {
-                // Use a microtask or next tick to avoid synchronous setState warning
                 Promise.resolve().then(() => setCurrentUserId(userId));
             }
+            if (role !== userRole) {
+                Promise.resolve().then(() => setUserRole(role));
+            }
         }
-    }, [currentUserId]);
+    }, [currentUserId, userRole]);
+
+    const isAuthorized = useMemo(() => {
+        return userRole === 'admin' || userRole === 'editor';
+    }, [userRole]);
 
     // Show sticky title when scrolled past hero
     const heroRef = useRef<HTMLDivElement>(null);
@@ -992,35 +1001,43 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                     </div>
                 )}
 
-                {/* Community Annotations Section */}
-                <div className="pt-12 mt-12 border-t border-border/50">
-                    <TopicAnnotations 
-                        topicId={topic.id.toString()} 
-                        currentUserId={currentUserId || undefined} 
-                        className="max-w-4xl mx-auto"
-                    />
-                </div>
+                {/* Community Annotations Section - Restricted to Admin/Editor */}
+                {isAuthorized && (
+                    <div className="pt-12 mt-12 border-t border-border/50">
+                        <TopicAnnotations 
+                            topicId={topic.id.toString()} 
+                            currentUserId={currentUserId || undefined} 
+                            className="max-w-4xl mx-auto"
+                        />
+                    </div>
+                )}
 
-                {/* Feedback & Contribution */}
-                <MobileFeedbackButton 
-                    topicId={topic.id.toString()} 
-                    topicTitle={topic.canonical_title} 
-                />
+                {/* Feedback & Contribution - Restricted to Admin/Editor */}
+                {isAuthorized && (
+                    <MobileFeedbackButton 
+                        topicId={topic.id.toString()} 
+                        topicTitle={topic.canonical_title} 
+                    />
+                )}
             </main>
 
-            {/* Modals & Overlays */}
-            <TranslationFeedback 
-                isOpen={isTranslationFeedbackOpen}
-                onClose={() => setIsTranslationFeedbackOpen(false)}
-                contentType="topic"
-                contentId={topic.id.toString()}
-                contentName={topic.canonical_title}
-            />
+            {/* Modals & Overlays - Restricted to Admin/Editor */}
+            {isAuthorized && (
+                <>
+                    <TranslationFeedback 
+                        isOpen={isTranslationFeedbackOpen}
+                        onClose={() => setIsTranslationFeedbackOpen(false)}
+                        contentType="topic"
+                        contentId={topic.id.toString()}
+                        contentName={topic.canonical_title}
+                    />
 
-            <TranslationSurvey 
-                isOpen={isTranslationSurveyOpen}
-                onClose={() => setIsTranslationSurveyOpen(false)}
-            />
+                    <TranslationSurvey 
+                        isOpen={isTranslationSurveyOpen}
+                        onClose={() => setIsTranslationSurveyOpen(false)}
+                    />
+                </>
+            )}
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet
