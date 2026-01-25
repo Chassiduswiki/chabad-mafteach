@@ -16,6 +16,8 @@ import {
   ConceptTagger,
   DisplayFormatSelector,
   TopicCompleteness,
+  TopicVersionHistory,
+  TopicHierarchyTree,
   useAutoSave,
   useSaveShortcut,
   TopicFormData,
@@ -39,6 +41,7 @@ import {
 import { SaveStatusToast } from '@/components/ui/SaveStatusToast';
 import { useSmartSlug } from '@/hooks/useSmartSlug';
 import { useAIFieldAutoComplete } from '@/hooks/useAIFieldAutoComplete';
+import { useTopicLock } from '@/hooks/useTopicLock';
 
 // Content sections configuration
 const CONTENT_SECTIONS: SectionConfig[] = [
@@ -548,6 +551,8 @@ export default function TopicEditorPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const { isLocked, lockedBy, isOwner, error: lockError } = useTopicLock({ slug, enabled: !!topic && !isLoading });
+
   // Loading state
   if (isLoading) {
     return (
@@ -611,6 +616,20 @@ export default function TopicEditorPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Lock Banner */}
+      {isLocked && !isOwner && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          <span>Read Only: This topic is currently being edited by another user ({lockedBy}).</span>
+        </div>
+      )}
+      {lockError && (
+        <div className="bg-red-500 text-white px-4 py-2 flex items-center justify-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          <span>{lockError}</span>
+        </div>
+      )}
+
       <AIContentGeneratorDialog 
         open={showContentGenerator}
         onOpenChange={setShowContentGenerator}
@@ -688,7 +707,7 @@ export default function TopicEditorPage() {
 
               <button
                 onClick={handleManualSave}
-                disabled={manualSaveStatus === 'saving'}
+                disabled={manualSaveStatus === 'saving' || (isLocked && !isOwner)}
                 className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {manualSaveStatus === 'saving' ? (
@@ -709,7 +728,7 @@ export default function TopicEditorPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6 ${(isLocked && !isOwner) ? 'opacity-75 pointer-events-none' : ''}`}>
           {/* Sidebar - Completeness */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <div className="sticky top-20 space-y-4">
@@ -718,6 +737,16 @@ export default function TopicEditorPage() {
                 relationshipCount={relationships.length}
                 sourceCount={linkedSources.length}
               />
+
+              <div className="bg-card border border-border rounded-lg p-4">
+                <TopicVersionHistory 
+                  slug={slug} 
+                  onRevert={() => {
+                    loadTopic();
+                    markAsSaved();
+                  }} 
+                />
+              </div>
 
               <ProactiveSuggestionsPanel 
                 topicId={topic.id} 

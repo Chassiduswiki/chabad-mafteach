@@ -301,6 +301,9 @@ interface ActivityItem {
   };
 }
 
+import { ReviewQueue } from '@/components/admin/ReviewQueue';
+import { BrandingCustomizer } from '@/components/admin/BrandingCustomizer';
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ sources: 0, authors: 0, topics: 0, statements: 0, documents: 0 });
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
