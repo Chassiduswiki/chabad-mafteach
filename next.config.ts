@@ -5,10 +5,14 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   output: 'standalone',
   async rewrites() {
+    const directusUrl = process.env.DIRECTUS_URL;
+    if (!directusUrl) {
+      return [];
+    }
     return [
       {
         source: '/api/directus-proxy/:path*',
-        destination: `${process.env.DIRECTUS_URL}/api/:path*`,
+        destination: `${directusUrl}/api/:path*`,
       },
     ];
   },
