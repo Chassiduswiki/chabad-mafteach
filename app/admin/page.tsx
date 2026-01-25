@@ -43,7 +43,9 @@ import {
   ThumbsUp,
   Share2,
   UserPlus,
-  Check
+  Check,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -314,6 +316,7 @@ export default function AdminDashboardPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [isMaintenanceLoading, setIsMaintenanceLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -329,6 +332,37 @@ export default function AdminDashboardPage() {
       return () => clearInterval(interval);
     }
   }, [autoRefresh, selectedTimeRange]);
+
+  const handleReviewAction = async (type: 'topics' | 'statements', id: number, action: 'approve' | 'reject') => {
+    const actionKey = `${type}-${id}-${action}`;
+    setActionLoading(actionKey);
+    try {
+      const response = await fetch(`/api/admin/review-queue/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, id, action })
+      });
+      
+      if (response.ok) {
+        // Optimistically update UI
+        setReviewQueue(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            [type]: prev[type].filter(item => item.id !== id),
+            summary: {
+              totalPending: prev.summary.totalPending - 1
+            }
+          };
+        });
+        fetchActivityLog(); // Refresh log to show the change
+      }
+    } catch (error) {
+      console.error('Failed to perform review action:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const fetchMaintenanceStatus = async () => {
     try {
@@ -718,22 +752,33 @@ export default function AdminDashboardPage() {
                   <div className="space-y-2">
                     <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold px-2">Topics</h3>
                     {reviewQueue.topics.map(item => (
-                      <Link 
+                      <div 
                         key={`review-topic-${item.id}`} 
-                        href={`/editor/topics/${item.slug}`}
                         className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
                       >
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium group-hover:text-primary transition-colors">{item.canonical_title}</span>
+                        <Link href={`/editor/topics/${item.slug}`} className="flex flex-col flex-1 min-w-0">
+                          <span className="text-sm font-medium group-hover:text-primary transition-colors truncate">{item.canonical_title}</span>
                           <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
+                        </Link>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleReviewAction('topics', item.id, 'approve')}
+                            disabled={!!actionLoading}
+                            className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 transition-colors"
+                            title="Approve & Publish"
+                          >
+                            {actionLoading === `topics-${item.id}-approve` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => handleReviewAction('topics', item.id, 'reject')}
+                            disabled={!!actionLoading}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-600 transition-colors"
+                            title="Reject to Draft"
+                          >
+                            {actionLoading === `topics-${item.id}-reject` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
-                        <span className={cn(
-                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
-                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
-                        )}>
-                          {item.status}
-                        </span>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -747,16 +792,28 @@ export default function AdminDashboardPage() {
                         key={`review-stmt-${item.id}`}
                         className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
                       >
-                        <div className="flex flex-col max-w-[70%]">
+                        <div className="flex flex-col flex-1 min-w-0">
                           <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{item.text}</span>
                           <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
                         </div>
-                        <span className={cn(
-                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
-                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
-                        )}>
-                          {item.status}
-                        </span>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleReviewAction('statements', item.id, 'approve')}
+                            disabled={!!actionLoading}
+                            className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-600 transition-colors"
+                            title="Approve & Publish"
+                          >
+                            {actionLoading === `statements-${item.id}-approve` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => handleReviewAction('statements', item.id, 'reject')}
+                            disabled={!!actionLoading}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-600 transition-colors"
+                            title="Reject to Draft"
+                          >
+                            {actionLoading === `statements-${item.id}-reject` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
