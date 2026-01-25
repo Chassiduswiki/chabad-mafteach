@@ -141,9 +141,11 @@ export function ImmersiveHero({
                                 <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-foreground mb-2">
                                     {titleTransliteration || title}
                                 </h1>
-                                <p className="text-3xl sm:text-4xl font-hebrew text-muted-foreground">
-                                    {titleHebrew}
-                                </p>
+                                {titleHebrew && (
+                                    <p className="text-3xl sm:text-4xl font-hebrew text-muted-foreground">
+                                        {titleHebrew}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Intro / Short Def */}

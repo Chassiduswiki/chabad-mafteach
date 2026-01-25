@@ -45,7 +45,7 @@ import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
 import { TranslationSurvey } from '@/components/feedback/TranslationSurvey';
 
 // Types
-type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'translations' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -232,14 +232,6 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-sky-500/5',
         borderColor: 'border-sky-500/20'
     },
-    translations: {
-        title: 'Translations',
-        shortTitle: 'Translate',
-        icon: Globe,
-        color: 'text-green-600 dark:text-green-400',
-        bgColor: 'bg-green-500/5',
-        borderColor: 'border-green-500/20'
-    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -369,7 +361,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         global_nimshal: null,
         historical_context: null,
         charts: null,
-        translations: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -478,12 +469,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             type: 'charts' as SectionType,
             order: 8,
             content: highlightTerms(topic.charts)
-        }] : []),
-        // Translations section - only show if translations exist
-        ...(hasTranslations ? [{
-            type: 'translations' as SectionType,
-            order: 9,
-            content: '<div class="text-center text-muted-foreground py-8"><p>Translations for this topic are available. Click the language selector above to view them.</p></div>'
         }] : [])
     ];
 
