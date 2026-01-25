@@ -13,7 +13,7 @@ import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
 
 import { MobileNav } from "@/components/mobile/MobileNav";
-import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UserMenu } from "@/components/auth/UserMenu";
 
 const inter = Inter({
