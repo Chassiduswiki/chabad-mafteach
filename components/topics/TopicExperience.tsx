@@ -601,57 +601,27 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         
         const edges: GraphEdge[] = [];
         
-        // Add parent topic
-        const parentTopic = relatedTopics.find(t => t.relationship.direction === 'child');
-        if (parentTopic) {
-            nodes.push({
-                id: parentTopic.slug,
-                label: parentTopic.canonical_title,
-                slug: parentTopic.slug,
-                category: parentTopic.topic_type || 'concept',
-                size: 2
-            });
+        // Add all related topics to the graph
+        relatedTopics.forEach(related => {
+            if (!related.slug) return;
+
+            // Check if node already exists to avoid duplicates
+            if (!nodes.find(n => n.id === related.slug)) {
+                nodes.push({
+                    id: related.slug,
+                    label: related.canonical_title || related.name || 'Untitled',
+                    slug: related.slug,
+                    category: related.topic_type || 'concept',
+                    size: related.relationship?.direction === 'parent' ? 1 : 2
+                });
+            }
+
+            // Add edge
             edges.push({
                 source: topic.slug,
-                target: parentTopic.slug,
-                type: 'parent-child',
-                strength: 0.8
-            });
-        }
-        
-        // Add opposite topic
-        const oppositeTopic = relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'));
-        if (oppositeTopic) {
-            nodes.push({
-                id: oppositeTopic.slug,
-                label: oppositeTopic.canonical_title,
-                slug: oppositeTopic.slug,
-                category: oppositeTopic.topic_type || 'concept',
-                size: 2
-            });
-            edges.push({
-                source: topic.slug,
-                target: oppositeTopic.slug,
-                type: 'opposite',
-                strength: 0.6
-            });
-        }
-        
-        // Add child topics (components)
-        const childTopics = relatedTopics.filter(t => t.relationship.direction === 'parent').slice(0, 3);
-        childTopics.forEach(child => {
-            nodes.push({
-                id: child.slug,
-                label: child.canonical_title,
-                slug: child.slug,
-                category: child.topic_type || 'concept',
-                size: 1
-            });
-            edges.push({
-                source: topic.slug,
-                target: child.slug,
-                type: 'parent-child',
-                strength: 0.7
+                target: related.slug,
+                type: related.relationship?.type || 'related_to',
+                strength: related.relationship?.strength || 0.5
             });
         });
         
