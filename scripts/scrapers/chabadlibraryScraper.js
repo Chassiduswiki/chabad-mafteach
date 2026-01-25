@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { parseTextIntoStatements } = require('../../lib/content/ingestion-parser');
+const { routeContent } = require('../../lib/content/content-router');
 
 async function getEntireChabadLibraryBookSequential(idx) {
     async function processItemSequential(item) {
@@ -14,9 +15,15 @@ async function getEntireChabadLibraryBookSequential(idx) {
         if (data && data.text !== undefined && data.haoros !== undefined) {
             // Use advanced parser for leaf nodes
             const statements = parseTextIntoStatements(data.text, data.haoros);
+            // Auto-detect content type for routing
+            const routing = routeContent(heading, statements);
+            
             return {
                 heading: heading,
                 id: id,
+                type: routing.type,
+                confidence: routing.confidence,
+                routing_reason: routing.reasoning,
                 statements: statements,
                 raw_text: data.text,
                 raw_notes: data.haoros,
