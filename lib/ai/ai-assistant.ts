@@ -41,6 +41,28 @@ export class AIAssistant {
   }
 
   /**
+   * Generate an outline for a comprehensive article
+   */
+  async generateOutline(topicTitle: string, briefDescription?: string): Promise<string> {
+    const prompt = `You are a Chassidic scholar planning a comprehensive article.
+    
+Topic: ${topicTitle}
+${briefDescription ? `Brief Description: ${briefDescription}` : ''}
+
+Please create a detailed outline for an in-depth article about this Chassidic concept. 
+Include headings for:
+1. Introduction & Basic Definition
+2. Philosophical Roots & Source Origins
+3. Deeper Explanations & Analytical Breakdown
+4. Practical Applications & Personal Relevance
+5. Connections to related concepts
+
+Format as a numbered list.`;
+
+    return this.generateContent(prompt);
+  }
+
+  /**
    * Expand a brief topic description into a comprehensive article
    */
   async expandTopicArticle(topicTitle: string, briefDescription: string): Promise<string> {
@@ -149,6 +171,140 @@ Return as JSON array with format: [{"concept": "...", "explanation": "..."}]`;
       return JSON.parse(response);
     } catch (error) {
       console.error('Failed to parse JSON response:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Predict potential relationships between topics based on content
+   */
+  async predictRelationships(content: string, existingRelationships?: any[]): Promise<Array<{
+    topic_id: number;
+    topic_title: string;
+    relationship_type: string;
+    confidence: number;
+    explanation: string;
+  }>> {
+    const prompt = `Based on the content of this Chassidic topic, predict potential relationships with other topics. 
+    
+Topic Content: \"${content}\"
+${existingRelationships ? `Existing Relationships to avoid: ${JSON.stringify(existingRelationships)}` : ''}
+
+Respond in JSON format with an array of predictions:
+{
+  \"predictions\": [
+    {
+      \"topic_id\": 123,
+      \"topic_title\": \"Concept Name\",
+      \"relationship_type\": \"opposite\",
+      \"confidence\": 0.92,
+      \"explanation\": \"Brief explanation of the connection...\"
+    }
+  ]
+}`;
+
+    const response = await this.generateContent(prompt, { temperature: 0.3 });
+    
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        return data.predictions || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to parse relationship predictions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Find relevant citations for a given query and context
+   */
+  async findCitations(query: string, context: string): Promise<Array<{
+    source_id: number;
+    source_title: string;
+    reference: string;
+    quote: string;
+    relevance: number;
+  }>> {
+    const prompt = `As a Chassidic scholar, find relevant citations from the library that support or relate to the following query and context.
+    
+Query: \"${query}\"
+Context: \"${context}\"
+
+Respond in JSON format with an array of citations:
+{
+  \"citations\": [
+    {
+      \"source_id\": 1,
+      \"source_title\": \"Tanya\",
+      \"reference\": \"Chapter 1\",
+      \"quote\": \"The soul of the Jew is truly a part of G-d above...\",
+      \"relevance\": 0.95
+    }
+  ]
+}`;
+
+    const response = await this.generateContent(prompt, { temperature: 0.3 });
+    
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        return data.citations || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to parse citation suggestions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Suggest improvements for a topic's content
+   */
+  async suggestImprovements(content: string): Promise<Array<{
+    id: string;
+    type: 'action' | 'content' | 'relationship';
+    title: string;
+    description: string;
+    confidence: number;
+  }>> {
+    const prompt = `Analyze this Chassidic topic content and suggest 3-5 specific improvements:
+
+Content: \"${content}\"
+
+For each suggestion, provide:
+1. A clear action title
+2. Brief description of why it would help
+3. Confidence score (0.0-1.0)
+4. Type (action|content|relationship)
+
+Respond in JSON format:
+{
+  \"suggestions\": [
+    {
+      \"id\": \"unique-id\",
+      \"type\": \"action\",
+      \"title\": \"Add source from Likkutei Sichos\",
+      \"description\": \"The section on Ahava could be strengthened with a quote from Volume 2...\",
+      \"confidence\": 0.85
+    }
+  ]
+}`;
+
+    const response = await this.generateContent(prompt, { temperature: 0.4 });
+    
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        return data.suggestions || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to parse suggestions:', error);
       return [];
     }
   }

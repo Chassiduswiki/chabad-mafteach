@@ -4,11 +4,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Eye, FileText, BookOpen, Zap, Sparkles, CheckCircle, AlertCircle, RefreshCw, Check } from 'lucide-react';
 import { TipTapEditor } from "@/components/editor/TipTapEditor";
+import { Editor } from "@tiptap/react";
+
+interface UserProfile {
+  name: string;
+  role: string;
+}
 
 export default function WritePage() {
   const router = useRouter();
-  const editorRef = useRef<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -179,7 +185,7 @@ export default function WritePage() {
             // Simulate inserting the AI-generated statements
             let insertContent = '\n\n--- AI-GENERATED STATEMENTS ---\n\n';
             if (result.statements && result.statements.length > 0) {
-              result.statements.forEach((stmt: any, index: number) => {
+              result.statements.forEach((stmt: { text: string }, index: number) => {
                 insertContent += `**Statement ${index + 1}:** ${stmt.text}\n\n`;
               });
             } else {
@@ -238,7 +244,7 @@ export default function WritePage() {
     }
   };
 
-  const handleEditorReady = (editor: any) => {
+  const handleEditorReady = (editor: Editor) => {
     editorRef.current = editor;
   };
 
@@ -284,7 +290,7 @@ export default function WritePage() {
         let insertContent = '\n\n--- GRAMMAR CHECK RESULTS ---\n\n';
         if (result.analysis && result.analysis.issues_found > 0) {
           insertContent += `Found ${result.analysis.issues_found} issues:\n\n`;
-          result.analysis.corrections.forEach((correction: any, index: number) => {
+          result.analysis.corrections.forEach((correction: { type: string; original: string; corrected: string; explanation: string }, index: number) => {
             insertContent += `${index + 1}. **${correction.type.toUpperCase()}**: "${correction.original}" → "${correction.corrected}"\n`;
             insertContent += `   Reason: ${correction.explanation}\n\n`;
           });
@@ -403,7 +409,7 @@ export default function WritePage() {
           insertContent += '\n\n--- IMPROVEMENTS MADE ---\n\n';
 
           if (result.result.improvements && result.result.improvements.length > 0) {
-            result.result.improvements.forEach((improvement: any, index: number) => {
+            result.result.improvements.forEach((improvement: { type: string; reason: string; original: string; improved: string }, index: number) => {
               insertContent += `${index + 1}. **${improvement.type.toUpperCase()}**: ${improvement.reason}\n`;
               insertContent += `   "${improvement.original}" → "${improvement.improved}"\n\n`;
             });

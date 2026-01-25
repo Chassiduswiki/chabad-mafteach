@@ -184,7 +184,49 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
-## 🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
+## � NEW FEATURE PRIORITIES (Jan 2026)
+
+### Editor & Content Management
+- [ ] **Hide Entry from Website**: Add toggle to topics to hide from public view.
+- [ ] **Topic Version History**: Track and revert content changes.
+- [ ] **Auto-Translate**: Integrated AI translation for entry fields.
+- [ ] **Language Dropdown**: Improved selection for multi-language editing.
+- [ ] **Seder Hishtalshelus Integration**: Make the custom chart component accessible/editable via the editor (not hardcoded).
+- [ ] **ISSUE: New Topic Creation**: Debug token/auth issues preventing new topic saves.
+
+### Main Site Enhancements
+- [ ] **User Auth**: Sign up/login for community features.
+- [ ] **User Collections**: Save and organize personal topic lists.
+- [ ] **Full Site Translation**: Support for bilingual navigation and interface.
+- [ ] **Enhanced Controls**: User-facing settings for reading experience.
+- [ ] **Community Reporting**:
+    - [x] Bug report (UI implemented)
+    - [ ] Content issue report (detailed workflow)
+- [ ] **Advanced Analytics**: Full Google Analytics integration.
+
+### Admin Dashboard (Chassidus Wiki Backend)
+#### Content & Branding
+- [ ] **CMS Pages**: Edit About, Homepage, and Search Bar text from Admin.
+- [ ] **Branding**: Logo upload, color scheme customizer, and font selection.
+- [ ] **Site Banners**: Site-wide announcement toggle.
+- [ ] **Custom Injection**: CSS/JS injection points for quick fixes.
+
+#### Monitoring & Security
+- [ ] **Site Status**: Maintenance mode switch and uptime dashboard.
+- [ ] **Logs**: Recent activity log (audit trail) and error log viewer.
+- [ ] **Access Control**: Detailed editor permissions and page locking.
+- [ ] **Session Management**: Force logout and password policies.
+- [ ] **Data Safety**: Backup/Restore functionality and API key management.
+
+#### Performance & Advanced
+- [ ] **Technical Ops**: Cache clearing, image optimization, and DB optimization tools.
+- [ ] **Growth**: A/B testing manager and webhook configuration.
+- [ ] **Publishing**: Multi-language support and scheduled publishing.
+- [ ] **Reporting**: Custom report builder and conversion tracking.
+
+---
+
+## �🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
 - ✅ **Directus Permissions Fix**: Verified static token access and directus-proxy path reconstruction.
 - ✅ **API Stability**: Paragraphs and Statements API refactored to use `content_blocks` schema.
 - ✅ **Editor Reliability**: Resolved infinite loop in ParagraphsEditor and fixed stuck loading spinner.
@@ -1226,6 +1268,289 @@ You have an ambitious vision but a broken foundation. The roadmap shows impressi
 - **Impact**: Current statement_topics table only links single statements to topics
 - **Solution Needed**: Support for statement ranges, page ranges, or concept spans
 - **Discussion Required**: Schema changes for multi-statement topic associations
+
+---
+
+## 🎯 USER PRIORITY ITEMS (Jan 23, 2026)
+
+### IMMEDIATE PRIORITY (This Sprint)
+
+#### 1. Authentication & Access Control
+- [ ] **Lock editor/admin pages behind login** - Require authentication for `/editor/*` and `/admin/*`
+- [ ] **Role-based access control** - Admins see everything, editors see only `/editor`, public users see read-only
+- [ ] **Verify login works end-to-end** - Test with actual Directus users
+- **Status**: Authentication fixed (Jan 23), now need to wire up route protection
+- **Acceptance**: Can't access `/editor` without login; 403 if wrong role
+
+#### 2. Translations Feature Visibility
+- [ ] **Show translations tab only when alternate translation exists** - Hide if no translations available
+- [ ] **Audit current translation data** - Check which topics have translations
+- [ ] **Update TopicTabs logic** - Conditional rendering based on translation count
+- **Status**: New requirement
+- **Acceptance**: Translations tab only visible when data exists
+
+#### 3. Consultation Graph Centering
+- [ ] **Fix random node positioning** - Ensure graph always centers on load
+- [ ] **Investigate current graph library** - Check if using react-force-graph-2d or similar
+- [ ] **Implement center/zoom logic** - Auto-center and fit all nodes on viewport
+- **Status**: Known issue
+- **Acceptance**: Graph loads centered every time, no random positioning
+
+#### 4. Topic Fields Reordering
+- [ ] **Audit current field order in editor** - Document what's currently at top/bottom
+- [ ] **Define logical field order** - Frequently used fields at top, metadata at bottom
+- [ ] **Implement field grouping** - Group related fields (e.g., "Content", "Metadata", "Advanced")
+- [ ] **Update editor form layout** - Reorganize `/editor/topics/[slug]` form
+- **Status**: New requirement
+- **Acceptance**: Fields ordered logically; used fields prominent
+
+#### 5. TipTap Editor Enhancement Brainstorm
+- [ ] **Document current TipTap capabilities** - What extensions are installed?
+- [ ] **Brainstorm advanced features** - AI suggestions, smart formatting, citation insertion, etc.
+- [ ] **Create feature wishlist** - Prioritize which enhancements to implement
+- [ ] **Plan Phase 1 implementation** - Pick 2-3 quick wins
+- **Status**: Brainstorm phase
+- **Acceptance**: Feature list created, Phase 1 scoped
+
+#### 6. AI-Powered Search Integration
+- [ ] **Design search enhancement** - How to use AI to improve search results?
+- [ ] **Implement semantic search** - Use embeddings to find conceptually similar topics
+- [ ] **Add search result ranking** - Rank by relevance using AI
+- [ ] **Create search caching layer** - Cache AI results to avoid repeated requests
+- **Status**: Design phase
+- **Acceptance**: Search returns more relevant results; AI requests cached
+
+#### 6.1 Search Result Caching
+- [ ] **Implement Redis/in-memory cache** - Store AI search results
+- [ ] **Set cache TTL** - Expire results after X hours
+- [ ] **Cache invalidation strategy** - Clear cache when topics updated
+- **Status**: Part of #6
+- **Acceptance**: Same search query returns cached result within TTL
+
+#### 7. Public User Collections
+- [ ] **Create user authentication for public users** - Allow signup/login for non-editors
+- [ ] **Implement collections feature** - Users can save topics to personal collections
+- [ ] **Build collections UI** - Display user's saved topics
+- [ ] **Add collection sharing** - Users can share collections with others
+- **Status**: New feature
+- **Acceptance**: Public users can create accounts and save topics
+
+#### 8. Edit Button on Topic Fields
+- [ ] **Add edit button to topic fields** - Visible when admin/editor logged in
+- [ ] **Implement field-level navigation** - Clicking edit takes user to that field in editor
+- [ ] **Highlight field in editor** - Show which field is being edited
+- **Status**: New feature
+- **Acceptance**: Can click edit button on any field and jump to editor
+
+#### 9. User Feedback & Issue Reporting
+- [ ] **Create feedback form** - Allow users to report inaccuracies
+- [ ] **Add note/comment field** - Users can leave detailed notes
+- [ ] **Build admin dashboard** - Show all reported issues
+- [ ] **Email notifications** - Notify admins of new reports
+- [ ] **Topic-level display** - Show reports on topic page with notes
+- **Status**: New feature
+- **Acceptance**: Users can report issues; admins see them on dashboard
+
+#### 10. User Collections Pages
+- [ ] **Design collections page layout** - Beautiful, awesome UX
+- [ ] **Implement collection browsing** - View all user collections
+- [ ] **Add collection management** - Create, edit, delete collections
+- [ ] **Collection sharing UI** - Share collections with link
+- **Status**: New feature
+- **Acceptance**: Collections pages are visually impressive and functional
+
+#### 11. UI/UX Cohesion
+- [ ] **Audit current design system** - Document colors, typography, spacing
+- [ ] **Create design tokens** - Centralize design decisions
+- [ ] **Apply consistently** - Update all components to use tokens
+- [ ] **Mobile-first responsive** - Ensure all pages work on mobile
+- **Status**: Ongoing
+- **Acceptance**: Consistent look and feel across all pages; responsive on all devices
+
+#### 12. Documentation & Codebase Cleanup
+- [ ] **Remove outdated documentation** - Delete old/redundant docs
+- [ ] **Update README** - Current project overview and setup
+- [ ] **Document architecture** - How pieces fit together
+- [ ] **Remove dead code** - Delete unused components/functions
+- [ ] **Add code comments** - Document complex logic
+- **Status**: Ongoing
+- **Acceptance**: Codebase is clean; documentation is current
+
+#### 13. GitHub README Update
+- [ ] **Update project description** - Current vision and features
+- [ ] **Add setup instructions** - How to run locally
+- [ ] **Document environment variables** - What's needed to run
+- [ ] **Add contribution guidelines** - How to contribute
+- [ ] **Include screenshots** - Visual overview of app
+- **Status**: New requirement
+- **Acceptance**: README is comprehensive and up-to-date
+
+#### 14. Sensitive Information Security
+- [ ] **Audit git history** - Check for exposed secrets
+- [ ] **Remove sensitive data** - Delete any API keys, tokens from repo
+- [ ] **Add .env to .gitignore** - Ensure env files never committed
+- [ ] **Implement secret scanning** - Prevent future commits of secrets
+- [ ] **Rotate exposed keys** - Change any compromised credentials
+- **Status**: Security audit
+- **Acceptance**: No sensitive data in git; secrets properly managed
+
+#### 15. Update Longterm Tasks List
+- [ ] **Mark completed items** - Remove items that are done
+- [ ] **Update in-progress items** - Mark current work
+- [ ] **Add new items** - Include all user priorities
+- [ ] **Remove redundant items** - Delete outdated/duplicate tasks
+- [ ] **Reorganize by priority** - Clear execution order
+- **Status**: In progress (this document)
+- **Acceptance**: Task list is accurate and actionable
+
+---
+
+## 🧠 AI-GENERATED SUGGESTIONS (Based on User Priorities)
+
+### Suggested Features & Improvements (For User Review)
+
+#### 16. Progressive Onboarding Flow
+- **Idea**: Guide new users through key features on first visit
+- **Implementation**: Show tooltips/modals for: search, topics, graph, collections
+- **Benefit**: Reduces learning curve; increases feature discovery
+- **Effort**: 2-3 days
+- **Priority**: Medium
+
+#### 17. Smart Topic Recommendations
+- **Idea**: Show "You might also like" based on viewing history
+- **Implementation**: Track viewed topics; recommend related topics
+- **Benefit**: Increases engagement; helps discovery
+- **Effort**: 3-4 days
+- **Priority**: Medium
+
+#### 18. Offline Support
+- **Idea**: Cache viewed topics for offline access
+- **Implementation**: Service worker + IndexedDB for offline storage
+- **Benefit**: App works without internet; better mobile experience
+- **Effort**: 4-5 days
+- **Priority**: Low
+
+#### 19. Dark/Light Mode Toggle
+- **Idea**: Let users choose their preferred theme
+- **Implementation**: Add theme toggle; persist preference
+- **Benefit**: Better accessibility; personal preference
+- **Effort**: 1-2 days
+- **Priority**: Low
+
+#### 20. Topic Comparison View
+- **Idea**: Compare 2-3 topics side-by-side
+- **Implementation**: Add "Compare" button; show topics in columns
+- **Benefit**: Easier to understand relationships; better learning
+- **Effort**: 2-3 days
+- **Priority**: Medium
+
+#### 21. Advanced Search Filters
+- **Idea**: Filter topics by: category, date added, content completeness, etc.
+- **Implementation**: Add filter UI; wire to search API
+- **Benefit**: More powerful discovery; better search experience
+- **Effort**: 2-3 days
+- **Priority**: Medium
+
+#### 22. Topic Timeline View
+- **Idea**: Show topics organized by historical period
+- **Implementation**: Add timeline visualization; filter by era
+- **Benefit**: Historical context; different exploration mode
+- **Effort**: 3-4 days
+- **Priority**: Low
+
+#### 23. Collaborative Annotations
+- **Idea**: Allow users to add notes/highlights to topics
+- **Implementation**: Create annotations collection; show on topic page
+- **Benefit**: Community knowledge sharing; deeper engagement
+- **Effort**: 4-5 days
+- **Priority**: Medium
+
+#### 24. Export/Print Functionality
+- **Idea**: Export topics as PDF or markdown
+- **Implementation**: Add export button; generate document
+- **Benefit**: Offline study; sharing; archiving
+- **Effort**: 2-3 days
+- **Priority**: Low
+
+#### 25. Topic Versioning & History
+- **Idea**: Show edit history for topics; ability to revert
+- **Implementation**: Track changes in database; show history UI
+- **Benefit**: Transparency; error recovery; audit trail
+- **Effort**: 3-4 days
+- **Priority**: Medium
+
+---
+
+## 📊 EXECUTION ROADMAP (Recommended Order)
+
+### Phase 1: Foundation & Security (Week 1-2)
+**Goal**: Secure the app and fix critical issues
+
+1. **Authentication & Access Control** (#1) - Lock down routes
+2. **Sensitive Information Security** (#14) - Remove secrets from git
+3. **GitHub README Update** (#13) - Document the project
+4. **Update Longterm Tasks** (#15) - Clear priorities
+
+**Deliverable**: Secure, documented, properly authenticated app
+
+### Phase 2: User Experience Improvements (Week 3-4)
+**Goal**: Improve core user experience
+
+5. **Translations Feature Visibility** (#2) - Show only when relevant
+6. **Consultation Graph Centering** (#3) - Fix graph positioning
+7. **Topic Fields Reordering** (#4) - Better editor UX
+8. **UI/UX Cohesion** (#11) - Consistent design
+
+**Deliverable**: Polished, intuitive user experience
+
+### Phase 3: Content & Discovery (Week 5-6)
+**Goal**: Enhance content management and discovery
+
+9. **TipTap Editor Enhancement** (#5) - Better editing tools
+10. **AI-Powered Search** (#6) - Smarter search results
+11. **Edit Button on Fields** (#8) - Quick editor access
+12. **User Feedback System** (#9) - Collect user input
+
+**Deliverable**: Better content creation and discovery
+
+### Phase 4: Community & Collections (Week 7-8)
+**Goal**: Build community features
+
+13. **Public User Collections** (#7) - Users can save topics
+14. **User Collections Pages** (#10) - Beautiful collection UI
+15. **Collaborative Annotations** (#23) - Community notes
+
+**Deliverable**: Community-driven features
+
+### Phase 5: Documentation & Polish (Week 9-10)
+**Goal**: Clean up and document
+
+16. **Documentation & Codebase Cleanup** (#12) - Remove dead code
+17. **Progressive Onboarding** (#16) - Guide new users
+18. **Smart Recommendations** (#17) - Personalized suggestions
+
+**Deliverable**: Clean, well-documented codebase
+
+### Phase 6: Advanced Features (Week 11+)
+**Goal**: Add advanced capabilities
+
+19. **Topic Comparison View** (#20) - Side-by-side comparison
+20. **Advanced Search Filters** (#21) - Powerful search
+21. **Export/Print** (#24) - Offline access
+22. **Topic Versioning** (#25) - History tracking
+
+**Deliverable**: Advanced features for power users
+
+---
+
+## 📝 NOTES
+
+- **Authentication**: Already fixed (Jan 23, 2026). Now need to wire up route protection.
+- **Search Caching**: Part of AI-powered search (#6). Implement Redis or in-memory cache.
+- **Design System**: Create centralized design tokens for UI/UX cohesion.
+- **Mobile First**: All features should work on mobile first, then desktop.
+- **Testing**: Add tests for each feature before marking complete.
+- **User Feedback**: Collect feedback early and often; iterate based on real usage.
 
 ---
 

@@ -67,7 +67,7 @@ export function ZenCard({ statement, onNext, onSave, isLoading }: ZenCardProps) 
                             transition={{ delay: 0.3 }}
                             className="text-lg sm:text-xl text-muted-foreground leading-relaxed italic"
                         >
-                            "{statement.translated_text}"
+                            &quot;{statement.translated_text}&quot;
                         </motion.div>
                     )}
 

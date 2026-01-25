@@ -162,13 +162,30 @@ export const AdvancedCitation = Node.create<AdvancedCitationOptions>({
       
       // Apply consistent styling
       dom.style.fontSize = '0.85em';
-      dom.style.color = 'var(--color-primary)';
+      dom.style.color = node.attrs.sourceId ? 'var(--color-primary)' : '#94a3b8';
       dom.style.cursor = 'pointer';
-      dom.style.fontWeight = '500';
+      dom.style.fontWeight = '600';
+      dom.style.transition = 'all 0.2s ease';
+      
+      // If no sourceId, it's unsynced/needs attention
+      if (!node.attrs.sourceId) {
+        dom.classList.add('citation-unsynced');
+        dom.title = 'Unsynced Citation: Click to add source';
+      }
       
       // Set the content as simple bracketed text
       const citationText = node.attrs.reference || node.attrs.sourceTitle?.slice(0, 12) || '†';
       dom.textContent = `[${citationText}]`;
+
+      // Hover effects
+      dom.addEventListener('mouseenter', () => {
+        dom.style.transform = 'scale(1.1)';
+        dom.style.filter = 'brightness(1.2)';
+      });
+      dom.addEventListener('mouseleave', () => {
+        dom.style.transform = 'scale(1)';
+        dom.style.filter = 'brightness(1)';
+      });
 
       // Click handler
       dom.addEventListener('click', (e) => {

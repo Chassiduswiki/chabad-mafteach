@@ -14,6 +14,7 @@ import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
 
 import { MobileNav } from "@/components/mobile/MobileNav";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const inter = Inter({
   variable: "--font-inter",

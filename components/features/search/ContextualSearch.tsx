@@ -6,17 +6,22 @@ import Link from 'next/link';
 
 interface SearchResultItem {
     id: string;
-    name: string;
-    slug: string;
+    title: string;
+    name?: string; // For backward compatibility
+    slug?: string;
+    url: string;
     category?: string;
+    topic_type?: string;
     definition_short?: string;
+    author?: string;
+    doc_type?: string;
 }
 
 interface SearchResult {
     topics: SearchResultItem[];
-    documents: SearchResultItem[];
     seforim: SearchResultItem[];
-    // Add other types as needed
+    locations: { id: string | number; title: string; content_preview?: string; url?: string }[];
+    statements: { id: string | number; title: string; content_preview?: string; url?: string }[];
 }
 
 interface ContextualSearchProps {
@@ -31,7 +36,7 @@ interface ContextualSearchProps {
  */
 export default function ContextualSearch({ placeholder = "Search topics...", searchType = 'topics' }: ContextualSearchProps) {
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<SearchResult>({ topics: [], documents: [], seforim: [] });
+    const [results, setResults] = useState<SearchResult>({ topics: [], seforim: [], locations: [], statements: [] });
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +56,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
     // Debounced search
     const search = useCallback(async (searchQuery: string) => {
         if (!searchQuery.trim()) {
-            setResults({ topics: [], documents: [], seforim: [] });
+            setResults({ topics: [], seforim: [], locations: [], statements: [] });
             setIsOpen(false);
             return;
         }
@@ -65,7 +70,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
             setIsOpen(true);
         } catch (error) {
             console.error('Search failed:', error);
-            setResults({ topics: [], documents: [], seforim: [] });
+            setResults({ topics: [], seforim: [], locations: [], statements: [] });
         } finally {
             setLoading(false);
         }
@@ -80,7 +85,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
 
     const handleClear = () => {
         setQuery('');
-        setResults({ topics: [], documents: [], seforim: [] });
+        setResults({ topics: [], seforim: [], locations: [], statements: [] });
         setIsOpen(false);
         inputRef.current?.focus();
     };
@@ -116,7 +121,7 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
                         </div>
                     ) : (results.topics.length === 0 && results.seforim.length === 0) ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
-                            No results found for "{query}"
+                            No results found for &quot;{query}&quot;
                         </div>
                     ) : (
                         <div>
@@ -128,8 +133,8 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
                                             <li key={`topic-${result.id}`}>
                                                 <Link href={`/topics/${result.slug}`} onClick={() => setIsOpen(false)} className="block p-3 hover:bg-muted/50 transition-colors">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="font-semibold text-foreground">{result.name}</span>
-                                                        {result.category && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{result.category}</span>}
+                                                        <span className="font-semibold text-foreground">{result.title || result.name}</span>
+                                                        {(result.category || result.topic_type) && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{result.category || result.topic_type}</span>}
                                                     </div>
                                                     {result.definition_short && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{result.definition_short.replace(/<[^>]*>/g, '')}</p>}
                                                 </Link>
@@ -144,8 +149,8 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
                                     <ul>
                                         {results.seforim.slice(0, 3).map((result) => (
                                             <li key={`sefer-${result.id}`}>
-                                                <Link href={`/seforim/${result.slug}`} onClick={() => setIsOpen(false)} className="block p-3 hover:bg-muted/50 transition-colors">
-                                                    <span className="font-semibold text-foreground">{result.name}</span>
+                                                <Link href={result.url || `/seforim/${result.slug || result.id}`} onClick={() => setIsOpen(false)} className="block p-3 hover:bg-muted/50 transition-colors">
+                                                    <span className="font-semibold text-foreground">{result.title || result.name}</span>
                                                 </Link>
                                             </li>
                                         ))}

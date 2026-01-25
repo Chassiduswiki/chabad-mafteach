@@ -5,8 +5,19 @@ import { Compass, Sparkles } from 'lucide-react';
 import { ZenCard } from '@/components/explore/ZenCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface RandomStatement {
+    id: number;
+    text: string;
+    translated_text?: string | null;
+    source: {
+        document_title: string;
+        document_id: number;
+        paragraph_order?: string;
+    };
+}
+
 export default function ExplorePage() {
-    const [statement, setStatement] = useState<any>(null);
+    const [statement, setStatement] = useState<RandomStatement | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 

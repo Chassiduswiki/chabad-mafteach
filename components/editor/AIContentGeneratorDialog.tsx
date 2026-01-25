@@ -20,12 +20,25 @@ export function AIContentGeneratorDialog({ open, onOpenChange, topicTitle, onCon
 
   const handleGenerateOutline = async () => {
     setLoading(true);
-    // In a real implementation, we would call an API to generate the outline
-    setTimeout(() => {
-      setOutline(`1. Introduction to ${topicTitle}\n2. Key Concepts\n3. Practical Applications\n4. Conclusion`);
+    try {
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'generate_outline',
+          data: { topicTitle } 
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate outline');
+      
+      setOutline(data.result);
       setStep(2);
+    } catch (error) {
+      console.error('Outline generation failed:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleGenerateArticle = async () => {

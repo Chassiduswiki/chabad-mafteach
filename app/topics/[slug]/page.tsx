@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getTopicBySlug } from '@/lib/api/topics';
 import { TopicTracker } from '@/components/shared/TopicTracker';
 import { TopicExperience } from '@/components/topics/TopicExperience';
+import { Topic } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,17 +29,17 @@ export default async function TopicDetailPage({
 
     const { topic, relatedTopics, sources, citations, inlineCitations } = topicData;
     
-    // Cast topic to any to access all properties from the merged topic object
-    const topicAny = topic as any;
+    // Cast topic to Topic type from lib/types, using unknown first to safely merge types
+    const typedTopic = topic as unknown as Topic;
 
     return (
         <>
             {/* Track last visited topic for analytics/history */}
-            <TopicTracker slug={slug} name={topicAny.title || topicAny.canonical_title} topicId={topicAny.id} />
+            <TopicTracker slug={slug} name={(typedTopic as any).title || typedTopic.canonical_title} topicId={typedTopic.id} />
 
             {/* Main Interactive Experience */}
             <TopicExperience
-                topic={topicAny}
+                topic={typedTopic}
                 relatedTopics={relatedTopics}
                 sources={sources}
                 citations={citations}

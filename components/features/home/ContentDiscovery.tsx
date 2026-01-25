@@ -8,19 +8,15 @@ import { TopicCardSkeleton } from '@/components/skeletons/TopicCardSkeleton';
 
 import { Topic, TopicCitation, Location, Sefer } from '@/lib/types';
 
-interface FeaturedTopic extends Topic { }
-
 interface RecentSource extends Omit<Partial<TopicCitation>, 'location' | 'topic'> {
     location?: Location & { sefer?: Sefer };
     topic?: Topic;
 }
 
-interface RecentTopic extends Topic { }
-
 interface FeaturedData {
-    featuredTopic: FeaturedTopic | null;
+    featuredTopic: Topic | null;
     recentSources: RecentSource[];
-    recentTopics: RecentTopic[];
+    recentTopics: Topic[];
 }
 
 interface ContentDiscoveryProps {
@@ -57,7 +53,7 @@ export function ContentDiscovery({ variant = 'full' }: ContentDiscoveryProps) {
     };
 
     useEffect(() => {
-        loadData();
+        Promise.resolve().then(() => loadData());
     }, []);
 
     if (loading) {

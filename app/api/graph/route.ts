@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
                 { child_topic_id: ['id', 'canonical_title', 'canonical_title_en', 'slug', 'topic_type'] }
             ] as any,
             limit: -1
-        })) as any[];
+        }));
 
         console.log(`Graph API: Found ${relationships.length} relationships`);
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         const edges: GraphEdge[] = [];
         const connectionCounts = new Map<string, number>();
 
-        for (const rel of relationships) {
+        for (const rel of relationships as any[]) {
             const parent = rel.parent_topic_id;
             const child = rel.child_topic_id;
 
@@ -166,9 +166,9 @@ export async function GET(request: NextRequest) {
             const topics = await directus.request(readItems('topics' as any, {
                 fields: ['id', 'canonical_title', 'canonical_title_en', 'slug', 'topic_type'] as any,
                 limit: limit
-            })) as any[];
+            }));
 
-            nodes = topics.map(t => ({
+            nodes = (topics as any[]).map(t => ({
                 id: t.id,
                 label: t.canonical_title_en || t.canonical_title,
                 labelHebrew: t.canonical_title,

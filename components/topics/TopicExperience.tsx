@@ -11,7 +11,7 @@ import { ForceGraph } from '@/components/graph/ForceGraph';
 import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Topic, Source } from '@/lib/types';
+import { Topic, Source, Citation } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
@@ -22,9 +22,13 @@ import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { TopicAnnotations } from '@/components/annotations/TopicAnnotations';
+import { MobileFeedbackButton } from '@/components/feedback/MobileFeedbackButton';
+import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
+import { TranslationSurvey } from '@/components/feedback/TranslationSurvey';
 
 // Types
-type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'translations' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -32,12 +36,21 @@ interface ArticleSection {
     order: number;
 }
 
+interface RelatedTopic extends Topic {
+    relationship: {
+        type?: string;
+        strength?: number;
+        description?: string;
+        direction: 'child' | 'parent';
+    };
+}
+
 interface TopicExperienceProps {
     topic: Topic;
-    relatedTopics: any[];
+    relatedTopics: RelatedTopic[];
     sources: Source[];
-    citations: any[];
-    inlineCitations: any[];
+    citations: Citation[];
+    inlineCitations: Source[];
 }
 
 // Helper: Auto-link topic names in text
@@ -59,12 +72,12 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
             topicMap.set(t.name.toLowerCase(), t.slug);
         }
         // Add Hebrew name
-        if ((t as any).name_hebrew) {
-            topicMap.set((t as any).name_hebrew, t.slug); // Hebrew is case-sensitive
+        if (t.name_hebrew) {
+            topicMap.set(t.name_hebrew, t.slug); // Hebrew is case-sensitive
         }
         // Add alternate names
-        if ((t as any).alternate_names && Array.isArray((t as any).alternate_names)) {
-            (t as any).alternate_names.forEach((altName: string) => {
+        if (t.alternate_names && Array.isArray(t.alternate_names)) {
+            t.alternate_names.forEach((altName: string) => {
                 if (altName) topicMap.set(altName.toLowerCase(), t.slug);
             });
         }
@@ -202,6 +215,14 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-sky-500/5',
         borderColor: 'border-sky-500/20'
     },
+    translations: {
+        title: 'Translations',
+        shortTitle: 'Translate',
+        icon: Globe,
+        color: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-500/5',
+        borderColor: 'border-green-500/20'
+    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -212,37 +233,51 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
     }
 };
 
+interface GraphNode {
+    id: string;
+    label: string;
+    slug: string;
+    category?: string;
+    size?: number;
+}
+
+interface GraphEdge {
+    source: string;
+    target: string;
+    type: string;
+    strength: number;
+}
+
 export function TopicExperience({ topic, relatedTopics, sources, citations, inlineCitations }: TopicExperienceProps) {
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
     const [isLoading, setIsLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(false);
     const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
-
-    // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
-    useEffect(() => {
-        async function fetchAllTopicNames() {
-            try {
-                const res = await fetch('/api/topics?fields=name,canonical_title,slug,name_hebrew,alternate_names&limit=500');
-                if (res.ok) {
-                    const data = await res.json();
-                    setAllTopicsForLinking(data.topics || []);
-                }
-            } catch (e) {
-                // Fallback to related topics if fetch fails
-                setAllTopicsForLinking(relatedTopics);
-            }
-        }
-        fetchAllTopicNames();
-    }, [relatedTopics]);
+    const [hasTranslations, setHasTranslations] = useState(false);
+    const [showStickyTitle, setShowStickyTitle] = useState(false);
+    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
+    const [isTranslationFeedbackOpen, setIsTranslationFeedbackOpen] = useState(false);
+    const [isTranslationSurveyOpen, setIsTranslationSurveyOpen] = useState(false);
     const [focusedSection, setFocusedSection] = useState<SectionType | null>(null);
     const [sheetContent, setSheetContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
-    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [isSourceViewerOpen, setIsSourceViewerOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
-    const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
-    const [showStickyTitle, setShowStickyTitle] = useState(false);
-    const heroRef = useRef<HTMLDivElement>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const userId = localStorage.getItem('chabad-mafteach:user-id');
+            if (userId !== currentUserId) {
+                // Use a microtask or next tick to avoid synchronous setState warning
+                Promise.resolve().then(() => setCurrentUserId(userId));
+            }
+        }
+    }, [currentUserId]);
 
     // Show sticky title when scrolled past hero
+    const heroRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const handleScroll = () => {
             if (heroRef.current) {
@@ -263,6 +298,42 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         setSelectedSource(source);
     };
 
+    // Fetch all topics for auto-linking in sources (lightweight call for names/slugs only)
+    useEffect(() => {
+        async function fetchAllTopicNames() {
+            try {
+                const res = await fetch('/api/topics?fields=name,canonical_title,slug,name_hebrew,alternate_names&limit=500');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllTopicsForLinking(data.topics || []);
+                }
+            } catch (e) {
+                // Fallback to related topics if fetch fails
+                setAllTopicsForLinking(relatedTopics);
+            }
+        }
+        fetchAllTopicNames();
+    }, [relatedTopics]);
+
+    // Check if topic has translations
+    useEffect(() => {
+        async function checkTranslations() {
+            try {
+                const res = await fetch(`/api/topics/translations?topic_id=${topic.id}`);
+                if (res.ok) {
+                    const translations = await res.json();
+                    setHasTranslations(Array.isArray(translations) && translations.length > 0);
+                }
+            } catch (e) {
+                console.error('Failed to check translations:', e);
+                setHasTranslations(false);
+            }
+        }
+        if (topic.id) {
+            checkTranslations();
+        }
+    }, [topic.id]);
+
     const sectionRefs = useRef<Record<SectionType, HTMLElement | null>>({
         definition: null,
         overview: null,
@@ -272,6 +343,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         global_nimshal: null,
         historical_context: null,
         charts: null,
+        translations: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -279,12 +351,17 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     // Simulate loading for smooth transition
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 500);
-        const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
-        if (!hasSeenTutorial) {
-            setIsTutorialOpen(true);
+        
+        if (typeof window !== 'undefined') {
+            const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
+            if (!hasSeenTutorial && !isTutorialOpen) {
+                // Use a microtask to avoid synchronous setState warning
+                Promise.resolve().then(() => setIsTutorialOpen(true));
+            }
         }
+        
         return () => clearTimeout(timer);
-    }, []);
+    }, [isTutorialOpen]);
 
     // Helper: Highlight key concepts in text
     // Note: In a real app, do this safer to avoid breaking HTML tags.
@@ -310,7 +387,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const displayConfig = topic.display_config as Record<string, { visible?: boolean; format?: string }> | undefined;
     
     // Helper to check if a section should be visible using smart visibility
-    const isSectionVisible = (sectionId: string, fieldValue: any): boolean => {
+    const isSectionVisible = (sectionId: string, fieldValue: string | null | undefined | unknown): boolean => {
         const manualVisibility = displayConfig?.[sectionId]?.visible;
         const result = computeSmartVisibility(fieldValue, manualVisibility);
         return result.isVisible;
@@ -376,12 +453,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             order: 8,
             content: highlightTerms(topic.charts)
         }] : []),
-        // Always include sources
-        // {
-        //     type: 'sources',
-        //     order: 9,
-        //     content: ''
-        // }
+        // Translations section - only show if translations exist
+        ...(hasTranslations ? [{
+            type: 'translations' as SectionType,
+            order: 9,
+            content: '<div class="text-center text-muted-foreground py-8"><p>Translations for this topic are available. Click the language selector above to view them.</p></div>'
+        }] : [])
     ];
 
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
@@ -487,7 +564,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
     // Transform related topics for ForceGraph
     const forceGraphData = useMemo(() => {
-        const nodes = [
+        const nodes: GraphNode[] = [
             {
                 id: topic.slug,
                 label: topic.canonical_title,
@@ -497,7 +574,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             }
         ];
         
-        const edges: any[] = [];
+        const edges: GraphEdge[] = [];
         
         // Add parent topic
         const parentTopic = relatedTopics.find(t => t.relationship.direction === 'child');
@@ -557,14 +634,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     }, [topic, relatedTopics]);
 
     // Extract connected topics for graph (kept for reference)
-    const graphData = {
-        centerConcept: topic.canonical_title,
-        relatedConcepts: {
-            parent: relatedTopics.find(t => t.relationship.direction === 'child')?.canonical_title,
-            opposite: relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'))?.canonical_title,
-            components: relatedTopics.filter(t => t.relationship.direction === 'parent').map(t => t.canonical_title).slice(0, 3)
-        }
-    };
+    // const graphData = {
+    //     centerConcept: topic.canonical_title,
+    //     relatedConcepts: {
+    //         parent: relatedTopics.find(t => t.relationship.direction === 'child')?.canonical_title,
+    //         opposite: relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'))?.canonical_title,
+    //         components: relatedTopics.filter(t => t.relationship.direction === 'parent').map(t => t.canonical_title).slice(0, 3)
+    //     }
+    // };
 
     if (isLoading) {
         return <TopicSkeleton />;
@@ -645,7 +722,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             }
                         }}
                     >
-                        {sections.map((section, index) => {
+                        {sections.map((section) => {
                             const config = sectionConfig[section.type];
                             const Icon = config.icon;
                             const isActive = activeSection === section.type;
@@ -850,7 +927,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             
                             {/* Section Content */}
                             <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
-                               <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
+                                <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
                             </div>
                         </section>
                     );
@@ -858,57 +935,75 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
                 {/* Concept Constellation - Visual Discovery at Bottom */}
                 {relatedTopics.length > 0 && (
-                    <div className="pt-12 mt-8 border-t border-border">
-                        <div className="text-center mb-6">
-                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-medium mb-3">
-                                <Sparkles className="w-3 h-3" />
-                                See the Connections
+                    <div className="pt-12 mt-12 border-t border-border/50">
+                        <div className="text-center mb-8">
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Interactive Map
                             </span>
-                            <h2 className="text-lg font-semibold text-foreground">How This Concept Connects</h2>
-                            <p className="text-sm text-muted-foreground mt-1">Now that you&apos;ve learned about {topic.canonical_title}, explore how it connects to other ideas</p>
+                            <h2 className="text-3xl font-serif italic text-foreground">How This Concept Connects</h2>
+                            <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between {topic.canonical_title} and other Chassidic ideas.</p>
                         </div>
                         <ConstellationErrorBoundary>
-                            <ForceGraph
-                                nodes={forceGraphData.nodes}
-                                edges={forceGraphData.edges}
-                                width={600}
-                                height={320}
-                                interactive={true}
-                            />
+                            {forceGraphData.nodes.length > 1 ? (
+                                <ForceGraph
+                                    nodes={forceGraphData.nodes}
+                                    edges={forceGraphData.edges}
+                                    width={800}
+                                    height={400}
+                                    interactive={true}
+                                />
+                            ) : (
+                                <div className="h-80 flex flex-col items-center justify-center bg-muted/20 rounded-[2rem] border border-dashed border-border/50 p-8">
+                                    <GitBranch className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                                    <p className="text-sm text-muted-foreground text-center max-w-[280px] italic">
+                                        No connections mapped for this topic yet. Be the first to suggest one!
+                                    </p>
+                                </div>
+                            )}
                         </ConstellationErrorBoundary>
-                        <div className="text-center mt-4">
+                        
+                        <div className="text-center mt-8">
                             <button
                                 onClick={() => setIsDeepDiveOpen(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full text-sm font-medium hover:from-purple-500/20 hover:to-pink-500/20 transition-all hover-lift"
+                                className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
                             >
                                 <Sparkles className="w-4 h-4" />
-                                Open Deep Dive Mode
+                                Enter Deep Dive Mode
                             </button>
-                        </div>
-                        
-                        {/* Quick Links */}
-                        <div className="mt-8 pt-6 border-t border-border/50">
-                            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
-                                <GitBranch className="w-4 h-4 text-primary" />
-                                Continue Exploring
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {relatedTopics.slice(0, 5).map((related) => (
-                                    <Link
-                                        key={related.slug}
-                                        href={`/topics/${related.slug}`}
-                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted/50 hover:bg-muted text-sm rounded-full transition-colors hover-scale"
-                                    >
-                                        <span>{related.canonical_title}</span>
-                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                                    </Link>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 )}
+
+                {/* Community Annotations Section */}
+                <div className="pt-12 mt-12 border-t border-border/50">
+                    <TopicAnnotations 
+                        topicId={topic.id.toString()} 
+                        currentUserId={currentUserId || undefined} 
+                        className="max-w-4xl mx-auto"
+                    />
+                </div>
+
+                {/* Feedback & Contribution */}
+                <MobileFeedbackButton 
+                    topicId={topic.id.toString()} 
+                    topicTitle={topic.canonical_title} 
+                />
             </main>
 
+            {/* Modals & Overlays */}
+            <TranslationFeedback 
+                isOpen={isTranslationFeedbackOpen}
+                onClose={() => setIsTranslationFeedbackOpen(false)}
+                contentType="topic"
+                contentId={topic.id.toString()}
+                contentName={topic.canonical_title}
+            />
+
+            <TranslationSurvey 
+                isOpen={isTranslationSurveyOpen}
+                onClose={() => setIsTranslationSurveyOpen(false)}
+            />
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet

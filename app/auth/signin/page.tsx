@@ -32,6 +32,9 @@ export default function SignInPage() {
         // Store the token in localStorage
         localStorage.setItem('auth_token', data.accessToken);
 
+        // Also set as cookie for middleware access
+        document.cookie = `auth_token=${data.accessToken}; path=/; max-age=${24 * 60 * 60}; SameSite=Strict`;
+
         setSuccess(true);
 
         // Redirect to editor after a short delay

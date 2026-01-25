@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { createItem, readItems } from '@directus/sdk';
 import { verifyAuth } from '@/lib/auth';
+import { isValidSlug, normalizeSlug, generateAlternativeSlugs, isValidSlugLength } from '@/lib/utils/slug-utils';
 
 const directus = createClient();
 
@@ -43,6 +44,25 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Normalize the slug
+    const normalizedSlug = normalizeSlug(slug);
+    
+    // Validate slug format
+    if (!isValidSlug(normalizedSlug)) {
+      return NextResponse.json({ 
+        error: 'Invalid slug format',
+        message: 'Slug must contain only lowercase letters, numbers, and hyphens'
+      }, { status: 400 });
+    }
+    
+    // Check minimum length
+    if (!isValidSlugLength(normalizedSlug)) {
+      return NextResponse.json({ 
+        error: 'Slug too short',
+        message: 'Slug must be at least 3 characters long'
+      }, { status: 400 });
+    }
 
     if (!topic_type) {
       return NextResponse.json(
@@ -52,18 +72,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if slug already exists
-    const existing = await directus.request(
-      readItems('topics', {
-        filter: { slug: { _eq: slug.toLowerCase() } },
-        fields: ['id'],
-        limit: 1,
-      } as any)
-    );
+    try {
+      const existing = await directus.request(
+        readItems('topics', {
+          filter: { slug: { _eq: normalizedSlug } },
+          fields: ['id'],
+          limit: 1,
+        } as any)
+      );
 
-    if ((existing as any[]).length > 0) {
+      if ((existing as any[]).length > 0) {
+        // Generate alternative slugs
+        const alternatives = generateAlternativeSlugs(normalizedSlug);
+        
+        return NextResponse.json(
+          { 
+            error: 'A topic with this slug already exists',
+            alternatives,
+            normalized: normalizedSlug
+          },
+          { status: 409 }
+        );
+      }
+    } catch (error) {
+      console.error('Error checking for existing slug:', error);
       return NextResponse.json(
-        { error: 'A topic with this slug already exists' },
-        { status: 409 }
+        { error: 'Failed to validate slug uniqueness' },
+        { status: 500 }
       );
     }
 
@@ -73,7 +108,7 @@ export async function POST(request: NextRequest) {
         canonical_title,
         canonical_title_en: canonical_title_en || undefined,
         canonical_title_transliteration: canonical_title_transliteration || undefined,
-        slug: slug.toLowerCase(),
+        slug: normalizedSlug,
         topic_type,
         description: description || undefined,
         content_status: 'minimal',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { createItem } from '@directus/sdk';
+import { createItem, readItems, updateItem } from '@directus/sdk';
 import { extractCitationReferences, CitationReference } from '@/lib/citation-utils';
 
 /**
@@ -41,31 +41,47 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Create or update the source_link
+        // Check if a link with this citation_id already exists
+        const existingLinks = await directus.request(
+          readItems('source_links', {
+            filter: { citation_id: { _eq: citation.id } },
+            fields: ['id'],
+            limit: 1
+          })
+        ) as { id: number }[];
+
         const sourceLinkData = {
           source_id: citation.sourceId,
-          topic_id: topicId || null, // Optional: link to topic if provided
-          statement_id: null, // For now, we're handling topic-level citations
+          topic_id: topicId || null,
+          statement_id: null,
           relationship_type: 'references', 
           page_number: citation.pageNumber || '',
           section_reference: citation.reference || '',
           verse_reference: citation.verseNumber || '',
-          citation_id: citation.id, // Store the citation ID for future reference
-          notes: `Generated from citation reference ${citation.id}`
+          citation_id: citation.id,
+          notes: `Updated from citation reference ${citation.id}`
         };
 
-        // Create the source_link
-        const savedSourceLink = await directus.request(
-          createItem('source_links', sourceLinkData)
-        );
+        let result: any;
+        if (existingLinks && existingLinks.length > 0) {
+          // Update existing
+          result = await directus.request(
+            updateItem('source_links', existingLinks[0].id, sourceLinkData)
+          );
+        } else {
+          // Create new
+          result = await directus.request(
+            createItem('source_links', sourceLinkData)
+          );
+        }
 
         savedCitations.push({
           citationId: citation.id,
-          sourceLinkId: savedSourceLink.id
+          sourceLinkId: result.id,
+          wasUpdated: !!(existingLinks && existingLinks.length > 0)
         });
       } catch (citationError) {
         console.error(`Error saving citation ${citation.id}:`, citationError);
-        // Continue with other citations if one fails
       }
     }
 

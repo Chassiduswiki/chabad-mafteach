@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface WordRotateProps {
     words: string[];
     duration?: number;
-    framerProps?: HTMLMotionProps<"h1">;
+    framerProps?: HTMLMotionProps<"div">;
     className?: string;
 }
 
@@ -16,16 +16,18 @@ export function WordRotate({
     words,
     duration = 2500,
     framerProps = {
-        initial: { opacity: 0, y: -50 },
+        initial: { opacity: 0, y: 20 },
         animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: 50 },
-        transition: { duration: 0.25, ease: "easeOut" },
+        exit: { opacity: 0, y: -20 },
+        transition: { duration: 0.3, ease: "easeOut" },
     },
     className,
 }: WordRotateProps) {
     const [index, setIndex] = useState(0);
 
     useEffect(() => {
+        if (!words || words.length === 0) return;
+        
         const interval = setInterval(() => {
             setIndex((prevIndex) => (prevIndex + 1) % words.length);
         }, duration);
@@ -33,16 +35,18 @@ export function WordRotate({
         return () => clearInterval(interval);
     }, [words, duration]);
 
+    if (!words || words.length === 0) return null;
+
     return (
-        <div className="overflow-hidden py-2">
+        <div className="relative overflow-hidden py-1">
             <AnimatePresence mode="wait">
-                <motion.h1
+                <motion.div
                     key={words[index]}
                     className={cn(className)}
                     {...framerProps}
                 >
                     {words[index]}
-                </motion.h1>
+                </motion.div>
             </AnimatePresence>
         </div>
     );

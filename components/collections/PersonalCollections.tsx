@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Heart, BookmarkPlus, X, Check, Share2, Eye, Trash2 } from 'lucide-react';
+import { Plus, Heart, BookmarkPlus, X, Check, Share2, Eye, Trash2, Library, Sparkles, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface PersonalCollection {
     id: string;
@@ -16,9 +21,10 @@ interface PersonalCollectionsProps {
     currentTopicId?: number;
     isInCollection?: boolean;
     onCollectionChange?: () => void;
+    className?: string;
 }
 
-export function PersonalCollections({ currentTopicId, isInCollection, onCollectionChange }: PersonalCollectionsProps) {
+export function PersonalCollections({ currentTopicId, isInCollection, onCollectionChange, className }: PersonalCollectionsProps) {
     const [collections, setCollections] = useState<PersonalCollection[]>([]);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
@@ -113,7 +119,6 @@ export function PersonalCollections({ currentTopicId, isInCollection, onCollecti
     };
 
     const handleShare = async (collection: PersonalCollection) => {
-        // Create a shareable data object
         const shareData = {
             name: collection.name,
             description: collection.description,
@@ -124,15 +129,13 @@ export function PersonalCollections({ currentTopicId, isInCollection, onCollecti
         const shareText = `Check out my study collection: ${collection.name}\n${collection.description || ''}\n\nShared from Chabad Mafteach`;
 
         try {
-            if (navigator.share) {
-                // Use native share API on mobile
+            if (typeof navigator !== 'undefined' && navigator.share) {
                 await navigator.share({
                     title: collection.name,
                     text: shareText,
                     url: window.location.href
                 });
             } else {
-                // Fallback to copying collection data
                 await navigator.clipboard.writeText(JSON.stringify(shareData, null, 2));
                 setSharedId(collection.id);
                 setTimeout(() => setSharedId(null), 2000);
@@ -143,92 +146,119 @@ export function PersonalCollections({ currentTopicId, isInCollection, onCollecti
     };
 
     if (currentTopicId) {
-        // Show collection actions for current topic
         const relevantCollections = collections.filter(c => c.topicIds.includes(currentTopicId));
 
         return (
-            <div className="space-y-3">
+            <div className={cn("space-y-4", className)}>
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-foreground">My Collections</h3>
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-1 rounded-md text-primary">
+                            <Library className="h-3.5 w-3.5" />
+                        </div>
+                        <h3 className="text-sm font-bold tracking-tight">Personal Collections</h3>
+                    </div>
                     <button
                         onClick={() => setIsAddingToCollection(!isAddingToCollection)}
-                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                        className="text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                     >
-                        <BookmarkPlus className="w-3 h-3" />
+                        {isAddingToCollection ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                         {isAddingToCollection ? 'Cancel' : 'Add to collection'}
                     </button>
                 </div>
 
                 {relevantCollections.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                         {relevantCollections.map(collection => (
-                            <div key={collection.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                                <span className="text-sm text-foreground">{collection.name}</span>
+                            <Badge 
+                                key={collection.id} 
+                                variant="secondary" 
+                                className="pl-2 pr-1 h-7 rounded-full bg-primary/5 text-primary border-primary/10 text-[10px] font-bold"
+                            >
+                                {collection.name}
                                 <button
                                     onClick={() => removeFromCollection(collection.id)}
-                                    className="text-muted-foreground hover:text-destructive p-1"
+                                    className="ml-1.5 p-0.5 hover:bg-primary/20 rounded-full transition-colors"
                                 >
                                     <X className="w-3 h-3" />
                                 </button>
-                            </div>
+                            </Badge>
                         ))}
                     </div>
                 )}
 
                 {isAddingToCollection && (
-                    <div className="space-y-2">
-                        {collections.filter(c => !c.topicIds.includes(currentTopicId)).map(collection => (
-                            <button
-                                key={collection.id}
-                                onClick={() => addToCollection(collection.id)}
-                                className="w-full text-left p-2 hover:bg-muted/50 rounded-lg flex items-center justify-between"
-                            >
-                                <span className="text-sm">{collection.name}</span>
-                                <Plus className="w-3 h-3" />
-                            </button>
-                        ))}
+                    <div className="bg-muted/30 border border-border/50 rounded-2xl p-1 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                        {collections.filter(c => !c.topicIds.includes(currentTopicId)).length > 0 ? (
+                            <div className="max-h-40 overflow-y-auto p-1">
+                                {collections.filter(c => !c.topicIds.includes(currentTopicId)).map(collection => (
+                                    <button
+                                        key={collection.id}
+                                        onClick={() => addToCollection(collection.id)}
+                                        className="w-full text-left px-3 py-2 hover:bg-primary/10 hover:text-primary rounded-xl flex items-center justify-between group transition-colors"
+                                    >
+                                        <span className="text-xs font-medium">{collection.name}</span>
+                                        <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-4 text-center">
+                                <p className="text-[10px] text-muted-foreground italic mb-2">No other collections available</p>
+                            </div>
+                        )}
 
-                        <div className="border-t border-border pt-2">
+                        <div className="border-t border-border/30 p-1">
                             <button
                                 onClick={() => setShowCreateForm(true)}
-                                className="w-full text-left p-2 hover:bg-muted/50 rounded-lg flex items-center gap-2 text-primary"
+                                className="w-full text-left px-3 py-2 hover:bg-primary/10 rounded-xl flex items-center gap-2 text-primary transition-all group"
                             >
-                                <Plus className="w-3 h-3" />
-                                <span className="text-sm">Create new collection</span>
+                                <div className="bg-primary/10 p-1 rounded-md group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                    <Plus className="w-3 h-3" />
+                                </div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider">Create new collection</span>
                             </button>
                         </div>
                     </div>
                 )}
 
                 {showCreateForm && (
-                    <div className="p-3 bg-muted/50 rounded-lg space-y-3">
-                        <input
-                            type="text"
+                    <div className="p-4 bg-card border border-primary/20 rounded-2xl space-y-4 shadow-xl animate-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">New Collection</h4>
+                            <button onClick={() => setShowCreateForm(false)} className="text-muted-foreground hover:text-foreground">
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                        <Input
                             placeholder="Collection name"
                             value={newCollectionName}
                             onChange={(e) => setNewCollectionName(e.target.value)}
-                            className="w-full px-2 py-1 text-sm border border-border rounded"
+                            className="h-9 text-xs bg-muted/30 border-border/50 focus-visible:ring-primary/20"
                         />
-                        <textarea
+                        <Textarea
                             placeholder="Description (optional)"
                             value={newCollectionDesc}
                             onChange={(e) => setNewCollectionDesc(e.target.value)}
                             rows={2}
-                            className="w-full px-2 py-1 text-sm border border-border rounded resize-none"
+                            className="text-xs bg-muted/30 border-border/50 focus-visible:ring-primary/20 resize-none"
                         />
-                        <div className="flex gap-2">
-                            <button
-                                onClick={createCollection}
-                                className="px-3 py-1 bg-primary text-primary-foreground text-sm rounded hover:bg-primary/90"
-                            >
-                                Create
-                            </button>
-                            <button
+                        <div className="flex gap-2 justify-end">
+                            <Button
                                 onClick={() => setShowCreateForm(false)}
-                                className="px-3 py-1 border border-border text-sm rounded hover:bg-muted"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 text-[10px] font-bold uppercase"
                             >
-                                Cancel
-                            </button>
+                                Discard
+                            </Button>
+                            <Button
+                                onClick={createCollection}
+                                size="sm"
+                                className="h-8 rounded-full px-4 font-bold text-[10px] uppercase"
+                                disabled={!newCollectionName.trim()}
+                            >
+                                Create & Add
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -236,82 +266,142 @@ export function PersonalCollections({ currentTopicId, isInCollection, onCollecti
         );
     }
 
-    // Show collection overview
+    // Show collection overview (Library view)
     return (
-        <div className="space-y-4">
+        <div className={cn("space-y-6", className)}>
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">My Study Collections</h3>
-                <button
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-2 rounded-xl text-primary font-bold">
+                            <Library className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-xl font-bold tracking-tight">My Study Collections</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Personalized spaces for your Torah learning journeys.</p>
+                </div>
+                <Button
                     onClick={() => setShowCreateForm(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 transition-colors"
+                    className="flex items-center gap-2 rounded-full px-5 h-10 font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/10 transition-all hover:scale-[1.02]"
                 >
                     <Plus className="w-4 h-4" />
                     New Collection
-                </button>
+                </Button>
             </div>
 
             {showCreateForm && (
-                <div className="p-4 bg-card border border-border rounded-lg space-y-3">
-                    <h4 className="font-medium">Create New Collection</h4>
-                    <input
-                        type="text"
-                        placeholder="Collection name"
-                        value={newCollectionName}
-                        onChange={(e) => setNewCollectionName(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                    />
-                    <textarea
-                        placeholder="Description (optional)"
-                        value={newCollectionDesc}
-                        onChange={(e) => setNewCollectionDesc(e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none"
-                    />
-                    <div className="flex gap-2">
-                        <button
-                            onClick={createCollection}
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                        >
-                            Create Collection
+                <div className="p-6 bg-card/50 backdrop-blur-sm border border-primary/20 rounded-3xl space-y-5 shadow-xl animate-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            <h4 className="font-bold text-lg leading-none">Create Collection</h4>
+                        </div>
+                        <button onClick={() => setShowCreateForm(false)} className="text-muted-foreground hover:text-foreground">
+                            <X className="w-4 h-4" />
                         </button>
-                        <button
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Name</label>
+                            <Input
+                                placeholder="e.g., Daily Tanya Insights"
+                                value={newCollectionName}
+                                onChange={(e) => setNewCollectionName(e.target.value)}
+                                className="h-11 bg-background/50 border-border/50 focus-visible:ring-primary/20"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Description</label>
+                            <Textarea
+                                placeholder="Focus area for this collection..."
+                                value={newCollectionDesc}
+                                onChange={(e) => setNewCollectionDesc(e.target.value)}
+                                rows={3}
+                                className="bg-background/50 border-border/50 focus-visible:ring-primary/20 resize-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 justify-end pt-2">
+                        <Button
                             onClick={() => setShowCreateForm(false)}
-                            className="px-4 py-2 border border-border rounded-md hover:bg-muted"
+                            variant="ghost"
+                            className="font-bold text-xs uppercase"
                         >
                             Cancel
-                        </button>
+                        </Button>
+                        <Button
+                            onClick={createCollection}
+                            className="rounded-full px-8 font-bold text-xs uppercase shadow-md shadow-primary/10"
+                            disabled={!newCollectionName.trim()}
+                        >
+                            Create Collection
+                        </Button>
                     </div>
                 </div>
             )}
 
-            <div className="grid gap-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {collections.map((collection) => (
-                    <div key={collection.id} className="p-4 bg-card border border-border rounded-lg hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <h4 className="font-medium text-foreground">{collection.name}</h4>
-                                {collection.description && (
-                                    <p className="text-sm text-muted-foreground mt-1">{collection.description}</p>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    {collection.topicIds.length} topics • Created {new Date(collection.createdAt).toLocaleDateString()}
-                                </p>
+                    <div 
+                        key={collection.id} 
+                        className="group p-5 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl hover:shadow-xl hover:border-primary/20 transition-all duration-300 hover:-translate-y-1"
+                    >
+                        <div className="flex flex-col h-full">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="bg-primary/10 p-2.5 rounded-xl text-primary transition-all group-hover:scale-110">
+                                    <BookmarkPlus className="w-5 h-5" />
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button
+                                        onClick={() => handleShare(collection)}
+                                        className={cn(
+                                            "p-2 rounded-full transition-colors",
+                                            sharedId === collection.id ? "bg-emerald-500/10 text-emerald-600" : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                        title="Share collection"
+                                    >
+                                        {sharedId === collection.id ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                        onClick={() => deleteCollection(collection.id)}
+                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
+                                        title="Delete collection"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 ml-4">
-                                <button
+
+                            <div className="flex-grow space-y-2">
+                                <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                                    {collection.name}
+                                </h4>
+                                {collection.description && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed font-light italic">
+                                        "{collection.description}"
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/30">
+                                <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                                    <span className="flex items-center gap-1.5">
+                                        <Heart className="w-3 h-3" />
+                                        {collection.topicIds.length} topics
+                                    </span>
+                                    <span>•</span>
+                                    <span>{new Date(collection.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
                                     onClick={() => router.push(`/collections/personal/${collection.id}`)}
-                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
-                                    title="View collection"
+                                    className="h-8 rounded-full px-3 text-[10px] font-bold uppercase gap-1.5 hover:bg-primary hover:text-primary-foreground"
                                 >
-                                    <Eye className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => deleteCollection(collection.id)}
-                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                    title="Delete collection"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                                    Open
+                                    <Eye className="w-3 h-3" />
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -319,16 +409,20 @@ export function PersonalCollections({ currentTopicId, isInCollection, onCollecti
             </div>
 
             {collections.length === 0 && !showCreateForm && (
-                <div className="text-center py-8 text-muted-foreground">
-                    <Heart className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <h3 className="font-medium mb-2">No collections yet</h3>
-                    <p className="text-sm mb-4">Create your first study collection to organize topics you're learning</p>
-                    <button
+                <div className="text-center py-20 bg-muted/10 rounded-3xl border border-dashed border-border/50 max-w-2xl mx-auto space-y-6">
+                    <div className="bg-muted p-6 rounded-full w-fit mx-auto opacity-30 shadow-inner">
+                        <Heart className="w-16 h-16 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-2xl font-serif italic text-foreground/70">A Blank Slate...</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Create your first collection to organize the concepts that inspire your learning.</p>
+                    </div>
+                    <Button 
                         onClick={() => setShowCreateForm(true)}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        className="rounded-full px-10 h-12 font-bold text-sm uppercase tracking-widest shadow-lg shadow-primary/10 transition-all hover:scale-105"
                     >
-                        Create Collection
-                    </button>
+                        Begin Your Collection
+                    </Button>
                 </div>
             )}
         </div>

@@ -109,6 +109,45 @@ export async function PATCH(
             );
         }
 
+        // Trigger citation extraction if content fields were updated
+        const contentFields = [
+            'description', 'overview', 'article', 
+            'definition_positive', 'definition_negative', 
+            'practical_takeaways', 'historical_context', 
+            'mashal', 'global_nimshal'
+        ];
+        
+        const hasContentUpdates = Object.keys(cleanedUpdates).some(key => contentFields.includes(key));
+        
+        if (hasContentUpdates) {
+            try {
+                // We combine all content to extract citations in one go
+                const combinedContent = contentFields
+                    .map(field => cleanedUpdates[field] || '')
+                    .filter(Boolean)
+                    .join(' ');
+                
+                if (combinedContent) {
+                    // Call the extract API internally or implement logic
+                    // For now, we'll use a fetch to the internal API to keep it decoupled
+                    const protocol = request.nextUrl.protocol;
+                    const host = request.nextUrl.host;
+                    const extractUrl = `${protocol}//${host}/api/citations/extract`;
+                    
+                    fetch(extractUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            content: combinedContent,
+                            topicId: updatedTopic.id
+                        })
+                    }).catch(err => console.error('Background citation extraction failed:', err));
+                }
+            } catch (extractError) {
+                console.error('Failed to trigger citation extraction:', extractError);
+            }
+        }
+
         return NextResponse.json(updatedTopic);
     } catch (error: any) {
         console.error('Topic update error:', error);

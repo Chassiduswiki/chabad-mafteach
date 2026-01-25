@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createDirectus, rest, staticToken, readItems, aggregate } from '@directus/sdk';
-
-// Create server-side Directus client
-function getDirectusClient() {
-  const url = process.env.DIRECTUS_URL || 'http://localhost:8055';
-  const token = process.env.DIRECTUS_STATIC_TOKEN || '';
-  return createDirectus(url).with(rest()).with(staticToken(token));
-}
+import { readItems, aggregate } from '@directus/sdk';
+import { createClient } from '@/lib/directus';
 
 // Country flag mapping
 const countryFlags: Record<string, string> = {
@@ -16,7 +10,7 @@ const countryFlags: Record<string, string> = {
 };
 
 // Fetch real-time analytics from analytics_events collection
-async function getRealTimeAnalytics(directus: ReturnType<typeof getDirectusClient>) {
+async function getRealTimeAnalytics(directus: ReturnType<typeof createClient>) {
   const now = new Date();
   // Use UTC dates to match Directus timestamps
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
@@ -198,7 +192,7 @@ function getPageName(path: string): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const directus = getDirectusClient();
+    const directus = createClient();
 
     // Fetch real counts from Directus collections in parallel
     const [
@@ -209,27 +203,21 @@ export async function GET(req: NextRequest) {
       documentsResult,
       topicsWithSourcesResult,
       recentTopics,
-    ] = await Promise.all([
+    ] = await Promise.all<any>([
       // Count sources
-      directus.request(aggregate('sources', { aggregate: { count: '*' } })).catch(() => [{ count: 0 }]),
+      (directus as any).request({ method: 'GET', path: '/items/sources', params: { aggregate: { count: '*' } } }).catch(() => [{ count: 0 }]),
       // Count authors
-      directus.request(aggregate('authors', { aggregate: { count: '*' } })).catch(() => [{ count: 0 }]),
+      (directus as any).request({ method: 'GET', path: '/items/authors', params: { aggregate: { count: '*' } } }).catch(() => [{ count: 0 }]),
       // Count topics
-      directus.request(aggregate('topics', { aggregate: { count: '*' } })).catch(() => [{ count: 0 }]),
+      (directus as any).request({ method: 'GET', path: '/items/topics', params: { aggregate: { count: '*' } } }).catch(() => [{ count: 0 }]),
       // Count statements
-      directus.request(aggregate('statements', { aggregate: { count: '*' } })).catch(() => [{ count: 0 }]),
+      (directus as any).request({ method: 'GET', path: '/items/statements', params: { aggregate: { count: '*' } } }).catch(() => [{ count: 0 }]),
       // Count documents (books/seforim)
-      directus.request(aggregate('documents', { aggregate: { count: '*' } })).catch(() => [{ count: 0 }]),
+      (directus as any).request({ method: 'GET', path: '/items/documents', params: { aggregate: { count: '*' } } }).catch(() => [{ count: 0 }]),
       // Count topics that have at least one source linked
-      directus.request(aggregate('topic_sources', { 
-        aggregate: { countDistinct: 'topic_id' } 
-      })).catch(() => [{ countDistinct: { topic_id: 0 } }]),
+      (directus as any).request({ method: 'GET', path: '/items/topic_sources', params: { aggregate: { countDistinct: 'topic_id' } } }).catch(() => [{ countDistinct: { topic_id: 0 } }]),
       // Get recent/popular topics (most recently updated as proxy for popular)
-      directus.request(readItems('topics', {
-        fields: ['id', 'canonical_title', 'slug', 'topic_type', 'date_updated'],
-        sort: ['-date_updated'],
-        limit: 5,
-      })).catch(() => []),
+      (directus as any).request({ method: 'GET', path: '/items/topics', params: { fields: ['id', 'canonical_title', 'slug', 'topic_type', 'date_updated'], sort: ['-date_updated'], limit: 5 } }).catch(() => []),
     ]);
 
     // Extract counts safely
