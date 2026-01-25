@@ -11,6 +11,7 @@ import { ForceGraph } from '@/components/graph/ForceGraph';
 import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { Topic, Source, Citation } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
@@ -648,7 +649,8 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     }
 
     return (
-        <div className="min-h-screen bg-background relative">
+        <ErrorBoundary componentName="TopicExperience">
+            <div className="min-h-screen bg-background relative">
             <GlobalNav showBack backHref="/topics" backLabel="Topics" />
             <ScrollProgressIndicator />
             <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
@@ -1022,13 +1024,13 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                 />
             )}
 
-            {/* Deep Dive Mode */}
             <DeepDiveMode
                 currentTopic={{ slug: topic.slug, canonical_title: topic.canonical_title }}
                 relatedTopics={relatedTopics}
                 isOpen={isDeepDiveOpen}
                 onClose={() => setIsDeepDiveOpen(false)}
             />
-        </div>
+            </div>
+        </ErrorBoundary>
     );
 }
