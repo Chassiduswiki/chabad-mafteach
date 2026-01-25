@@ -1,14 +1,30 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
-import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
-import { ForceGraph } from '@/components/graph/ForceGraph';
-import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
+// Heavy components loaded dynamically to improve LCP
+const ConceptConstellation = dynamic(() => import('@/components/topics/visualization/ConceptConstellation').then(mod => mod.ConceptConstellation), {
+    ssr: false,
+    loading: () => <div className="h-[400px] w-full animate-pulse bg-muted rounded-xl" />
+});
+
+const DeepDiveMode = dynamic(() => import('@/components/topics/DeepDiveMode').then(mod => mod.DeepDiveMode), {
+    ssr: false
+});
+
+const ForceGraph = dynamic(() => import('@/components/graph/ForceGraph').then(mod => mod.ForceGraph), {
+    ssr: false
+});
+
+const ConstellationErrorBoundary = dynamic(() => import('@/components/topics/visualization/ConstellationErrorBoundary').then(mod => mod.ConstellationErrorBoundary), {
+    ssr: false
+});
+
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -19,7 +35,6 @@ import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
-import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';

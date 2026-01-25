@@ -192,11 +192,11 @@ export interface Topic {
     definition_negative?: string;
     overview?: string;
     mashal?: string;
+    global_nimshal?: string;
+    charts?: string;
     article?: string;
     practical_takeaways?: string; 
     historical_context?: string; 
-    global_nimshal?: string;
-    charts?: string;
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
 

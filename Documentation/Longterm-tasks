@@ -84,113 +84,41 @@ The frontend TypeScript types now match the new Directus schema:
 
 ---
 
-## TRACK 1: Topics Detail Page (Unblock everything else)
+## TRACK 1: Topics Experience (Unified)
 
-**Goal**: Make `/topics/[slug]` simple, fast, and honest about what data exists.
+**Goal**: A single, high-performance topic exploration engine. (Merged TRACK 1 & 15)
 
-### Phase 1a: MVP Detail Page (IMMEDIATE)
-- [x] Simplify `TopicHeader` to show only: title (canonical_title), category (topic_type), short description.
-- [x] Remove or feature-flag `BoundariesTab`, `SourcesTab`, `RelatedTab` from `TopicTabs` (mark as "Coming soon").
-- [x] Remove `TopicSidebar` from detail page layout.
-- [x] Test: `/topics/[slug]` loads fast, renders cleanly on desktop + mobile, never shows broken/empty sections.
+### Phase 1: Interactive Experience (COMPLETED - Jan 2026)
+- [x] **Unified View**: Consolidated `TopicExperience.tsx` as the single entry point for topic exploration.
+- [x] **Stable Foundation**: Verified Directus permissions and data integrity for topics/statements.
+- [x] **Visual Polish**: Integrated Immersive Hero and background Hebrew watermarks.
+- [x] **Navigation**: Implemented scroll-linked tabs and sticky header for section navigation.
 
-### Phase 1b: Rich Content Fields (COMPLETED - Dec 25, 2025)
-- [x] Added `overview`, `article`, `practical_takeaways`, `historical_context` fields to `Topic` type.
-- [x] Created `OverviewTab` to render rich content summary before the detailed source blocks.
-- [x] Updated `TopicTabs` dynamic visibility logic (hide empty tabs, show "Coming Soon" or valid content).
-
-### Phase 1c: Boundaries & Relationships (COMPLETED - Dec 25, 2025)
-- [x] Wired `BoundariesTab` to render `definition_positive` and `definition_negative`.
-- [x] Implemented `RelatedTab` with actual `topic_relationships` data.
-- [x] Fixed duplicated cases and missing props in `TopicTabs.tsx`.
-
-### Phase 1d: Citations & Sources (COMPLETED - Dec 25, 2025)
-- [x] Redesign `SourcesTab` to query `statements` tagged with topic (via `statement_topics`), grouped by book.
-- [x] Implement "Statement-First" premium UI for topic exploration.
-- [x] Added "Copy Citation" and "View in context" deep linking.
-> [!NOTE]
-> Functional unblocking requires Directus permission update for `statement_topics` collection fields (`statement_id`, `topic_id`).
-
-### Phase 1e: Content Model Clarity (NEW)
-- [x] **Data Model Definitions**: Define usage of short vs. long descriptions (popups vs. headers).
-- [ ] **Source Linking**: Determine optimal display and linking strategy for sources.
-- [x] **Smart Glossary Refinement**: Fix parse failures for standalone numbered lists.
-
-### Phase 1f: Topic Display Enhancements (COMPLETED - Jan 21, 2026)
-- [x] **Transliteration as Main Title**: Updated topic pages to use `canonical_title_transliteration` from database as main title instead of English title
-- [x] **Hebrew Watermark Optimization**: Adjusted background watermark blur and opacity for better visual balance (reduced from blur-xl to blur-lg, opacity 0.08)
-- [x] **Short Description Separation**: Implemented auto-generated short descriptions for hero section (first paragraph only, numbering removed) to eliminate duplication with full definition section
-- [x] **Database Schema Update**: Added `canonical_title_transliteration` field to TypeScript Topic interface
+### Phase 2: Performance & Disclosure (ACTIVE)
+- [ ] **Lazy Loading**: Implement dynamic imports for heavy components (`ConceptConstellation`, `DeepDiveMode`).
+- [ ] **Progressive Disclosure**: Refine Level 1-4 depth system (Glance → Summary → Article → Sources).
+- [ ] **Mobile UX**: Polish bottom sheet gestures and touch targets for mobile topic study.
+- [ ] **LCP Fix**: Optimize image/font loading to improve Lighthouse score from 46 to 80+.
 
 ---
 
-## TRACK 11: Explore & Discovery Upgrade (NEW)
-**Goal**: Transform Explore from a redundant browse page into a "passive discovery" experience and centralize intentional browsing in Topics.
+## TRACK 2: Search & Discovery (Unified)
 
-### Phase 11a: Topics Page Consolidation (COMPLETED - Dec 24, 2025)
-- [x] Extract `TopicCategoryChips` for horizontal category scrolling.
-- [x] Implement `FeaturedTopicCard` for editorial highlights.
-- [x] Merge Explore category browsing into `/topics` header area for cleaner navigation.
+**Goal**: Transform search and discovery from redundant pages into a cohesive intentional/passive browsing system. (Merged TRACK 2 & 11)
 
-### Phase 11b: Zen Explore Experience (COMPLETED - Dec 25, 2025)
-- [x] Rebuild `/explore` as a full-screen, mobile-first "one quote at a time" interface.
-- [x] Implement random statement API for serendipitous discovery.
-- [x] Add "Go to Source" and "Share" actions to the Zen cards.
-- [ ] **Curated Discovery:** Add `is_for_you` or `explore_eligible` checkbox to `statements` collection for editorial control.
-- [ ] Add swipe/pull gestures for "Next Quote" interaction.
+### Phase 1: Search Foundation (COMPLETED - Dec 2025)
+- [x] **API Stabilization**: Optimized `/api/search` for topics, authors, and sources.
+- [x] **Mobile UX**: Implemented native-feel bottom sheet for mobile search.
+- [x] **Intentional Hubs**: Centralized category browsing in the Topics portal.
 
----
-
-## TRACK 2: Search (Topics-first, then Seforim)
-
-**Goal**: Make search feel responsive and reliable for topics, then extend to seforim.
-
-### Phase 2a: Topics Search Feel (IMMEDIATE)
-- [x] Audit `/api/search` topics filter: decide whether to fetch broader set + rely on Fuse, or expand server-side filter to include `slug` + future translation fields. **DONE**
-- [x] Test: typing a topic's English name reliably returns that topic (no vanishing as you add letters). **DONE**
-- [x] Update `CommandMenu` to show topic results with clear category/type badge. **DONE**
-
-### Phase 2b: Seforim Search (After 2a)
-- [x] Finalize where seforim live: `documents` (current) or dedicated `seforim` collection. **DONE**
-- [x] Ensure `/api/search` queries the right collection and handles permissions gracefully. **DONE**
-- [x] Test: searching "Tanya" or other sefer titles returns results in Sources section. **DONE**
-
-### Phase 2c: Mobile Search UX (After 2b) ✅ COMPLETED - Dec 29, 2025
-- [x] Convert `CommandMenu` on small screens to a true **bottom sheet** (full-height, swipe-down to close). **DONE**
-- [x] Add larger touch targets and clearer result type differentiation. **DONE**
-- [x] Test on real mobile device: open, search, select, close all feel smooth. **DONE**
+### Phase 2: Discovery & Passive Learning (ACTIVE)
+- [x] **Zen Mode**: Rebuilt `/explore` as a mobile-first "one quote at a time" discovery interface.
+- [ ] **Serendipity Engine**: Surface surprising topic connections based on current study context.
+- [ ] **Curated Discovery**: Add editorial controls (`explore_eligible`) to statements collection.
+- [ ] **Mobile Polish**: Finalize swipe/pull gestures for "Next Quote" in Zen mode.
 
 ---
 
-## TRACK 3: TorahReader (Tanya → Generic)
-
-**Goal**: Generalize the Tanya prototype into a reusable reader for any sefer.
-
-### Phase 3a: Extract & Generalize (IMMEDIATE)
-- [x] Created advanced TorahReader in `/seforim/[seferId]/page.tsx` with virtual scrolling, citation handling, settings, and mobile optimization
-- [x] Generalized TorahReader component (`/components/TorahReader.tsx`) for flexible content structures
-- [x] Integrated Directus data fetching for all sefer content
-- [x] Tested `/seforim/[seferId]` routes work for any document type
-- [x] Created comprehensive documentation (`TORAH_READER_DOCUMENTATION.md`) with usage examples, API integration, and future extensibility
-
-### Phase 3b: Directus Modeling (After 3a)
-- [x] Model `documents` (seforim) → `paragraphs` (chapters/sections) → `statements` (lines/blocks) in Directus. **DONE**
-- [ ] Add `translations` collection entries for Hebrew/English pairs.
-- [x] Wire `[perek]/page.tsx` to fetch from Directus instead of local file. **DONE** (Dec 8, 2025)
-
-### Phase 3c: Generic Reader Integration (COMPLETED - Dec 25, 2025)
-- [x] Integrated `TorahReader` into `app/seforim/[seferId]/page.tsx`.
-- [x] Maps Directus `contentBlocks` and `statements` to reader sections.
-- [x] Supports English toggle, inline commentaries, and reading settings (Sepia/Charcoal themes).
-
----
-
-## TRACK 5: Content Editor (Lower priority, after core tracks)
-
-**Goal**: Build a WYSIWYG editor for content creators to easily edit topics and books, aligned with the current Directus model. Behind authentication with Editor role.
-
-### Phase 5a: MVP Editor Forms (After Phase 1b)
-- [x] Create `/editor/topics/[slug]` page for editing topic definitions
 - [x] Form fields for: canonical_title, description, topic_type, definition_positive, definition_negative
 - [x] Save to Directus via API with authentication
 - [x] Basic validation and error handling
