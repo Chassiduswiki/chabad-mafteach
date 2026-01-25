@@ -1,26 +1,42 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
-import { ConceptConstellation } from '@/components/topics/visualization/ConceptConstellation';
-import { ForceGraph } from '@/components/graph/ForceGraph';
-import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
+// Heavy components loaded dynamically to improve LCP
+const ConceptConstellation = dynamic(() => import('@/components/topics/visualization/ConceptConstellation').then(mod => mod.ConceptConstellation), {
+    ssr: false,
+    loading: () => <div className="h-[400px] w-full animate-pulse bg-muted rounded-xl" />
+});
+
+const DeepDiveMode = dynamic(() => import('@/components/topics/DeepDiveMode').then(mod => mod.DeepDiveMode), {
+    ssr: false
+});
+
+const ForceGraph = dynamic(() => import('@/components/graph/ForceGraph').then(mod => mod.ForceGraph), {
+    ssr: false
+});
+
+const ConstellationErrorBoundary = dynamic(() => import('@/components/topics/visualization/ConstellationErrorBoundary').then(mod => mod.ConstellationErrorBoundary), {
+    ssr: false
+});
+
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Topic, Source, Citation } from '@/lib/types';
+import { Topic, Source, Citation, TopicRelationship } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
 import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
-import { DeepDiveMode } from '@/components/topics/DeepDiveMode';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
+import { SerendipityCard } from '@/components/features/SerendipityCard';
 import { GlobalNav } from '@/components/layout/GlobalNav';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { TopicAnnotations } from '@/components/annotations/TopicAnnotations';
@@ -29,7 +45,7 @@ import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
 import { TranslationSurvey } from '@/components/feedback/TranslationSurvey';
 
 // Types
-type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'translations' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -216,14 +232,6 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-sky-500/5',
         borderColor: 'border-sky-500/20'
     },
-    translations: {
-        title: 'Translations',
-        shortTitle: 'Translate',
-        icon: Globe,
-        color: 'text-green-600 dark:text-green-400',
-        bgColor: 'bg-green-500/5',
-        borderColor: 'border-green-500/20'
-    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -266,15 +274,24 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+    const [userRole, setUserRole] = useState<string | null>(null);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const userId = localStorage.getItem('chabad-mafteach:user-id');
+            const role = localStorage.getItem('chabad-mafteach:user-role');
             if (userId !== currentUserId) {
-                // Use a microtask or next tick to avoid synchronous setState warning
                 Promise.resolve().then(() => setCurrentUserId(userId));
             }
+            if (role !== userRole) {
+                Promise.resolve().then(() => setUserRole(role));
+            }
         }
-    }, [currentUserId]);
+    }, [currentUserId, userRole]);
+
+    const isAuthorized = useMemo(() => {
+        return userRole === 'admin' || userRole === 'editor';
+    }, [userRole]);
 
     // Show sticky title when scrolled past hero
     const heroRef = useRef<HTMLDivElement>(null);
@@ -344,7 +361,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         global_nimshal: null,
         historical_context: null,
         charts: null,
-        translations: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -453,12 +469,6 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             type: 'charts' as SectionType,
             order: 8,
             content: highlightTerms(topic.charts)
-        }] : []),
-        // Translations section - only show if translations exist
-        ...(hasTranslations ? [{
-            type: 'translations' as SectionType,
-            order: 9,
-            content: '<div class="text-center text-muted-foreground py-8"><p>Translations for this topic are available. Click the language selector above to view them.</p></div>'
         }] : [])
     ];
 
@@ -577,57 +587,27 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         
         const edges: GraphEdge[] = [];
         
-        // Add parent topic
-        const parentTopic = relatedTopics.find(t => t.relationship.direction === 'child');
-        if (parentTopic) {
-            nodes.push({
-                id: parentTopic.slug,
-                label: parentTopic.canonical_title,
-                slug: parentTopic.slug,
-                category: parentTopic.topic_type || 'concept',
-                size: 2
-            });
+        // Add all related topics to the graph
+        relatedTopics.forEach(related => {
+            if (!related.slug) return;
+
+            // Check if node already exists to avoid duplicates
+            if (!nodes.find(n => n.id === related.slug)) {
+                nodes.push({
+                    id: related.slug,
+                    label: related.canonical_title || related.name || 'Untitled',
+                    slug: related.slug,
+                    category: related.topic_type || 'concept',
+                    size: related.relationship?.direction === 'parent' ? 1 : 2
+                });
+            }
+
+            // Add edge
             edges.push({
                 source: topic.slug,
-                target: parentTopic.slug,
-                type: 'parent-child',
-                strength: 0.8
-            });
-        }
-        
-        // Add opposite topic
-        const oppositeTopic = relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'));
-        if (oppositeTopic) {
-            nodes.push({
-                id: oppositeTopic.slug,
-                label: oppositeTopic.canonical_title,
-                slug: oppositeTopic.slug,
-                category: oppositeTopic.topic_type || 'concept',
-                size: 2
-            });
-            edges.push({
-                source: topic.slug,
-                target: oppositeTopic.slug,
-                type: 'opposite',
-                strength: 0.6
-            });
-        }
-        
-        // Add child topics (components)
-        const childTopics = relatedTopics.filter(t => t.relationship.direction === 'parent').slice(0, 3);
-        childTopics.forEach(child => {
-            nodes.push({
-                id: child.slug,
-                label: child.canonical_title,
-                slug: child.slug,
-                category: child.topic_type || 'concept',
-                size: 1
-            });
-            edges.push({
-                source: topic.slug,
-                target: child.slug,
-                type: 'parent-child',
-                strength: 0.7
+                target: related.slug,
+                type: related.relationship?.type || 'related_to',
+                strength: related.relationship?.strength || 0.5
             });
         });
         
@@ -956,10 +936,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                                     interactive={true}
                                 />
                             ) : (
-                                <div className="h-80 flex flex-col items-center justify-center bg-muted/20 rounded-[2rem] border border-dashed border-border/50 p-8">
-                                    <GitBranch className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                                    <p className="text-sm text-muted-foreground text-center max-w-[280px] italic">
-                                        No connections mapped for this topic yet. Be the first to suggest one!
+                                <div className="h-64 flex flex-col items-center justify-center bg-muted/10 rounded-[2rem] border border-dashed border-border/40 p-8 transition-all hover:bg-muted/20">
+                                    <GitBranch className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                                    <p className="text-sm text-muted-foreground text-center max-w-[320px] font-light leading-relaxed">
+                                        {isAuthorized 
+                                            ? "This concept hasn't been connected to others yet. Use the relationship tool in the admin panel to map its place in the system."
+                                            : "We are currently mapping the relationships for this concept. Explore other topics to see the connected web of Chassidus."}
                                     </p>
                                 </div>
                             )}
@@ -977,35 +959,43 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                     </div>
                 )}
 
-                {/* Community Annotations Section */}
-                <div className="pt-12 mt-12 border-t border-border/50">
-                    <TopicAnnotations 
-                        topicId={topic.id.toString()} 
-                        currentUserId={currentUserId || undefined} 
-                        className="max-w-4xl mx-auto"
-                    />
-                </div>
+                {/* Community Annotations Section - Restricted to Admin/Editor */}
+                {isAuthorized && (
+                    <div className="pt-12 mt-12 border-t border-border/50">
+                        <TopicAnnotations 
+                            topicId={topic.id.toString()} 
+                            currentUserId={currentUserId || undefined} 
+                            className="max-w-4xl mx-auto"
+                        />
+                    </div>
+                )}
 
-                {/* Feedback & Contribution */}
-                <MobileFeedbackButton 
-                    topicId={topic.id.toString()} 
-                    topicTitle={topic.canonical_title} 
-                />
+                {/* Feedback & Contribution - Restricted to Admin/Editor */}
+                {isAuthorized && (
+                    <MobileFeedbackButton 
+                        topicId={topic.id.toString()} 
+                        topicTitle={topic.canonical_title} 
+                    />
+                )}
             </main>
 
-            {/* Modals & Overlays */}
-            <TranslationFeedback 
-                isOpen={isTranslationFeedbackOpen}
-                onClose={() => setIsTranslationFeedbackOpen(false)}
-                contentType="topic"
-                contentId={topic.id.toString()}
-                contentName={topic.canonical_title}
-            />
+            {/* Modals & Overlays - Restricted to Admin/Editor */}
+            {isAuthorized && (
+                <>
+                    <TranslationFeedback 
+                        isOpen={isTranslationFeedbackOpen}
+                        onClose={() => setIsTranslationFeedbackOpen(false)}
+                        contentType="topic"
+                        contentId={topic.id.toString()}
+                        contentName={topic.canonical_title}
+                    />
 
-            <TranslationSurvey 
-                isOpen={isTranslationSurveyOpen}
-                onClose={() => setIsTranslationSurveyOpen(false)}
-            />
+                    <TranslationSurvey 
+                        isOpen={isTranslationSurveyOpen}
+                        onClose={() => setIsTranslationSurveyOpen(false)}
+                    />
+                </>
+            )}
 
             {/* Interactive Bottom Sheet */}
             <BottomSheet

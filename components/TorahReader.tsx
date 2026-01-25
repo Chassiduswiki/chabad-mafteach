@@ -324,8 +324,8 @@ export function TorahReader({
 
                             {/* Hebrew Commentary if exists and toggled */}
                             {showCommentaries && s.commentary_text && (
-                              <div className="p-3 bg-accent/10 rounded-lg border-r-4 border-primary font-hebrew text-sm leading-relaxed">
-                                <span className="font-semibold">{s.commentary_author || 'Commentary'}: </span>
+                              <div className="p-3 bg-accent/10 rounded-lg border-r-4 border-primary font-hebrew text-sm leading-relaxed" dir="rtl">
+                                <span className="font-semibold">{s.commentary_author || 'מפרש'}: </span>
                                 {s.commentary_text}
                               </div>
                             )}
@@ -346,8 +346,16 @@ export function TorahReader({
                                 lineHeight: settings.lineHeight
                               }}
                             >
-                              {s.translated_text || s.text}
+                              {s.translated_text || <span className="italic text-muted-foreground/50 text-sm">Translation pending...</span>}
                             </div>
+                            
+                            {/* English Commentary if exists and toggled */}
+                            {showCommentaries && s.commentary_text && (
+                              <div className="p-3 bg-accent/10 rounded-lg border-l-4 border-primary text-sm leading-relaxed italic">
+                                <span className="font-semibold text-muted-foreground">{s.commentary_author || 'Commentary'}: </span>
+                                {s.commentary_text}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))

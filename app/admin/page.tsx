@@ -42,7 +42,8 @@ import {
   MessageSquare,
   ThumbsUp,
   Share2,
-  UserPlus
+  UserPlus,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -270,25 +271,118 @@ const MiniChart = ({ data, label }: { data: number[]; label: string }) => {
   );
 };
 
+interface ReviewQueueItem {
+  id: number;
+  status: string;
+  date_updated: string;
+  canonical_title?: string;
+  slug?: string;
+  text?: string;
+}
+
+interface ReviewQueueData {
+  topics: ReviewQueueItem[];
+  statements: ReviewQueueItem[];
+  summary: {
+    totalPending: number;
+  };
+}
+
+interface ActivityItem {
+  id: number;
+  action: string;
+  collection: string;
+  timestamp: string;
+  user?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ sources: 0, authors: 0, topics: 0, statements: 0, documents: 0 });
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [contentHealth, setContentHealth] = useState<ContentHealth | null>(null);
   const [realTimeMetrics, setRealTimeMetrics] = useState<RealTimeMetrics | null>(null);
   const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(null);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueData | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAnalyticsPanelOpen, setIsAnalyticsPanelOpen] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isMaintenanceLoading, setIsMaintenanceLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchReviewQueue();
+    fetchActivityLog();
+    fetchMaintenanceStatus();
     if (autoRefresh) {
-      const interval = setInterval(fetchRealTimeData, 30000); // Refresh every 30 seconds
+      const interval = setInterval(() => {
+        fetchRealTimeData();
+        fetchReviewQueue();
+        fetchActivityLog();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [autoRefresh, selectedTimeRange]);
+
+  const fetchMaintenanceStatus = async () => {
+    try {
+      const res = await fetch('/api/admin/maintenance');
+      if (res.ok) {
+        const data = await res.json();
+        setIsMaintenance(data.isMaintenance);
+      }
+    } catch (e) {
+      console.error('Failed to fetch maintenance status');
+    }
+  };
+
+  const toggleMaintenance = async () => {
+    setIsMaintenanceLoading(true);
+    try {
+      const res = await fetch('/api/admin/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !isMaintenance })
+      });
+      if (res.ok) {
+        setIsMaintenance(!isMaintenance);
+      }
+    } catch (e) {
+      console.error('Failed to toggle maintenance');
+    } finally {
+      setIsMaintenanceLoading(false);
+    }
+  };
+
+  const fetchActivityLog = async () => {
+    try {
+      const response = await fetch('/api/admin/audit-log');
+      if (response.ok) {
+        const data = await response.json();
+        setActivityLog(data.activity || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch activity log:', error);
+    }
+  };
+
+  const fetchReviewQueue = async () => {
+    try {
+      const response = await fetch('/api/admin/review-queue');
+      if (response.ok) {
+        const data = await response.json();
+        setReviewQueue(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch review queue:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -604,6 +698,79 @@ export default function AdminDashboardPage() {
 
           {/* Content Sections */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+            {/* Editorial Review Queue */}
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                  Review Queue
+                </h2>
+                {reviewQueue?.summary.totalPending && (
+                  <span className="bg-amber-500/10 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    {reviewQueue.summary.totalPending} Pending
+                  </span>
+                )}
+              </div>
+              
+              <div className="space-y-6">
+                {/* Pending Topics */}
+                {reviewQueue?.topics && reviewQueue.topics.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold px-2">Topics</h3>
+                    {reviewQueue.topics.map(item => (
+                      <Link 
+                        key={`review-topic-${item.id}`} 
+                        href={`/editor/topics/${item.slug}`}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium group-hover:text-primary transition-colors">{item.canonical_title}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
+                        </div>
+                        <span className={cn(
+                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
+                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
+                        )}>
+                          {item.status}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pending Statements */}
+                {reviewQueue?.statements && reviewQueue.statements.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold px-2">Statements</h3>
+                    {reviewQueue.statements.map(item => (
+                      <div 
+                        key={`review-stmt-${item.id}`}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
+                      >
+                        <div className="flex flex-col max-w-[70%]">
+                          <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{item.text}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
+                        </div>
+                        <span className={cn(
+                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
+                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
+                        )}>
+                          {item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!reviewQueue || (reviewQueue.topics.length === 0 && reviewQueue.statements.length === 0)) && (
+                  <div className="text-center py-10">
+                    <Check className="w-8 h-8 text-emerald-500/20 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Queue is empty. Everything reviewed!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Popular Topics */}
             <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
               <div className="flex items-center justify-between mb-8">
@@ -647,24 +814,64 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions & System Status */}
             <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
-              <h2 className="text-xl font-serif italic mb-8 flex items-center gap-3">
-                Quick Actions
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                {quickLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-border/60 hover:bg-muted/50 transition-all text-[14px] font-medium group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
+                  System Control
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "w-2 h-2 rounded-full animate-pulse",
+                    isMaintenance ? "bg-amber-500" : "bg-emerald-500"
+                  )} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {isMaintenance ? 'Maintenance Active' : 'System Online'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="p-4 bg-muted/30 rounded-2xl border border-transparent flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center">
+                      <Zap className={cn("w-5 h-5", isMaintenance ? "text-amber-500" : "text-emerald-500")} />
                     </div>
-                    {link.label}
-                  </Link>
-                ))}
+                    <div>
+                      <div className="text-sm font-medium">Maintenance Mode</div>
+                      <div className="text-[10px] text-muted-foreground font-light">Redirect public traffic to maintenance page</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={toggleMaintenance}
+                    disabled={isMaintenanceLoading}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300",
+                      isMaintenance 
+                        ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" 
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {isMaintenanceLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isMaintenance ? 'Disable' : 'Enable'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {quickLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="flex items-center gap-3 p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-border/60 hover:bg-muted/50 transition-all text-[14px] font-medium group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                        <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -718,13 +925,14 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* Right Analytics Panel */}
+        {/* Right Activity Panel */}
         {isAnalyticsPanelOpen && (
           <div className="w-96 bg-card/50 backdrop-blur-xl border-l border-border/50 overflow-y-auto relative z-20">
             <div className="p-6 border-b border-border/50 sticky top-0 bg-card/80 backdrop-blur-xl z-10">
               <div className="flex items-center justify-between">
                 <h2 className="font-serif italic text-lg flex items-center gap-2">
-                  Live Stream
+                  <Activity className="w-4 h-4 text-primary" />
+                  Recent Activity
                 </h2>
                 <button
                   onClick={() => setIsAnalyticsPanelOpen(false)}
@@ -735,36 +943,36 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="p-8 space-y-10">
-              {/* Activity Chart */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Volume (Last 12h)</h3>
-                <MiniChart 
-                  data={realTimeMetrics?.hourlyActivity.slice(-12).map(h => h.views) || []}
-                  label=""
-                />
-              </div>
-
-              {/* Countries */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Demographics</h3>
-                <CountryList countries={realTimeMetrics?.topCountries || []} />
-              </div>
-
-              {/* Search Terms */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Queries</h3>
-                <SearchAnalytics terms={realTimeMetrics?.searchTerms || []} />
-              </div>
-
-              {/* User Journey */}
-              <div className="space-y-4">
-                <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50 font-bold">Navigation Flow</h3>
-                <UserJourneyFlow journey={userAnalytics?.userJourney || []} />
-              </div>
+            <div className="p-6 space-y-6">
+              {activityLog.length > 0 ? (
+                activityLog.map((item) => (
+                  <div key={item.id} className="relative pl-6 pb-6 border-l border-border/50 last:pb-0">
+                    <div className={cn(
+                      "absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-background",
+                      item.action === 'create' ? "bg-emerald-500" : 
+                      item.action === 'update' ? "bg-blue-500" : "bg-rose-500"
+                    )} />
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs font-medium text-foreground">
+                        <span className="capitalize">{item.action}</span> in <span className="font-bold text-primary">{item.collection}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground flex items-center gap-2">
+                        {item.user ? `${item.user.first_name} ${item.user.last_name}` : 'System'}
+                        <span>•</span>
+                        {formatTimeAgo(item.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <Clock className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">No recent activity found.</p>
+                </div>
+              )}
 
               {/* Export Options */}
-              <div className="pt-10 border-t border-border/50">
+              <div className="pt-6 border-t border-border/50">
                 <button className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-foreground text-background rounded-2xl font-medium hover:opacity-90 transition-all shadow-lg shadow-foreground/5">
                   <FileDown className="w-4 h-4" />
                   Generate Archive
