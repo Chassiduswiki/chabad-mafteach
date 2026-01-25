@@ -7,9 +7,22 @@ import { handleApiError } from '@/lib/utils/api-errors';
 // Add translation query
 const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en', 'practical_takeaways', 'historical_context'];
 
+interface RawTopic {
+    id: number;
+    canonical_title: string;
+    canonical_title_en?: string;
+    canonical_title_transliteration?: string;
+    slug: string;
+    topic_type?: string;
+    description?: string;
+    description_en?: string;
+    practical_takeaways?: string;
+    historical_context?: string;
+}
+
 // Function to fetch topics with translations (now using native Directus fields)
-async function fetchTopicsWithTranslations(filter: any = {}, limit?: number) {
-    const query: any = {
+async function fetchTopicsWithTranslations(filter: Record<string, unknown> = {}, limit?: number): Promise<RawTopic[]> {
+    const query: { fields: string[]; sort: string[]; filter?: Record<string, unknown>; limit?: number } = {
         fields: TOPIC_FIELDS,
         sort: ['canonical_title']
     };
@@ -23,8 +36,8 @@ async function fetchTopicsWithTranslations(filter: any = {}, limit?: number) {
     }
 
     try {
-        const topics = await directus.request(readItems('topics', query)) as any[];
-        return topics;
+        const topics = await directus.request(readItems('topics', query as { fields: string[] }));
+        return topics as unknown as RawTopic[];
     } catch (error) {
         console.warn('Failed to fetch topics:', error);
         return [];
@@ -32,7 +45,7 @@ async function fetchTopicsWithTranslations(filter: any = {}, limit?: number) {
 }
 
 // Helper function to get display name (English translation > transliteration > Hebrew)
-function getDisplayName(topic: any): string {
+function getDisplayName(topic: { canonical_title_en?: string; canonical_title_transliteration?: string; canonical_title: string }): string {
     const englishName = topic.canonical_title_en;
     const transliteration = topic.canonical_title_transliteration;
     const hebrewName = topic.canonical_title;
@@ -42,8 +55,8 @@ function getDisplayName(topic: any): string {
 }
 
 // Helper function to get display description (English preferred, Hebrew fallback)
-function getDisplayDescription(topic: any): string {
-    return topic.description_en || topic.description;
+function getDisplayDescription(topic: { description_en?: string; description?: string }): string {
+    return topic.description_en || topic.description || '';
 }
 const validateLimit = (limit: string | null): number => {
     const parsed = parseInt(limit || '10', 10);
@@ -92,7 +105,7 @@ export async function GET(request: NextRequest) {
 
             // We no longer have topic_citations / locations in the new schema,
             // so for now expose an empty recentSources array to keep the UI happy.
-            const recentSources: any[] = [];
+            const recentSources: unknown[] = [];
 
             return NextResponse.json({
                 featuredTopic,
@@ -128,7 +141,7 @@ export async function GET(request: NextRequest) {
         }
 
         // DEFAULT: List topics
-        const filter: any = category ? { topic_type: { _eq: category } } : {};
+        const filter: Record<string, unknown> = category ? { topic_type: { _eq: category } } : {};
 
         const rawTopics = await fetchTopicsWithTranslations(filter, limit);
 

@@ -10,11 +10,21 @@ import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
 import { SoulLevelsDisplay } from '@/components/topics/custom-content/SoulLevelsDisplay';
 import { TabularDataDisplay } from '@/components/topics/custom-content/TabularDataDisplay';
 import { CitationReference } from '@/components/citations/CitationReference';
+import { LucideIcon } from 'lucide-react';
 import { Topic, Source } from '@/lib/types';
 import { CitationReference as CitationReferenceType } from '@/lib/citation-utils';
 
+interface SectionConfig {
+    title: string;
+    shortTitle: string;
+    icon: LucideIcon | null;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+}
+
 // This is a simplified version of the config. In a real app, this would be shared.
-const sectionConfig: Record<string, { title: string; shortTitle: string; icon: any; color: string; bgColor: string; borderColor: string }> = {
+const sectionConfig: Record<string, SectionConfig> = {
     definition: { title: 'Definition', shortTitle: 'Define', icon: null, color: 'text-primary', bgColor: 'bg-primary/5', borderColor: 'border-primary/20' },
     mashal: { title: 'Analogy', shortTitle: 'Mashal', icon: null, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/5', borderColor: 'border-amber-500/20' },
     personal_nimshal: { title: 'Personal Application', shortTitle: 'Personal', icon: null, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-500/5', borderColor: 'border-purple-500/20' },

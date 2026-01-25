@@ -96,9 +96,13 @@ export default function NewTopicPage() {
     setError(null);
 
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/topics/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(formData),
       });
 

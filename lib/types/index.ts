@@ -194,7 +194,6 @@ export interface Topic {
     article?: string;
     practical_takeaways?: string; 
     historical_context?: string; 
-    mashal?: string;
     global_nimshal?: string;
     charts?: string;
     common_confusions?: { question: string; answer: string }[];

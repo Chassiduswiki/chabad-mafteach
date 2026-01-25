@@ -54,7 +54,7 @@ interface Collection {
 export default function CollectionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  // @ts-ignore
+  // @ts-expect-error - params is a Promise in Next.js 15
   const collectionId = React.use(params).collectionId as string;
 
   const [collection, setCollection] = useState<Collection | null>(null);
@@ -201,7 +201,7 @@ export default function CollectionDetailPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-foreground tracking-tight">Collection Not Found</h1>
-            <p className="text-muted-foreground leading-relaxed font-light italic">"{error || 'This collection may have been removed or set to private.'}"</p>
+            <p className="text-muted-foreground leading-relaxed font-light italic">&quot;{error || 'This collection may have been removed or set to private.'}&quot;</p>
           </div>
           <Link
             href="/collections"
@@ -276,7 +276,7 @@ export default function CollectionDetailPage() {
             
             {collection.description && (
               <p className="text-lg md:text-xl text-muted-foreground font-light leading-relaxed max-w-2xl italic">
-                "{collection.description}"
+                &quot;{collection.description}&quot;
               </p>
             )}
           </div>

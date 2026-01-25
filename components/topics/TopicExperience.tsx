@@ -11,7 +11,7 @@ import { ForceGraph } from '@/components/graph/ForceGraph';
 import { ConstellationErrorBoundary } from '@/components/topics/visualization/ConstellationErrorBoundary';
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Topic, Source } from '@/lib/types';
+import { Topic, Source, Citation } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
@@ -36,12 +36,21 @@ interface ArticleSection {
     order: number;
 }
 
+interface RelatedTopic extends Topic {
+    relationship: {
+        type?: string;
+        strength?: number;
+        description?: string;
+        direction: 'child' | 'parent';
+    };
+}
+
 interface TopicExperienceProps {
     topic: Topic;
-    relatedTopics: any[];
+    relatedTopics: RelatedTopic[];
     sources: Source[];
-    citations: any[];
-    inlineCitations: any[];
+    citations: Citation[];
+    inlineCitations: Source[];
 }
 
 // Helper: Auto-link topic names in text
@@ -63,12 +72,12 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
             topicMap.set(t.name.toLowerCase(), t.slug);
         }
         // Add Hebrew name
-        if ((t as any).name_hebrew) {
-            topicMap.set((t as any).name_hebrew, t.slug); // Hebrew is case-sensitive
+        if (t.name_hebrew) {
+            topicMap.set(t.name_hebrew, t.slug); // Hebrew is case-sensitive
         }
         // Add alternate names
-        if ((t as any).alternate_names && Array.isArray((t as any).alternate_names)) {
-            (t as any).alternate_names.forEach((altName: string) => {
+        if (t.alternate_names && Array.isArray(t.alternate_names)) {
+            t.alternate_names.forEach((altName: string) => {
                 if (altName) topicMap.set(altName.toLowerCase(), t.slug);
             });
         }
@@ -224,6 +233,21 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
     }
 };
 
+interface GraphNode {
+    id: string;
+    label: string;
+    slug: string;
+    category?: string;
+    size?: number;
+}
+
+interface GraphEdge {
+    source: string;
+    target: string;
+    type: string;
+    strength: number;
+}
+
 export function TopicExperience({ topic, relatedTopics, sources, citations, inlineCitations }: TopicExperienceProps) {
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
     const [isLoading, setIsLoading] = useState(true);
@@ -242,9 +266,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     useEffect(() => {
-        const userId = typeof window !== 'undefined' ? localStorage.getItem('chabad-mafteach:user-id') : null;
-        setCurrentUserId(userId);
-    }, []);
+        if (typeof window !== 'undefined') {
+            const userId = localStorage.getItem('chabad-mafteach:user-id');
+            if (userId !== currentUserId) {
+                // Use a microtask or next tick to avoid synchronous setState warning
+                Promise.resolve().then(() => setCurrentUserId(userId));
+            }
+        }
+    }, [currentUserId]);
 
     // Show sticky title when scrolled past hero
     const heroRef = useRef<HTMLDivElement>(null);
@@ -322,12 +351,17 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     // Simulate loading for smooth transition
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 500);
-        const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
-        if (!hasSeenTutorial) {
-            setIsTutorialOpen(true);
+        
+        if (typeof window !== 'undefined') {
+            const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
+            if (!hasSeenTutorial && !isTutorialOpen) {
+                // Use a microtask to avoid synchronous setState warning
+                Promise.resolve().then(() => setIsTutorialOpen(true));
+            }
         }
+        
         return () => clearTimeout(timer);
-    }, []);
+    }, [isTutorialOpen]);
 
     // Helper: Highlight key concepts in text
     // Note: In a real app, do this safer to avoid breaking HTML tags.
@@ -353,7 +387,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const displayConfig = topic.display_config as Record<string, { visible?: boolean; format?: string }> | undefined;
     
     // Helper to check if a section should be visible using smart visibility
-    const isSectionVisible = (sectionId: string, fieldValue: any): boolean => {
+    const isSectionVisible = (sectionId: string, fieldValue: string | null | undefined | unknown): boolean => {
         const manualVisibility = displayConfig?.[sectionId]?.visible;
         const result = computeSmartVisibility(fieldValue, manualVisibility);
         return result.isVisible;
@@ -530,7 +564,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
     // Transform related topics for ForceGraph
     const forceGraphData = useMemo(() => {
-        const nodes = [
+        const nodes: GraphNode[] = [
             {
                 id: topic.slug,
                 label: topic.canonical_title,
@@ -540,7 +574,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             }
         ];
         
-        const edges: any[] = [];
+        const edges: GraphEdge[] = [];
         
         // Add parent topic
         const parentTopic = relatedTopics.find(t => t.relationship.direction === 'child');
@@ -600,14 +634,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     }, [topic, relatedTopics]);
 
     // Extract connected topics for graph (kept for reference)
-    const graphData = {
-        centerConcept: topic.canonical_title,
-        relatedConcepts: {
-            parent: relatedTopics.find(t => t.relationship.direction === 'child')?.canonical_title,
-            opposite: relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'))?.canonical_title,
-            components: relatedTopics.filter(t => t.relationship.direction === 'parent').map(t => t.canonical_title).slice(0, 3)
-        }
-    };
+    // const graphData = {
+    //     centerConcept: topic.canonical_title,
+    //     relatedConcepts: {
+    //         parent: relatedTopics.find(t => t.relationship.direction === 'child')?.canonical_title,
+    //         opposite: relatedTopics.find(t => t.relationship.type === 'opposite' || t.relationship.description?.includes('contrast'))?.canonical_title,
+    //         components: relatedTopics.filter(t => t.relationship.direction === 'parent').map(t => t.canonical_title).slice(0, 3)
+    //     }
+    // };
 
     if (isLoading) {
         return <TopicSkeleton />;
@@ -688,7 +722,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             }
                         }}
                     >
-                        {sections.map((section, index) => {
+                        {sections.map((section) => {
                             const config = sectionConfig[section.type];
                             const Icon = config.icon;
                             const isActive = activeSection === section.type;

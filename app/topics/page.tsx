@@ -86,9 +86,13 @@ const FeaturedCollections = Dynamic(() => import('@/components/topics/FeaturedCo
     )
 });
 
+interface TopicFilter {
+    topic_type?: { _eq: string };
+}
+
 async function getTopics(limit: number, offset: number, category?: string): Promise<{ topics: Topic[]; totalCount: number }> {
     try {
-        const filter: any = {};
+        const filter: TopicFilter = {};
 
         if (category) {
             filter.topic_type = { _eq: category };
@@ -99,14 +103,14 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
             fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
             limit,
             offset,
-            filter,
+            filter: filter as Record<string, unknown>,
         }));
 
-        const topics: Topic[] = (rawTopics as any[]).map((t) => ({
+        const topics: Topic[] = (rawTopics as { id: number; slug: string; canonical_title: string; topic_type?: string; description?: string }[]).map((t) => ({
             id: t.id,
             slug: t.slug,
             canonical_title: t.canonical_title,
-            topic_type: t.topic_type,
+            topic_type: t.topic_type as Topic['topic_type'],
             description: t.description,
             name: t.canonical_title,
             category: t.topic_type,
@@ -117,7 +121,7 @@ async function getTopics(limit: number, offset: number, category?: string): Prom
         const meta = (await directus.request(
             readItems('topics', {
                 filter,
-                meta: 'total_count' as any,
+                meta: 'total_count' as const,
             })
         )) as unknown as { total_count: number };
 

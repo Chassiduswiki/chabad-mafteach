@@ -121,7 +121,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
           const response = await fetch(`/api/search?q=${encodeURIComponent(text)}`);
           if (response.ok) {
             const data = await response.json();
-            return (data.topics || []).map((t: any) => t.name).slice(0, 5);
+            return (data.topics || []).map((t: { name: string }) => t.name).slice(0, 5);
           }
           return [];
         },
@@ -150,7 +150,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Mark editor as ready when available
   useEffect(() => {
     if (editor) {
-      setIsEditorReady(true);
+      Promise.resolve().then(() => setIsEditorReady(true));
     }
   }, [editor]);
 

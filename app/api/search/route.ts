@@ -91,28 +91,28 @@ export async function GET(request: NextRequest) {
         // Execute all searches in parallel with proper error handling
         const [contentBlocksRes, statementsRes, topicsRes, seforimRes] = await Promise.allSettled([
             directus.request(
-                readItems('content_blocks' as any, {
+                readItems('content_blocks', {
                     search: normalizedQuery,
                     fields: ['id', 'order_key', 'content', 'page_number', 'chapter_number', 'halacha_number', 'document_id'],
                     limit: MAX_RESULTS_PER_TYPE,
                 })
             ),
             directus.request(
-                readItems('statements' as any, {
+                readItems('statements', {
                     search: normalizedQuery,
                     fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
                     limit: MAX_RESULTS_PER_TYPE,
                 })
             ),
             directus.request(
-                readItems('topics' as any, {
+                readItems('topics', {
                     search: normalizedQuery,
                     fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
                     limit: 20,
                 })
             ),
             directus.request(
-                readItems('documents' as any, {
+                readItems('documents', {
                     search: normalizedQuery,
                     fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category'],
                     limit: 15,
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
 
         // Process Content Blocks -> locations
         const locations = contentBlocksRes.status === 'fulfilled' 
-            ? (contentBlocksRes.value as any[]).map(cb => {
+            ? (contentBlocksRes.value as { id: string | number; content?: string; order_key?: string | number; document_id?: string | number; page_number?: string; chapter_number?: number; halacha_number?: number }[]).map((cb) => {
                 const clean = cb.content?.replace(/<[^>]*>/g, '') || '';
                 return {
                     id: `content-${cb.id}`,
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
 
         // Process Statements -> statements
         const statements = statementsRes.status === 'fulfilled'
-            ? (statementsRes.value as any[]).map(stmt => {
+            ? (statementsRes.value as { id: string | number; text?: string; appended_text?: string; order_key?: string | number; block_id?: string | number }[]).map((stmt) => {
                 const cleanText = stmt.text?.replace(/<[^>]*>/g, '') || '';
                 const cleanAppended = stmt.appended_text?.replace(/<[^>]*>/g, '') || '';
                 return {
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
 
         // Process Topics -> topics
         const topics = topicsRes.status === 'fulfilled'
-            ? (topicsRes.value as any[]).map(t => ({
+            ? (topicsRes.value as { id: string | number; canonical_title: string; slug: string; topic_type?: string; description?: string }[]).map((t) => ({
                 id: t.id,
                 name: t.canonical_title,
                 slug: t.slug,
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
 
         // Process Seforim -> seforim
         const seforim = seforimRes.status === 'fulfilled'
-            ? (seforimRes.value as any[]).map(s => ({
+            ? (seforimRes.value as { id: string | number; title: string; author?: string; doc_type?: string; category?: string }[]).map((s) => ({
                 id: s.id,
                 title: s.title,
                 author: s.author,

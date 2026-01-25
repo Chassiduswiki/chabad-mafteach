@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useSearch } from '@/lib/search-context';
 import { useAnalytics } from '@/lib/analytics-tracker';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { rankSearchResults, getSearchQueryVariants } from '@/lib/utils/search-processor';
+import { rankSearchResults, getSearchQueryVariants, SearchResult as RankedResult } from '@/lib/utils/search-processor';
 
 type SearchResult = {
     id: string;
@@ -115,7 +115,7 @@ export function CommandMenu() {
                 };
 
                 // Map raw results to our SearchResult type with ID validation
-                const topicResults: SearchResult[] = (data.topics || []).filter((t: any) => t.slug).map((t: any) => ({
+                const topicResults: SearchResult[] = (data.topics || []).filter((t: { slug?: string }) => t.slug).map((t: { id: string; slug: string; name?: string; canonical_title?: string; description?: string; definition_short?: string; category?: string; topic_type?: string }) => ({
                     id: `topic-${t.id || t.slug}`,
                     title: t.name || t.canonical_title || 'Untitled',
                     type: 'topic' as const,
@@ -125,7 +125,7 @@ export function CommandMenu() {
                     url: `/topics/${t.slug}`
                 }));
 
-                const documentsResults: SearchResult[] = ((data.documents || []).concat(data.seforim || [])).filter((s: any) => s.id).map((s: any) => ({
+                const documentsResults: SearchResult[] = (data.seforim || []).filter((s: { id?: string | number }) => s.id).map((s: { id: string | number; title: string; author?: string; doc_type?: string; category?: string }) => ({
                     id: `document-${s.id}`,
                     title: s.title,
                     type: 'document' as const,
@@ -133,7 +133,7 @@ export function CommandMenu() {
                     url: `/seforim/${s.id}`
                 }));
 
-                const locationResults: SearchResult[] = (data.locations || []).map((l: any) => ({
+                const locationResults: SearchResult[] = (data.locations || []).map((l: { id: string | number; display_name?: string; title: string; content_preview?: string; url?: string; sefer?: string | number; document_id?: string | number }) => ({
                     id: `loc-${l.id}`,
                     title: l.display_name || l.title,
                     type: 'location' as const,
@@ -141,7 +141,7 @@ export function CommandMenu() {
                     url: l.url || `/seforim/${l.sefer || l.document_id}`
                 }));
 
-                const statementResults: SearchResult[] = (data.statements || []).map((s: any) => ({
+                const statementResults: SearchResult[] = (data.statements || []).map((s: { id: string | number; title: string; content_preview?: string; url?: string; document_id?: string | number; block_id?: string | number; paragraph_id?: string | number }) => ({
                     id: `stmt-${s.id}`,
                     title: s.title,
                     type: 'statement' as const,
@@ -152,7 +152,7 @@ export function CommandMenu() {
                 const allResults = [...topicResults, ...documentsResults, ...locationResults, ...statementResults];
 
                 // Use our new ranking utility to sort results intelligently
-                const rankedResults = rankSearchResults(allResults as any, search);
+                const rankedResults = rankSearchResults(allResults as unknown as RankedResult[], search);
                 setResults(rankedResults.slice(0, 20) as SearchResult[]);
             } catch (error) {
                 console.error('Search failed:', error);

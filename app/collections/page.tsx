@@ -30,7 +30,9 @@ export default function CollectionsPage() {
                 // Filter out bookmarks older than 30 days
                 const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
                 const validBookmarks = parsed.filter(b => b.timestamp > thirtyDaysAgo);
-                setBookmarks(validBookmarks);
+                
+                // Use a microtask to avoid synchronous setState warning
+                Promise.resolve().then(() => setBookmarks(validBookmarks));
 
                 // Update localStorage if we filtered any
                 if (validBookmarks.length !== parsed.length) {

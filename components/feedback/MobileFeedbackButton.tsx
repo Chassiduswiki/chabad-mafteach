@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MessageSquare, X, Send, ChevronUp, ChevronDown, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, X, Send, ChevronUp, ChevronDown, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -113,15 +113,16 @@ export function MobileFeedbackButton({
   const currentType = feedbackTypes.find(t => t.value === feedback.type);
 
   return (
-    <div className={cn("fixed bottom-6 right-6 z-50", className)}>
+    <div className={cn("fixed bottom-20 right-6 z-[100]", className)}>
       {/* Floating Button */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
           size="icon"
-          className="rounded-full w-14 h-14 shadow-2xl bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-110 group"
+          className="rounded-full w-14 h-14 shadow-2xl bg-destructive hover:bg-destructive/90 text-destructive-foreground transition-all duration-300 hover:scale-110 group"
+          title="Report an issue"
         >
-          <MessageSquare className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+          <AlertCircle className="h-6 w-6 group-hover:rotate-12 transition-transform" />
         </Button>
       )}
 

@@ -647,7 +647,7 @@ export default function TopicEditorPage() {
       />
       <FloatingAIChatButton onClick={() => setShowChatPanel(true)} />
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

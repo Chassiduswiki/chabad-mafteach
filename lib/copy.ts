@@ -27,7 +27,7 @@ export const copy = {
   home: {
     hero: {
       title: 'Deepen Your Understanding',
-      titleRotatingWords: ['Chassidic Wisdom', 'Divine Truth', 'Inner Light', 'Torah Insights'],
+      titleRotatingWords: ['Understanding', 'Chassidic Wisdom', 'Divine Truth', 'Inner Light', 'Torah Insights'],
       subtitle: 'Explore concepts. Discover connections. Uncover the sources that illuminate Chassidic thought.',
       badge: 'Now in Beta',
     },
