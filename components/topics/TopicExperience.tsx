@@ -12,7 +12,7 @@ import { ConstellationErrorBoundary } from '@/components/topics/visualization/Co
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Topic, Source, Citation } from '@/lib/types';
+import { Topic, Source, Citation, TopicRelationship } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
