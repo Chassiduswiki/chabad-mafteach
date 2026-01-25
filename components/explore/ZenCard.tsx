@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bookmark, Share2, ArrowRight, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -35,16 +36,37 @@ export function ZenCard({ statement, onNext, onSave, isLoading }: ZenCardProps) 
         }
     };
 
+    const [dragX, setDragX] = useState(0);
+
+    const handleDragEnd = (_: any, info: any) => {
+        const threshold = 100;
+        if (info.offset.x < -threshold) {
+            onNext();
+        }
+        setDragX(0);
+    };
+
     return (
         <AnimatePresence mode="wait">
             <motion.div
                 key={statement.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -50 }}
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                drag="x"
+                dragConstraints={{ left: -300, right: 0 }}
+                onDrag={(_, info) => setDragX(info.offset.x)}
+                onDragEnd={handleDragEnd}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="flex flex-col items-center justify-center min-h-[70vh] px-6 py-12"
+                className="flex flex-col items-center justify-center min-h-[70vh] px-6 py-12 touch-none cursor-grab active:cursor-grabbing"
             >
+                {/* Visual Feedback for swipe */}
+                <motion.div 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ opacity: dragX < 0 ? Math.abs(dragX) / 150 : 0 }}
+                >
+                    <ArrowRight className="h-8 w-8 text-primary/40" />
+                </motion.div>
                 {/* Quote Container */}
                 <div className="max-w-2xl w-full text-center space-y-8">
                     {/* Hebrew Text */}
