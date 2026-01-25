@@ -42,7 +42,8 @@ import {
   MessageSquare,
   ThumbsUp,
   Share2,
-  UserPlus
+  UserPlus,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -270,12 +271,30 @@ const MiniChart = ({ data, label }: { data: number[]; label: string }) => {
   );
 };
 
+interface ReviewQueueItem {
+  id: number;
+  status: string;
+  date_updated: string;
+  canonical_title?: string;
+  slug?: string;
+  text?: string;
+}
+
+interface ReviewQueueData {
+  topics: ReviewQueueItem[];
+  statements: ReviewQueueItem[];
+  summary: {
+    totalPending: number;
+  };
+}
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ sources: 0, authors: 0, topics: 0, statements: 0, documents: 0 });
   const [popularTopics, setPopularTopics] = useState<PopularTopic[]>([]);
   const [contentHealth, setContentHealth] = useState<ContentHealth | null>(null);
   const [realTimeMetrics, setRealTimeMetrics] = useState<RealTimeMetrics | null>(null);
   const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(null);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAnalyticsPanelOpen, setIsAnalyticsPanelOpen] = useState(true);
@@ -284,11 +303,27 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchReviewQueue();
     if (autoRefresh) {
-      const interval = setInterval(fetchRealTimeData, 30000); // Refresh every 30 seconds
+      const interval = setInterval(() => {
+        fetchRealTimeData();
+        fetchReviewQueue();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [autoRefresh, selectedTimeRange]);
+
+  const fetchReviewQueue = async () => {
+    try {
+      const response = await fetch('/api/admin/review-queue');
+      if (response.ok) {
+        const data = await response.json();
+        setReviewQueue(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch review queue:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -604,6 +639,79 @@ export default function AdminDashboardPage() {
 
           {/* Content Sections */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+            {/* Editorial Review Queue */}
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                  Review Queue
+                </h2>
+                {reviewQueue?.summary.totalPending && (
+                  <span className="bg-amber-500/10 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    {reviewQueue.summary.totalPending} Pending
+                  </span>
+                )}
+              </div>
+              
+              <div className="space-y-6">
+                {/* Pending Topics */}
+                {reviewQueue?.topics && reviewQueue.topics.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold px-2">Topics</h3>
+                    {reviewQueue.topics.map(item => (
+                      <Link 
+                        key={`review-topic-${item.id}`} 
+                        href={`/editor/topics/${item.slug}`}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium group-hover:text-primary transition-colors">{item.canonical_title}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
+                        </div>
+                        <span className={cn(
+                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
+                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
+                        )}>
+                          {item.status}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pending Statements */}
+                {reviewQueue?.statements && reviewQueue.statements.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold px-2">Statements</h3>
+                    {reviewQueue.statements.map(item => (
+                      <div 
+                        key={`review-stmt-${item.id}`}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-all group"
+                      >
+                        <div className="flex flex-col max-w-[70%]">
+                          <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{item.text}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatTimeAgo(item.date_updated)}</span>
+                        </div>
+                        <span className={cn(
+                          "text-[9px] px-2 py-0.5 rounded-full font-bold uppercase",
+                          item.status === 'draft' ? "bg-blue-500/10 text-blue-600" : "bg-amber-500/10 text-amber-600"
+                        )}>
+                          {item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!reviewQueue || (reviewQueue.topics.length === 0 && reviewQueue.statements.length === 0)) && (
+                  <div className="text-center py-10">
+                    <Check className="w-8 h-8 text-emerald-500/20 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Queue is empty. Everything reviewed!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Popular Topics */}
             <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
               <div className="flex items-center justify-between mb-8">
