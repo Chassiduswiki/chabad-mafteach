@@ -732,6 +732,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                         category={topic.topic_type || 'Concept'}
                         definitionShort={topic.description ? topic.description.split('</p>')[0].replace(/^\s*<strong>\d+\.\s*/, '').replace(/^\s*\d+\.\s*/, '') + '</p>' : ''}
                         topicSlug={topic.slug}
+                        isAuthorized={isAuthorized}
                     />
                 </div>
 

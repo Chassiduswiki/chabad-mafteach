@@ -168,9 +168,9 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Auto-Translate**: Integrated AI translation for entry fields.
 - [ ] **Language Dropdown**: Improved selection for multi-language editing.
 - [x] **Seder Hishtalshelus Integration**: Custom component (`TabularDataDisplay.tsx`) renders structured tables from content, detected by "Reference Chart" keyword.
-- [ ] **ISSUE: New Topic Creation**: Debug token/auth issues preventing new topic saves.
+- [x] **ISSUE: New Topic Creation**: Debugged and fixed 403 Forbidden error by using server-side Admin client for creation while maintaining user attribution.
 - [x] **Mobile Feedback Button**: Fixed z-index conflict with nav (moved to `z-[101]`, `bottom-24`) and updated icon to `AlertTriangle`.
-- [ ] **Quick Edit Link**: Add edit button for admins/editors when viewing topics (UI design needed).
+- [x] **Quick Edit Link**: Added "Edit Topic" button to Immersive Hero (frontend) for admins/editors.
 - [ ] **Editor Top Bar Z-Depth**: Fix z-index conflicts with sticky header (`z-40` conflicts).
 
 ### Main Site Enhancements
