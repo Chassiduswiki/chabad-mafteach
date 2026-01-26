@@ -34,6 +34,8 @@ export const createTipTapExtensions = (options?: {
       },
     }),
 
+    // Base extensions
+
     // Hebrew language support
     HebrewLanguage,
 

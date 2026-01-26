@@ -22,41 +22,35 @@ const getDirectusUrl = () => {
 
 const getDirectusToken = () => process.env.DIRECTUS_STATIC_TOKEN;
 
-const createClient = () => {
+const createClient = (authToken?: string) => {
     const directusUrl = getDirectusUrl();
 
     if (typeof window !== 'undefined') {
-        // Client-side: no token, just the URL to the proxy
-        try {
-            // Verify it's a valid URL before passing to SDK
-            new URL(directusUrl);
-            return createDirectus(directusUrl).with(rest());
-        } catch {
-            console.error('[Directus Client] Invalid Client URL:', directusUrl);
-            // Fallback to absolute URL if proxy construction failed
-            const fallback = window.location.origin + '/api/directus-proxy';
-            return createDirectus(fallback).with(rest());
-        }
+        // Client-side: no static token, just the URL to the proxy
+        return createDirectus(directusUrl).with(rest());
     } else {
-        // Server-side: use static token
-        const directusToken = getDirectusToken();
+        // Server-side
+        // Priority: 1. Provided authToken (Acting as specific user)
+        //           2. Static Token (System Admin action)
+        //           3. Public/Anonymous
+
+        const tokenToUse = authToken || getDirectusToken();
 
         try {
             new URL(directusUrl);
         } catch {
             console.error('[Directus Client] Invalid Server URL:', directusUrl);
-            // Use a safe fallback
             const safeUrl = 'http://localhost:8055';
-            return createDirectus(safeUrl).with(rest()).with(staticToken(directusToken || ''));
+            return createDirectus(safeUrl).with(rest()).with(staticToken(tokenToUse || ''));
         }
 
-        if (!directusToken && process.env.NODE_ENV === 'production') {
-            console.warn('DIRECTUS_STATIC_TOKEN is not set for server-side operations in production.');
+        if (!tokenToUse && process.env.NODE_ENV === 'production') {
+            console.warn('No authentication token available for server-side Directus client.');
         }
 
         return createDirectus(directusUrl)
             .with(rest())
-            .with(staticToken(directusToken || ''));
+            .with(staticToken(tokenToUse || ''));
     }
 };
 

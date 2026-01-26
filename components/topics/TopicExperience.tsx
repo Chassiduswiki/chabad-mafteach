@@ -4,22 +4,22 @@ import dynamic from 'next/dynamic';
 import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-    BookOpen, 
-    Lightbulb, 
-    User, 
-    Globe, 
-    Library, 
-    ChevronRight, 
-    ExternalLink, 
-    Sparkles, 
-    Share2, 
-    Bookmark, 
-    BarChart, 
-    ArrowUp, 
-    ArrowDown, 
-    RefreshCcw, 
-    GitBranch, 
+import {
+    BookOpen,
+    Lightbulb,
+    User,
+    Globe,
+    Library,
+    ChevronRight,
+    ExternalLink,
+    Sparkles,
+    Share2,
+    Bookmark,
+    BarChart,
+    ArrowUp,
+    ArrowDown,
+    RefreshCcw,
+    GitBranch,
     Loader2,
     Edit3
 } from 'lucide-react';
@@ -43,6 +43,14 @@ const ConstellationErrorBoundary = dynamic(() => import('@/components/topics/vis
     ssr: false
 });
 
+const SourceViewerModal = dynamic(() => import('@/components/topics/SourceViewerModal').then(mod => mod.SourceViewerModal), {
+    ssr: false
+});
+
+const FocusModeTutorial = dynamic(() => import('@/components/topics/FocusModeTutorial').then(mod => mod.FocusModeTutorial), {
+    ssr: false
+});
+
 import { ScrollProgressIndicator } from '@/components/topics/ScrollProgressIndicator';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -50,8 +58,7 @@ import { Topic, Source, Citation, TopicRelationship } from '@/lib/types';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
 import { computeSmartVisibility } from '@/lib/utils/smart-visibility';
 import GlossaryGrid from '@/components/topics/smart-content/GlossaryGrid';
-import { FocusModeTutorial } from '@/components/topics/FocusModeTutorial';
-import { SourceViewerModal } from '@/components/topics/SourceViewerModal';
+// FocusModeTutorial and SourceViewerModal moved to dynamic imports
 import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent';
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { SerendipityCard } from '@/components/features/SerendipityCard';
@@ -91,13 +98,13 @@ interface TopicExperienceProps {
 // Helper: Auto-link topic names in text
 function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: string; canonical_title: string; slug: string; name_hebrew?: string; alternate_names?: string[] }>): ReactNode {
     if (!text || availableTopics.length === 0) return text;
-    
+
     // Build a map of topic names to slugs (case-insensitive matching)
     // Include canonical_title, name, Hebrew name, and alternate names
     const topicMap = new Map<string, string>();
     availableTopics.forEach(t => {
         if (!t.slug) return;
-        
+
         // Add canonical title
         if (t.canonical_title) {
             topicMap.set(t.canonical_title.toLowerCase(), t.slug);
@@ -117,31 +124,31 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
             });
         }
     });
-    
+
     if (topicMap.size === 0) return text;
-    
+
     // Create regex pattern matching any topic name (longest first to avoid partial matches)
     const sortedNames = Array.from(topicMap.keys()).sort((a, b) => b.length - a.length);
     const pattern = new RegExp(`\\b(${sortedNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
-    
+
     // Split text by matches and rebuild with links
     const parts: ReactNode[] = [];
     let lastIndex = 0;
     let match;
     let keyIdx = 0;
-    
+
     while ((match = pattern.exec(text)) !== null) {
         // Add text before match
         if (match.index > lastIndex) {
             parts.push(text.slice(lastIndex, match.index));
         }
-        
+
         // Add linked topic
         const matchedText = match[1];
         const slug = topicMap.get(matchedText.toLowerCase());
         if (slug) {
             parts.push(
-                <Link 
+                <Link
                     key={`topic-link-${keyIdx++}`}
                     href={`/topics/${slug}`}
                     className="text-primary hover:text-primary/80 underline decoration-primary/30 hover:decoration-primary/60 underline-offset-2 transition-colors"
@@ -152,15 +159,15 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
         } else {
             parts.push(matchedText);
         }
-        
+
         lastIndex = match.index + match[0].length;
     }
-    
+
     // Add remaining text
     if (lastIndex < text.length) {
         parts.push(text.slice(lastIndex));
     }
-    
+
     return parts.length > 0 ? <>{parts}</> : text;
 }
 
@@ -177,8 +184,8 @@ function LanguageSelectorWrapper({ topicSlug }: { topicSlug: string }) {
     };
 
     return (
-        <LanguageSelector 
-            value={currentLang} 
+        <LanguageSelector
+            value={currentLang}
             onChange={handleLanguageChange}
         />
     );
@@ -299,6 +306,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     const [isSourceViewerOpen, setIsSourceViewerOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [showScrollTop, setShowScrollTop] = useState(false);
 
     const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -407,7 +415,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     // Simulate loading for smooth transition
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 500);
-        
+
         if (typeof window !== 'undefined') {
             const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
             if (!hasSeenTutorial && !isTutorialOpen) {
@@ -415,7 +423,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                 Promise.resolve().then(() => setIsTutorialOpen(true));
             }
         }
-        
+
         return () => clearTimeout(timer);
     }, [isTutorialOpen]);
 
@@ -441,7 +449,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
     // Get display config from topic (if stored in database)
     const displayConfig = topic.display_config as Record<string, { visible?: boolean; format?: string }> | undefined;
-    
+
     // Helper to check if a section should be visible using smart visibility
     const isSectionVisible = (sectionId: string, fieldValue: string | null | undefined | unknown): boolean => {
         const manualVisibility = displayConfig?.[sectionId]?.visible;
@@ -531,8 +539,14 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         }] : [])
     ];
 
+    // Debug: Log sections for sefiros topic
+    if (topic.slug === 'sefiros') {
+        console.log('Sefiros sections:', sections.map(s => ({ type: s.type, order: s.order, hasContent: !!s.content })));
+        console.log('Topic data:', { slug: topic.slug, hasCharts: !!topic.charts, chartsLength: topic.charts?.length });
+    }
+
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
-        const handleContentInteraction = (term: string) => {
+    const handleContentInteraction = (term: string) => {
         const conceptData = topic.key_concepts?.find(c => c.concept.toLowerCase() === term.toLowerCase());
         if (conceptData) {
             setSheetContent({
@@ -632,6 +646,27 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Toggle scroll-to-top visibility
+    useEffect(() => {
+        const toggleVisibility = () => {
+            if (window.scrollY > 500) {
+                setShowScrollTop(true);
+            } else {
+                setShowScrollTop(false);
+            }
+        };
+
+        window.addEventListener('scroll', toggleVisibility, { passive: true });
+        return () => window.removeEventListener('scroll', toggleVisibility);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+        });
+    };
+
     // Transform related topics for ForceGraph
     const forceGraphData = useMemo(() => {
         const nodes: GraphNode[] = [
@@ -643,9 +678,9 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                 size: 3
             }
         ];
-        
+
         const edges: GraphEdge[] = [];
-        
+
         // Add all related topics to the graph
         relatedTopics.forEach(related => {
             if (!related.slug) return;
@@ -669,7 +704,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                 strength: related.relationship?.strength || 0.5
             });
         });
-        
+
         return { nodes, edges };
     }, [topic, relatedTopics]);
 
@@ -690,407 +725,408 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     return (
         <ErrorBoundary componentName="TopicExperience">
             <div className="min-h-screen bg-background relative">
-            <GlobalNav showBack backHref="/topics" backLabel="Topics" />
-            <ScrollProgressIndicator />
-            <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
-            <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
-            {/* Immersive Hero */}
-            <div ref={heroRef}>
-                <ImmersiveHero
-                    title={topic.canonical_title}
-                    titleHebrew={topic.name_hebrew || ''}
-                    titleTransliteration={topic.canonical_title_transliteration}
-                    category={topic.topic_type || 'Concept'}
-                    definitionShort={topic.description ? topic.description.split('</p>')[0].replace(/^\s*<strong>\d+\.\s*/, '').replace(/^\s*\d+\.\s*/, '') + '</p>' : ''}
-                    topicSlug={topic.slug}
-                />
-            </div>
+                <GlobalNav showBack backHref="/topics" backLabel="Topics" />
+                <ScrollProgressIndicator />
+                <SourceViewerModal isOpen={!!selectedSource} onClose={() => setSelectedSource(null)} source={selectedSource} />
+                <FocusModeTutorial isOpen={isTutorialOpen} onClose={handleTutorialClose} />
+                {/* Immersive Hero */}
+                <div ref={heroRef}>
+                    <ImmersiveHero
+                        title={topic.canonical_title}
+                        titleHebrew={topic.name_hebrew || ''}
+                        titleTransliteration={topic.canonical_title_transliteration}
+                        category={topic.topic_type || 'Concept'}
+                        definitionShort={topic.description ? topic.description.split('</p>')[0].replace(/^\s*<strong>\d+\.\s*/, '').replace(/^\s*\d+\.\s*/, '') + '</p>' : ''}
+                        topicSlug={topic.slug}
+                        isAuthorized={isAuthorized}
+                    />
+                </div>
 
-            {/* Sticky Title + Tab Navigation Container */}
-            <div className="sticky top-[56px] z-40 bg-background border-b border-border shadow-sm">
-                {/* Topic Title - shows when scrolled past hero */}
-                <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                {topic.topic_type || 'Concept'}
-                            </span>
-                            <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                {/* Sticky Title + Tab Navigation Container */}
+                <div className="sticky top-[56px] z-40 bg-background border-b border-border shadow-sm">
+                    {/* Topic Title - shows when scrolled past hero */}
+                    <div className={`overflow-hidden transition-all duration-300 ${showStickyTitle ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
+                        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                    {topic.topic_type || 'Concept'}
+                                </span>
+                                <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isAuthorized && (
+                                    <Link
+                                        href={`/editor/topics/${topic.slug}`}
+                                        className="p-1.5 rounded-lg hover:bg-primary/5 text-primary transition-colors flex items-center gap-1.5"
+                                        title="Edit Topic"
+                                    >
+                                        <Edit3 className="w-4 h-4" />
+                                        <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>
+                                    </Link>
+                                )}
+                                <LanguageSelectorWrapper topicSlug={topic.slug} />
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {isAuthorized && (
-                                <Link 
-                                    href={`/editor/topics/${topic.slug}`}
-                                    className="p-1.5 rounded-lg hover:bg-primary/5 text-primary transition-colors flex items-center gap-1.5"
-                                    title="Edit Topic"
-                                >
-                                    <Edit3 className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>
-                                </Link>
-                            )}
-                            <LanguageSelectorWrapper topicSlug={topic.slug} />
+                    </div>
+
+                    {/* Tab Navigation with scroll indicators and keyboard support */}
+                    <div className="max-w-4xl mx-auto relative">
+                        {/* Left scroll indicator */}
+                        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                        {/* Right scroll indicator */}
+                        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
+
+                        <div
+                            ref={tabsRef}
+                            className="flex overflow-x-auto overflow-y-hidden scrollbar-hide -mx-1 px-4 sm:px-6 snap-x snap-mandatory touch-pan-x"
+                            role="tablist"
+                            aria-label="Topic Sections"
+                            style={{ WebkitOverflowScrolling: 'touch' }}
+                            onKeyDown={(e) => {
+                                const sectionTypes = sections.map(s => s.type);
+                                const currentIndex = sectionTypes.indexOf(activeSection);
+
+                                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    const nextIndex = (currentIndex + 1) % sectionTypes.length;
+                                    scrollToSection(sectionTypes[nextIndex]);
+                                    // Focus the next tab
+                                    const nextTab = document.getElementById(`tab-${sectionTypes[nextIndex]}`);
+                                    nextTab?.focus();
+                                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    const prevIndex = (currentIndex - 1 + sectionTypes.length) % sectionTypes.length;
+                                    scrollToSection(sectionTypes[prevIndex]);
+                                    // Focus the previous tab
+                                    const prevTab = document.getElementById(`tab-${sectionTypes[prevIndex]}`);
+                                    prevTab?.focus();
+                                } else if (e.key === 'Home') {
+                                    e.preventDefault();
+                                    scrollToSection(sectionTypes[0]);
+                                    document.getElementById(`tab-${sectionTypes[0]}`)?.focus();
+                                } else if (e.key === 'End') {
+                                    e.preventDefault();
+                                    scrollToSection(sectionTypes[sectionTypes.length - 1]);
+                                    document.getElementById(`tab-${sectionTypes[sectionTypes.length - 1]}`)?.focus();
+                                }
+                            }}
+                        >
+                            {sections.map((section) => {
+                                const config = sectionConfig[section.type];
+                                const Icon = config.icon;
+                                const isActive = activeSection === section.type;
+
+                                return (
+                                    <button
+                                        key={section.type}
+                                        id={`tab-${section.type}`}
+                                        role="tab"
+                                        aria-selected={isActive}
+                                        aria-controls={`panel-${section.type}`}
+                                        tabIndex={isActive ? 0 : -1}
+                                        onClick={() => scrollToSection(section.type)}
+                                        className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${isActive
+                                            ? `border-primary ${config.color}`
+                                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span className="text-sm font-medium hidden sm:inline">{config.title}</span>
+                                        <span className="text-sm font-medium sm:hidden">{config.shortTitle}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
-                
-                {/* Tab Navigation with scroll indicators and keyboard support */}
-                <div className="max-w-4xl mx-auto relative">
-                    {/* Left scroll indicator */}
-                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 sm:hidden" />
-                    {/* Right scroll indicator */}
-                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
-                    
-                    <div
-                        ref={tabsRef}
-                        className="flex overflow-x-auto overflow-y-hidden scrollbar-hide -mx-1 px-4 sm:px-6 snap-x snap-mandatory touch-pan-x"
-                        role="tablist"
-                        aria-label="Topic Sections"
-                        style={{ WebkitOverflowScrolling: 'touch' }}
-                        onKeyDown={(e) => {
-                            const sectionTypes = sections.map(s => s.type);
-                            const currentIndex = sectionTypes.indexOf(activeSection);
-                            
-                            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                                e.preventDefault();
-                                const nextIndex = (currentIndex + 1) % sectionTypes.length;
-                                scrollToSection(sectionTypes[nextIndex]);
-                                // Focus the next tab
-                                const nextTab = document.getElementById(`tab-${sectionTypes[nextIndex]}`);
-                                nextTab?.focus();
-                            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                                e.preventDefault();
-                                const prevIndex = (currentIndex - 1 + sectionTypes.length) % sectionTypes.length;
-                                scrollToSection(sectionTypes[prevIndex]);
-                                // Focus the previous tab
-                                const prevTab = document.getElementById(`tab-${sectionTypes[prevIndex]}`);
-                                prevTab?.focus();
-                            } else if (e.key === 'Home') {
-                                e.preventDefault();
-                                scrollToSection(sectionTypes[0]);
-                                document.getElementById(`tab-${sectionTypes[0]}`)?.focus();
-                            } else if (e.key === 'End') {
-                                e.preventDefault();
-                                scrollToSection(sectionTypes[sectionTypes.length - 1]);
-                                document.getElementById(`tab-${sectionTypes[sectionTypes.length - 1]}`)?.focus();
-                            }
-                        }}
-                    >
-                        {sections.map((section) => {
-                            const config = sectionConfig[section.type];
-                            const Icon = config.icon;
-                            const isActive = activeSection === section.type;
 
+                {/* Main Content */}
+                <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 pb-48">
+                    {/* Article Sections */}
+                    {sections.map((section) => {
+                        const config = sectionConfig[section.type];
+                        const Icon = config.icon;
+
+                        // SOURCES SECTION
+                        if (section.type === 'sources') {
                             return (
-                                <button
+                                <section
                                     key={section.type}
-                                    id={`tab-${section.type}`}
-                                    role="tab"
-                                    aria-selected={isActive}
-                                    aria-controls={`panel-${section.type}`}
-                                    tabIndex={isActive ? 0 : -1}
-                                    onClick={() => scrollToSection(section.type)}
-                                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap snap-start flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${isActive
-                                        ? `border-primary ${config.color}`
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                                        }`}
+                                    id={`panel-${section.type}`}
+                                    role="tabpanel"
+                                    aria-labelledby={`tab-${section.type}`}
+                                    ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
+                                    className="scroll-mt-36"
                                 >
-                                    <Icon className="w-4 h-4" />
-                                    <span className="text-sm font-medium hidden sm:inline">{config.title}</span>
-                                    <span className="text-sm font-medium sm:hidden">{config.shortTitle}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 pb-48">
-                {/* Article Sections */}
-                {sections.map((section) => {
-                    const config = sectionConfig[section.type];
-                    const Icon = config.icon;
-
-                    // SOURCES SECTION
-                    if (section.type === 'sources') {
-                        return (
-                            <section
-                                key={section.type}
-                                id={`panel-${section.type}`}
-                                role="tabpanel"
-                                aria-labelledby={`tab-${section.type}`}
-                                ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
-                                className="scroll-mt-36"
-                            >
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
-                                        <Icon className="w-5 h-5" />
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className={`p-2 rounded-lg ${config.bgColor} ${config.color}`}>
+                                            <Icon className="w-5 h-5" />
+                                        </div>
+                                        <h2 className="text-xl font-semibold text-foreground">{config.title}</h2>
                                     </div>
-                                    <h2 className="text-xl font-semibold text-foreground">{config.title}</h2>
-                                </div>
 
-                                <div className="space-y-6 pl-2">
-                                    {/* 📚 General Bibliography - Topic-level sources */}
-                                    {sources.length > 0 && (
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <BookOpen className="w-4 h-4 text-blue-500" />
-                                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">General Bibliography</h4>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground mb-3 pl-6">Books that discuss this topic</p>
-                                            {sources.map((source, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="group flex items-baseline gap-3 cursor-pointer hover:bg-blue-500/5 p-2 rounded-lg border border-transparent hover:border-blue-500/20 transition-all"
-                                                    onClick={() => handleSourceClick(source)}
-                                                >
-                                                    <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-foreground">{source.title}</span>
-                                                            {source.external_url && (
-                                                                <a
-                                                                    href={source.external_url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
-                                                                    title="Read Source"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <ExternalLink className="w-3 h-3" />
-                                                                </a>
+                                    <div className="space-y-6 pl-2">
+                                        {/* 📚 General Bibliography - Topic-level sources */}
+                                        {sources.length > 0 && (
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <BookOpen className="w-4 h-4 text-blue-500" />
+                                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">General Bibliography</h4>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mb-3 pl-6">Books that discuss this topic</p>
+                                                {sources.map((source, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="group flex items-baseline gap-3 cursor-pointer hover:bg-blue-500/5 p-2 rounded-lg border border-transparent hover:border-blue-500/20 transition-all"
+                                                        onClick={() => handleSourceClick(source)}
+                                                    >
+                                                        <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-foreground">{source.title}</span>
+                                                                {source.external_url && (
+                                                                    <a
+                                                                        href={source.external_url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
+                                                                        title="Read Source"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                            {/* Show junction metadata: chapter, page, verse, notes */}
+                                                            {(source.section_reference || source.page_number || source.verse_reference || source.notes) && (
+                                                                <div className="mt-1.5 flex flex-wrap gap-2">
+                                                                    {source.section_reference && (
+                                                                        <span className="inline-flex items-center text-xs text-blue-700 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                                                                            {source.section_reference}
+                                                                        </span>
+                                                                    )}
+                                                                    {source.page_number && (
+                                                                        <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
+                                                                            p. {source.page_number}
+                                                                        </span>
+                                                                    )}
+                                                                    {source.verse_reference && (
+                                                                        <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
+                                                                            {source.verse_reference}
+                                                                        </span>
+                                                                    )}
+                                                                    {source.notes && !source.notes.includes('Primary') && (
+                                                                        <span className="inline-flex items-center text-xs text-muted-foreground italic">
+                                                                            {source.notes}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
-                                                        {/* Show junction metadata: chapter, page, verse, notes */}
-                                                        {(source.section_reference || source.page_number || source.verse_reference || source.notes) && (
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* 📖 Inline Citations - Statement-level citations */}
+                                        {inlineCitations.length > 0 && (
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <Sparkles className="w-4 h-4 text-amber-500" />
+                                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inline Citations</h4>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mb-3 pl-6">Specific quotes from article statements</p>
+                                                {inlineCitations.map((citation, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="group flex items-baseline gap-3 cursor-pointer hover:bg-amber-500/5 p-2 rounded-lg border border-transparent hover:border-amber-500/20 transition-all"
+                                                        onClick={() => handleSourceClick(citation)}
+                                                    >
+                                                        <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-foreground">{citation.title}</span>
+                                                                {citation.external_url && (
+                                                                    <a
+                                                                        href={citation.external_url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
+                                                                        title="Read Source"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                            {/* Show citation details */}
                                                             <div className="mt-1.5 flex flex-wrap gap-2">
-                                                                {source.section_reference && (
-                                                                    <span className="inline-flex items-center text-xs text-blue-700 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                                                                        {source.section_reference}
+                                                                {citation.section_reference && (
+                                                                    <span className="inline-flex items-center text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                                                        {citation.section_reference}
                                                                     </span>
                                                                 )}
-                                                                {source.page_number && (
+                                                                {citation.page_number && (
                                                                     <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
-                                                                        p. {source.page_number}
+                                                                        p. {citation.page_number}
                                                                     </span>
                                                                 )}
-                                                                {source.verse_reference && (
+                                                                {citation.verse_reference && (
                                                                     <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
-                                                                        {source.verse_reference}
-                                                                    </span>
-                                                                )}
-                                                                {source.notes && !source.notes.includes('Primary') && (
-                                                                    <span className="inline-flex items-center text-xs text-muted-foreground italic">
-                                                                        {source.notes}
+                                                                        {citation.verse_reference}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                        )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 📖 Inline Citations - Statement-level citations */}
-                                    {inlineCitations.length > 0 && (
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Sparkles className="w-4 h-4 text-amber-500" />
-                                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inline Citations</h4>
+                                                ))}
                                             </div>
-                                            <p className="text-xs text-muted-foreground mb-3 pl-6">Specific quotes from article statements</p>
-                                            {inlineCitations.map((citation, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="group flex items-baseline gap-3 cursor-pointer hover:bg-amber-500/5 p-2 rounded-lg border border-transparent hover:border-amber-500/20 transition-all"
-                                                    onClick={() => handleSourceClick(citation)}
-                                                >
-                                                    <span className="text-muted-foreground text-sm font-mono opacity-50">{idx + 1}.</span>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-foreground">{citation.title}</span>
-                                                            {citation.external_url && (
-                                                                <a
-                                                                    href={citation.external_url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
-                                                                    title="Read Source"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <ExternalLink className="w-3 h-3" />
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                        {/* Show citation details */}
-                                                        <div className="mt-1.5 flex flex-wrap gap-2">
-                                                            {citation.section_reference && (
-                                                                <span className="inline-flex items-center text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                                                                    {citation.section_reference}
-                                                                </span>
-                                                            )}
-                                                            {citation.page_number && (
-                                                                <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
-                                                                    p. {citation.page_number}
-                                                                </span>
-                                                            )}
-                                                            {citation.verse_reference && (
-                                                                <span className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
-                                                                    {citation.verse_reference}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Empty state */}
-                                    {sources.length === 0 && inlineCitations.length === 0 && (
-                                        <div className="text-muted-foreground text-sm italic">
-                                            No sources or citations listed for this entry.
-                                        </div>
-                                    )}
+                                        {/* Empty state */}
+                                        {sources.length === 0 && inlineCitations.length === 0 && (
+                                            <div className="text-muted-foreground text-sm italic">
+                                                No sources or citations listed for this entry.
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            );
+                        }
+
+                        return (
+                            <section
+                                key={section.type}
+                                ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
+                                id={`panel-${section.type}`}
+                                role="tabpanel"
+                                aria-labelledby={`tab-${section.type}`}
+                                className={`scroll-mt-40 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
+                                onClick={handleContentClick}
+                                onDoubleClick={() => toggleFocusMode(section.type)}
+                                onKeyDown={handleContentKeyDown}
+                            >
+                                {/* Section Header */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`p-2 rounded-xl ${config.bgColor} border ${config.borderColor}`}>
+                                        <Icon className={`w-5 h-5 ${config.color}`} />
+                                    </div>
+                                    <h2 className="text-lg font-semibold text-foreground">{config.title}</h2>
+                                </div>
+
+                                {/* Section Content */}
+                                <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
+                                    <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
                                 </div>
                             </section>
                         );
-                    }
+                    })}
 
-                    return (
-                        <section
-                            key={section.type}
-                            ref={(el: HTMLDivElement | null) => { sectionRefs.current[section.type] = el; }}
-                            id={`panel-${section.type}`}
-                            role="tabpanel"
-                            aria-labelledby={`tab-${section.type}`}
-                            className={`scroll-mt-40 transition-all duration-500 ${focusMode && focusedSection !== section.type ? 'opacity-20 scale-95 blur-[1px]' : 'opacity-100 scale-100'} ${focusMode && focusedSection === section.type ? 'relative z-50' : ''}`}
-                            onClick={handleContentClick}
-                            onDoubleClick={() => toggleFocusMode(section.type)}
-                            onKeyDown={handleContentKeyDown}
-                        >
-                            {/* Section Header */}
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={`p-2 rounded-xl ${config.bgColor} border ${config.borderColor}`}>
-                                    <Icon className={`w-5 h-5 ${config.color}`} />
-                                </div>
-                                <h2 className="text-lg font-semibold text-foreground">{config.title}</h2>
+                    {/* Concept Constellation - Visual Discovery at Bottom */}
+                    {relatedTopics.length > 0 && (
+                        <div className="pt-12 mt-12 border-t border-border/50">
+                            <div className="text-center mb-8">
+                                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    Interactive Map
+                                </span>
+                                <h2 className="text-3xl font-serif italic text-foreground">How This Concept Connects</h2>
+                                <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between {topic.canonical_title} and other Chassidic ideas.</p>
                             </div>
-                            
-                            {/* Section Content */}
-                            <div className={`rounded-2xl border ${config.borderColor} ${config.bgColor} p-6 sm:p-8 transition-shadow ${focusMode && focusedSection === section.type ? 'shadow-2xl ring-2 ring-primary/20 bg-background' : ''}`}>
-                                <ArticleSectionContent section={section} topic={topic} citationMap={topic.citationMap} />
+                            <ConstellationErrorBoundary>
+                                {forceGraphData.nodes.length > 1 ? (
+                                    <ForceGraph
+                                        nodes={forceGraphData.nodes}
+                                        edges={forceGraphData.edges}
+                                        width={800}
+                                        height={400}
+                                        interactive={true}
+                                    />
+                                ) : (
+                                    <div className="h-64 flex flex-col items-center justify-center bg-muted/10 rounded-[2rem] border border-dashed border-border/40 p-8 transition-all hover:bg-muted/20">
+                                        <GitBranch className="h-10 w-10 text-muted-foreground/20 mb-4" />
+                                        <p className="text-sm text-muted-foreground text-center max-w-[320px] font-light leading-relaxed">
+                                            {isAuthorized
+                                                ? "This concept hasn't been connected to others yet. Use the relationship tool in the admin panel to map its place in the system."
+                                                : "We are currently mapping the relationships for this concept. Explore other topics to see the connected web of Chassidus."}
+                                        </p>
+                                    </div>
+                                )}
+                            </ConstellationErrorBoundary>
+
+                            <div className="text-center mt-8">
+                                <button
+                                    onClick={() => setIsDeepDiveOpen(true)}
+                                    className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    Enter Deep Dive Mode
+                                </button>
                             </div>
-                        </section>
-                    );
-                })}
-
-                {/* Concept Constellation - Visual Discovery at Bottom */}
-                {relatedTopics.length > 0 && (
-                    <div className="pt-12 mt-12 border-t border-border/50">
-                        <div className="text-center mb-8">
-                            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                Interactive Map
-                            </span>
-                            <h2 className="text-3xl font-serif italic text-foreground">How This Concept Connects</h2>
-                            <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between {topic.canonical_title} and other Chassidic ideas.</p>
                         </div>
-                        <ConstellationErrorBoundary>
-                            {forceGraphData.nodes.length > 1 ? (
-                                <ForceGraph
-                                    nodes={forceGraphData.nodes}
-                                    edges={forceGraphData.edges}
-                                    width={800}
-                                    height={400}
-                                    interactive={true}
-                                />
-                            ) : (
-                                <div className="h-64 flex flex-col items-center justify-center bg-muted/10 rounded-[2rem] border border-dashed border-border/40 p-8 transition-all hover:bg-muted/20">
-                                    <GitBranch className="h-10 w-10 text-muted-foreground/20 mb-4" />
-                                    <p className="text-sm text-muted-foreground text-center max-w-[320px] font-light leading-relaxed">
-                                        {isAuthorized 
-                                            ? "This concept hasn't been connected to others yet. Use the relationship tool in the admin panel to map its place in the system."
-                                            : "We are currently mapping the relationships for this concept. Explore other topics to see the connected web of Chassidus."}
-                                    </p>
-                                </div>
-                            )}
-                        </ConstellationErrorBoundary>
-                        
-                        <div className="text-center mt-8">
-                            <button
-                                onClick={() => setIsDeepDiveOpen(true)}
-                                className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
-                            >
-                                <Sparkles className="w-4 h-4" />
-                                Enter Deep Dive Mode
-                            </button>
-                        </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Community Annotations Section - Restricted to Admin/Editor */}
-                {isAuthorized && (
-                    <div className="pt-12 mt-12 border-t border-border/50">
-                        <TopicAnnotations 
-                            topicId={topic.id.toString()} 
-                            currentUserId={currentUserId || undefined} 
-                            className="max-w-4xl mx-auto"
+                    {/* Community Annotations Section - Restricted to Admin/Editor */}
+                    {isAuthorized && (
+                        <div className="pt-12 mt-12 border-t border-border/50">
+                            <TopicAnnotations
+                                topicId={topic.id.toString()}
+                                currentUserId={currentUserId || undefined}
+                                className="max-w-4xl mx-auto"
+                            />
+                        </div>
+                    )}
+
+                    {/* Feedback & Contribution - Restricted to Admin/Editor */}
+                    {isAuthorized && (
+                        <MobileFeedbackButton
+                            topicId={topic.id.toString()}
+                            topicTitle={topic.canonical_title}
                         />
-                    </div>
-                )}
+                    )}
+                </main>
 
-                {/* Feedback & Contribution - Restricted to Admin/Editor */}
+                {/* Modals & Overlays - Restricted to Admin/Editor */}
                 {isAuthorized && (
-                    <MobileFeedbackButton 
-                        topicId={topic.id.toString()} 
-                        topicTitle={topic.canonical_title} 
+                    <>
+                        <TranslationFeedback
+                            isOpen={isTranslationFeedbackOpen}
+                            onClose={() => setIsTranslationFeedbackOpen(false)}
+                            contentType="topic"
+                            contentId={topic.id.toString()}
+                            contentName={topic.canonical_title}
+                        />
+
+                        <TranslationSurvey
+                            isOpen={isTranslationSurveyOpen}
+                            onClose={() => setIsTranslationSurveyOpen(false)}
+                        />
+                    </>
+                )}
+
+                {/* Interactive Bottom Sheet */}
+                <BottomSheet
+                    isOpen={!!sheetContent}
+                    onClose={() => setSheetContent(null)}
+                    title={sheetContent?.title}
+                >
+                    {sheetContent?.content}
+                </BottomSheet>
+
+                {/* Focus Mode Overlay */}
+                {focusMode && (
+                    <div
+                        className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-30 transition-opacity duration-500"
+                        onClick={() => { setFocusMode(false); setFocusedSection(null); }}
                     />
                 )}
-            </main>
 
-            {/* Modals & Overlays - Restricted to Admin/Editor */}
-            {isAuthorized && (
-                <>
-                    <TranslationFeedback 
-                        isOpen={isTranslationFeedbackOpen}
-                        onClose={() => setIsTranslationFeedbackOpen(false)}
-                        contentType="topic"
-                        contentId={topic.id.toString()}
-                        contentName={topic.canonical_title}
-                    />
-
-                    <TranslationSurvey 
-                        isOpen={isTranslationSurveyOpen}
-                        onClose={() => setIsTranslationSurveyOpen(false)}
-                    />
-                </>
-            )}
-
-            {/* Interactive Bottom Sheet */}
-            <BottomSheet
-                isOpen={!!sheetContent}
-                onClose={() => setSheetContent(null)}
-                title={sheetContent?.title}
-            >
-                {sheetContent?.content}
-            </BottomSheet>
-
-            {/* Focus Mode Overlay */}
-            {focusMode && (
-                <div
-                    className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-30 transition-opacity duration-500"
-                    onClick={() => { setFocusMode(false); setFocusedSection(null); }}
+                <DeepDiveMode
+                    currentTopic={{ slug: topic.slug, canonical_title: topic.canonical_title }}
+                    relatedTopics={relatedTopics}
+                    isOpen={isDeepDiveOpen}
+                    onClose={() => setIsDeepDiveOpen(false)}
                 />
-            )}
-
-            <DeepDiveMode
-                currentTopic={{ slug: topic.slug, canonical_title: topic.canonical_title }}
-                relatedTopics={relatedTopics}
-                isOpen={isDeepDiveOpen}
-                onClose={() => setIsDeepDiveOpen(false)}
-            />
             </div>
         </ErrorBoundary>
     );

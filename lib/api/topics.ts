@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/directus';
 import { readItems, updateItem } from '@directus/sdk';
 import { extractCitationReferences, createCitationMap, CitationReference } from '@/lib/citation-utils';
+import { API } from '@/lib/constants';
 
 /**
  * Get topic by slug with associated content
@@ -73,7 +74,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
 
         let contentBlocks: any[] = [];
         let validStatementTopics: any[] = [];
-        
+
         try {
             // OPTIMIZED: Single query with deep nested fields instead of 3 separate queries
             const topicDocuments = await directus.request(readItems('documents', {
@@ -83,7 +84,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                     // Deep query: get content_blocks with their statements in one request
                     { content_blocks: ['id', 'content', 'order_key', 'block_type', { statements: ['id', 'text', 'order_key', 'block_id'] }] } as any
                 ],
-                limit: -1
+                limit: API.LIMITS.MAX_BULK_LOAD
             })) as any[];
 
             console.log(`Topic ${topic.id}: Found ${topicDocuments.length} documents (optimized query)`);
@@ -119,7 +120,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                     } as any,
                     fields: ['statement_id', 'relevance_score', 'is_primary'],
                     sort: ['-relevance_score'] as any,
-                    limit: -1
+                    limit: API.LIMITS.MAX_BULK_LOAD
                 })) as any[];
 
                 console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
@@ -132,7 +133,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                         const citationStatements = await directus.request(readItems('statements', {
                             filter: { id: { _in: statementIds } } as any,
                             fields: ['id', 'text', 'appended_text', 'block_id', 'order_key'],
-                            limit: -1
+                            limit: API.LIMITS.MAX_BULK_LOAD
                         })) as any[];
 
                         console.log(`Fetched ${citationStatements.length} statements for citations`);
@@ -143,7 +144,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                             const blocks = await directus.request(readItems('content_blocks' as any, {
                                 filter: { id: { _in: blockIds } } as any,
                                 fields: ['id', 'document_id', 'order_key'],
-                                limit: -1
+                                limit: API.LIMITS.MAX_BULK_LOAD
                             })) as any[];
 
                             const docIds = Array.from(new Set(blocks.map(b => b.document_id).filter(id => !!id)));
@@ -151,7 +152,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                                 const docs = await directus.request(readItems('documents', {
                                     filter: { id: { _in: docIds } } as any,
                                     fields: ['id', 'title', 'doc_type'],
-                                    limit: -1
+                                    limit: API.LIMITS.MAX_BULK_LOAD
                                 })) as any[];
 
                                 // Map everything together
@@ -235,7 +236,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
         try {
             // Fetch topic-level sources (bibliography)
             const topicSources = await directus.request(readItems('source_links' as any, {
-                filter: { 
+                filter: {
                     _and: [
                         { topic_id: { _eq: topic.id } },
                         { statement_id: { _null: true } }
@@ -296,10 +297,10 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             // Fetch statement-level citations (inline citations)
             // Get all statements for this topic first
             const statementIds = validStatementTopics.map(st => st.statement_id).filter(Boolean);
-            
+
             if (statementIds.length > 0) {
                 const citationLinks = await directus.request(readItems('source_links' as any, {
-                    filter: { 
+                    filter: {
                         statement_id: { _in: statementIds }
                     } as any,
                     fields: [
@@ -375,11 +376,11 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
 
         // Extract citation references from content fields
         let allCitationRefs: CitationReference[] = [];
-        
+
         // Process each content field that might contain citations
-        const contentFields = ['definition_positive', 'definition_negative', 'overview', 'article', 
+        const contentFields = ['definition_positive', 'definition_negative', 'overview', 'article',
             'mashal', 'practical_takeaways', 'global_nimshal', 'historical_context'];
-        
+
         contentFields.forEach(field => {
             if (topic[field]) {
                 try {
@@ -390,10 +391,10 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                 }
             }
         });
-        
+
         // Create citation map for frontend use
         const citationMap = createCitationMap(allCitationRefs);
-        
+
         // Return enriched topic with related data
         return {
             topic: {
@@ -419,7 +420,7 @@ export async function getAllTopics() {
         const directus = createClient();
         const topics = await directus.request(readItems('topics', {
             fields: ['id', 'slug', 'canonical_title', 'date_updated'],
-            limit: -1
+            limit: API.LIMITS.MAX_BULK_LOAD
         }));
         return topics;
     } catch (error) {

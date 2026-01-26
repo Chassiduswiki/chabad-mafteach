@@ -14,6 +14,13 @@ import { LucideIcon } from 'lucide-react';
 import { Topic, Source } from '@/lib/types';
 import { CitationReference as CitationReferenceType } from '@/lib/citation-utils';
 
+// Dynamic import for SefirosChart to avoid SSR issues
+import dynamic from 'next/dynamic';
+const SefirosChart = dynamic(() => import('@/components/graph/SefirosChart').then(mod => mod.SefirosChart), {
+    ssr: false,
+    loading: () => <div className="h-[500px] w-full animate-pulse bg-muted rounded-xl" />
+});
+
 interface SectionConfig {
     title: string;
     shortTitle: string;
@@ -44,6 +51,7 @@ interface ArticleSectionContentProps {
 }
 
 export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSectionContentProps) => {
+
     const glossaryItems = useMemo(() => {
         if (['definition', 'mashal', 'personal_nimshal', 'global_nimshal'].includes(section.type)) {
             const textContent = section.content.replace(/<[^>]*>/g, ' ');
@@ -77,6 +85,21 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
     
     if (isTabularData) {
         return <TabularDataDisplay content={section.content} />;
+    }
+
+    // Special case: Sefiros Chart for the Sefiros topic
+    if (section.type === 'charts' && topic.slug === 'sefiros') {
+        return (
+            <div className="space-y-4">
+                <div className="text-center space-y-2 mb-6">
+                    <h3 className="text-2xl font-semibold text-foreground">The Ten Sefiros</h3>
+                    <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+                        Click on any Sefirah to explore its unique qualities and connections in the divine flow of creation.
+                    </p>
+                </div>
+                <SefirosChart interactive={true} />
+            </div>
+        );
     }
 
     return (

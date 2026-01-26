@@ -13,6 +13,7 @@ interface ArticleHeroProps {
     definitionShort?: string;
     topicSlug?: string;
     onScrollProgress?: (progress: number) => void;
+    isAuthorized?: boolean;
 }
 
 export function ImmersiveHero({
@@ -21,7 +22,8 @@ export function ImmersiveHero({
     titleTransliteration,
     category = "General Concept",
     definitionShort,
-    topicSlug
+    topicSlug,
+    isAuthorized = false
 }: ArticleHeroProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isTruncated, setIsTruncated] = useState(false);
@@ -59,7 +61,7 @@ export function ImmersiveHero({
         setIsSharing(true);
         const url = window.location.href;
         const shareData = { title: `${title} - Chabad Maftaiach`, text: definitionShort || `Learn about ${title}`, url };
-        
+
         try {
             if (navigator.share && navigator.canShare(shareData)) {
                 await navigator.share(shareData);
@@ -172,7 +174,7 @@ export function ImmersiveHero({
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-3 pt-2">
-                                <button 
+                                <button
                                     onClick={handleListen}
                                     className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all shadow-lg ${isListening ? 'bg-primary/80 text-primary-foreground shadow-primary/30' : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20'}`}
                                     aria-label={isListening ? 'Stop listening' : 'Listen to topic'}
@@ -180,7 +182,7 @@ export function ImmersiveHero({
                                     {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
                                     <span>{isListening ? 'Playing...' : 'Listen'}</span>
                                 </button>
-                                <button 
+                                <button
                                     onClick={handleSave}
                                     className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border font-medium transition-all ${isSaved ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-muted/50 hover:bg-muted border-border text-foreground'}`}
                                     aria-label={isSaved ? 'Remove from saved' : 'Save topic'}
@@ -188,13 +190,22 @@ export function ImmersiveHero({
                                     {isSaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                                     <span>{isSaved ? 'Saved' : 'Save'}</span>
                                 </button>
-                                <button 
+                                <button
                                     onClick={handleShare}
                                     className="p-2.5 rounded-full bg-muted/30 hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors relative"
                                     aria-label="Share topic"
                                 >
                                     {isSharing ? <Loader2 className="w-5 h-5 animate-spin" /> : shareSuccess ? <Check className="w-5 h-5 text-emerald-500" /> : <Share2 className="w-5 h-5" />}
                                 </button>
+
+                                {isAuthorized && topicSlug && (
+                                    <Link
+                                        href={`/editor/topics/${topicSlug}`}
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 font-bold uppercase tracking-wider text-xs transition-all"
+                                    >
+                                        Edit Topic
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>

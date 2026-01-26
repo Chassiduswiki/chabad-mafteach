@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import { Topic } from '@/lib/types';
+import { CACHE, API } from '@/lib/constants';
 
 const directus = createClient();
 
@@ -13,7 +14,7 @@ interface CacheEntry<T> {
 
 class MemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private defaultTTL = 5 * 60 * 1000; // 5 minutes default
+  private defaultTTL = CACHE.TTL.DEFAULT;
 
   set<T>(key: string, data: T, ttl?: number): void {
     this.cache.set(key, {
@@ -87,8 +88,8 @@ export const getCachedTopics = async (filter?: any, limit?: number): Promise<Top
     })
   ) as Topic[];
 
-  // Cache for 10 minutes (topics don't change frequently)
-  cache.set(cacheKey, topics, 10 * 60 * 1000);
+  // Cache for topics (uses constant from config)
+  cache.set(cacheKey, topics, CACHE.TTL.TOPICS);
 
   return topics;
 };
@@ -126,8 +127,8 @@ export const getCachedDiscoveryTopics = async (): Promise<{
     recentSources
   };
 
-  // Cache for 15 minutes (discovery data can be slightly stale)
-  cache.set(cacheKey, result, 15 * 60 * 1000);
+  // Cache for discovery (uses constant from config)
+  cache.set(cacheKey, result, CACHE.TTL.DISCOVERY);
 
   return result;
 };
@@ -149,13 +150,13 @@ export const getCachedDocuments = async (docType?: string): Promise<any[]> => {
     readItems('documents', {
       filter,
       fields: ['id', 'title', 'doc_type'],
-      limit: -1,
+      limit: API.LIMITS.MAX_BULK_LOAD, // Use constant instead of -1 for safety
       sort: ['title']
     })
   ) as any[];
 
-  // Cache for 30 minutes (documents change less frequently)
-  cache.set(cacheKey, documents, 30 * 60 * 1000);
+  // Cache for documents (uses constant from config)
+  cache.set(cacheKey, documents, CACHE.TTL.DOCUMENTS);
 
   return documents;
 };
@@ -190,7 +191,7 @@ export const getCacheStats = (): { entries: number; size: string } => {
 };
 
 // Periodic cleanup (run this in a background process)
-export const startCacheCleanup = (intervalMs: number = 10 * 60 * 1000): void => {
+export const startCacheCleanup = (intervalMs: number = CACHE.CLEANUP_INTERVAL): void => {
   setInterval(() => {
     cache.cleanup();
   }, intervalMs);

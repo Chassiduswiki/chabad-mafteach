@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Palette, 
+import {
+  Palette,
   Type,
   Sun,
   Moon,
@@ -14,7 +14,9 @@ import {
   Sparkles,
   Square,
   Circle,
-  Hexagon
+  Hexagon,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -64,6 +66,7 @@ export default function BrandingStylePage() {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<StyleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error' | 'warning' | null; message: string }>({ type: null, message: '' });
 
   const { isLoading } = useQuery({
     queryKey: ['branding-style'],
@@ -81,17 +84,36 @@ export default function BrandingStylePage() {
 
   const saveMutation = useMutation({
     mutationFn: async (newSettings: StyleSettings) => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const res = await fetch('/api/admin/branding/style', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ settings: newSettings }),
       });
       if (!res.ok) throw new Error('Failed to save');
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ['branding-style'] });
+
+      // Show success with persistence info
+      const layers = data.persistedTo || ['unknown'];
+      if (data.warning) {
+        setSaveStatus({ type: 'warning', message: data.warning });
+      } else {
+        setSaveStatus({ type: 'success', message: `Saved to: ${layers.join(', ')}` });
+      }
+
+      // Clear status after 4 seconds
+      setTimeout(() => setSaveStatus({ type: null, message: '' }), 4000);
+    },
+    onError: (error) => {
+      setSaveStatus({ type: 'error', message: 'Failed to save settings. Please try again.' });
+      setTimeout(() => setSaveStatus({ type: null, message: '' }), 4000);
     },
   });
 
@@ -123,10 +145,10 @@ export default function BrandingStylePage() {
             Customize the visual appearance of your site.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleReset}
             disabled={!hasChanges}
             className="rounded-xl"
@@ -134,7 +156,7 @@ export default function BrandingStylePage() {
             <RotateCcw className="w-4 h-4 mr-2" />
             Reset
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             disabled={!hasChanges || saveMutation.isPending}
             className="rounded-xl"
@@ -148,6 +170,21 @@ export default function BrandingStylePage() {
           </Button>
         </div>
       </header>
+
+      {/* Save Status Feedback */}
+      {saveStatus.type && (
+        <div className={cn(
+          "flex items-center gap-2 p-3 rounded-xl text-sm transition-all",
+          saveStatus.type === 'success' && "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
+          saveStatus.type === 'warning' && "bg-amber-500/10 text-amber-600 border border-amber-500/20",
+          saveStatus.type === 'error' && "bg-red-500/10 text-red-600 border border-red-500/20"
+        )}>
+          {saveStatus.type === 'success' && <CheckCircle2 className="w-4 h-4" />}
+          {saveStatus.type === 'warning' && <AlertCircle className="w-4 h-4" />}
+          {saveStatus.type === 'error' && <AlertCircle className="w-4 h-4" />}
+          {saveStatus.message}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -182,13 +219,13 @@ export default function BrandingStylePage() {
                       }}
                       className={cn(
                         "p-3 rounded-xl border-2 transition-all flex items-center gap-2",
-                        settings.primaryColor === preset.primary 
-                          ? "border-primary bg-primary/5" 
+                        settings.primaryColor === preset.primary
+                          ? "border-primary bg-primary/5"
                           : "border-transparent bg-muted/30 hover:bg-muted/50"
                       )}
                     >
-                      <div 
-                        className="w-6 h-6 rounded-full shadow-sm" 
+                      <div
+                        className="w-6 h-6 rounded-full shadow-sm"
                         style={{ background: preset.primary }}
                       />
                       <span className="text-xs font-medium">{preset.name}</span>
@@ -262,8 +299,8 @@ export default function BrandingStylePage() {
                   onClick={() => updateSetting('fontFamily', font.value)}
                   className={cn(
                     "w-full p-4 rounded-xl border-2 transition-all text-left",
-                    settings.fontFamily === font.value 
-                      ? "border-primary bg-primary/5" 
+                    settings.fontFamily === font.value
+                      ? "border-primary bg-primary/5"
                       : "border-transparent bg-muted/30 hover:bg-muted/50"
                   )}
                 >
@@ -307,8 +344,8 @@ export default function BrandingStylePage() {
                     option.value === 'md' && "rounded-md",
                     option.value === 'lg' && "rounded-lg",
                     option.value === 'full' && "rounded-2xl",
-                    settings.borderRadius === option.value 
-                      ? "border-primary bg-primary/5" 
+                    settings.borderRadius === option.value
+                      ? "border-primary bg-primary/5"
                       : "border-transparent bg-muted/30 hover:bg-muted/50"
                   )}
                 >
@@ -343,8 +380,8 @@ export default function BrandingStylePage() {
                 onClick={() => updateSetting('darkModeDefault', false)}
                 className={cn(
                   "p-6 rounded-xl border-2 transition-all flex flex-col items-center gap-3",
-                  !settings.darkModeDefault 
-                    ? "border-primary bg-primary/5" 
+                  !settings.darkModeDefault
+                    ? "border-primary bg-primary/5"
                     : "border-transparent bg-muted/30 hover:bg-muted/50"
                 )}
               >
@@ -354,13 +391,13 @@ export default function BrandingStylePage() {
                   <span className="text-sm font-medium">Light Mode</span>
                 </div>
               </button>
-              
+
               <button
                 onClick={() => updateSetting('darkModeDefault', true)}
                 className={cn(
                   "p-6 rounded-xl border-2 transition-all flex flex-col items-center gap-3",
-                  settings.darkModeDefault 
-                    ? "border-primary bg-primary/5" 
+                  settings.darkModeDefault
+                    ? "border-primary bg-primary/5"
                     : "border-transparent bg-muted/30 hover:bg-muted/50"
                 )}
               >

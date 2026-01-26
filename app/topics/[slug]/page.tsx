@@ -19,8 +19,8 @@ export async function generateMetadata(
 
         const topic = topicData.topic as unknown as Topic;
         const title = topic.canonical_title || topic.name || 'Topic Details';
-        const description = topic.description 
-            ? topic.description.replace(/<[^>]*>/g, '').substring(0, 160) 
+        const description = topic.description
+            ? topic.description.replace(/<[^>]*>/g, '').substring(0, 160)
             : `Explore ${title} in the Chabad Chassidus Encyclopedia.`;
 
         return {
@@ -44,10 +44,10 @@ export async function generateMetadata(
     }
 }
 
-export default async function TopicDetailPage({ 
+export default async function TopicDetailPage({
     params,
-    searchParams 
-}: { 
+    searchParams
+}: {
     params: Promise<{ slug: string }>;
     searchParams: Promise<{ lang?: string }>;
 }) {
@@ -66,12 +66,40 @@ export default async function TopicDetailPage({
     }
 
     const { topic, relatedTopics, sources, citations, inlineCitations } = topicData;
-    
+
     // Cast topic to Topic type from lib/types, using unknown first to safely merge types
     const typedTopic = topic as unknown as Topic;
 
+    // JSON-LD Structured Data for Rich Results
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Article', // Can clarify as 'DefinedTerm' for Encyclopedia later
+        headline: typedTopic.canonical_title,
+        description: typedTopic.description?.replace(/<[^>]*>/g, '').substring(0, 160),
+        url: `https://beta.chassiduswiki.com/topics/${slug}`,
+        dateModified: typedTopic.date_updated || new Date().toISOString(),
+        author: {
+            '@type': 'Organization',
+            name: 'Chabad Mafteach'
+        },
+        mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': `https://beta.chassiduswiki.com/topics/${slug}`
+        },
+        about: {
+            '@type': 'Thing',
+            name: typedTopic.canonical_title,
+            additionalType: typedTopic.topic_type ? `https://beta.chassiduswiki.com/types/${typedTopic.topic_type}` : undefined
+        }
+    };
+
     return (
         <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+
             {/* Track last visited topic for analytics/history */}
             <TopicTracker slug={slug} name={(typedTopic as any).title || typedTopic.canonical_title} topicId={typedTopic.id} />
 

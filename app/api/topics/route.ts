@@ -4,6 +4,7 @@ const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 import { verifyAuth } from '@/lib/auth';
+import { API, CONTENT } from '@/lib/constants';
 
 // Add translation query
 const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en', 'practical_takeaways', 'historical_context', 'status'];
@@ -39,7 +40,7 @@ async function fetchTopicsWithTranslations(filter: Record<string, unknown> = {},
 
     // If not privileged, only show published topics
     const baseFilter = privileged ? {} : { status: { _eq: 'published' } };
-    
+
     query.filter = {
         _and: [
             baseFilter,
@@ -55,8 +56,58 @@ async function fetchTopicsWithTranslations(filter: Record<string, unknown> = {},
         const topics = await directus.request(readItems('topics', query as { fields: string[] }));
         return topics as unknown as RawTopic[];
     } catch (error) {
-        console.warn('Failed to fetch topics:', error);
-        return [];
+        console.warn('Failed to fetch topics via SDK, trying direct API call:', error);
+        
+        // Fallback to direct API call
+        try {
+            const directusUrl = process.env.DIRECTUS_URL || 'https://directus-production-20db.up.railway.app';
+            const staticToken = process.env.DIRECTUS_STATIC_TOKEN;
+            
+            if (!staticToken) {
+                console.warn('No Directus static token configured');
+                return [];
+            }
+
+            // Build query string
+            const params = new URLSearchParams();
+            params.append('fields', TOPIC_FIELDS.join(','));
+            params.append('sort', 'canonical_title');
+            
+            if (query.limit) {
+                params.append('limit', query.limit.toString());
+            }
+            
+            // Add filter parameters
+            if (query.filter && query.filter._and) {
+                const filters = query.filter._and as any[];
+                filters.forEach(f => {
+                    if (f.status && f.status._eq) {
+                        params.append('filter[status][_eq]', f.status._eq);
+                    }
+                    if (f.topic_type && f.topic_type._eq) {
+                        params.append('filter[topic_type][_eq]', f.topic_type._eq);
+                    }
+                });
+            }
+
+            const response = await fetch(`${directusUrl}/items/topics?${params.toString()}`, {
+                headers: {
+                    'Authorization': `Bearer ${staticToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.warn('Directus API error for topics:', response.status);
+                return [];
+            }
+
+            const data = await response.json();
+            return data.data || [];
+        } catch (fallbackError) {
+            console.error('Fallback API call also failed:', fallbackError);
+            return [];
+        }
     }
 }
 
@@ -75,8 +126,10 @@ function getDisplayDescription(topic: { description_en?: string; description?: s
     return topic.description_en || topic.description || '';
 }
 const validateLimit = (limit: string | null): number => {
-    const parsed = parseInt(limit || '10', 10);
-    return isNaN(parsed) || parsed < 1 || parsed > 100 ? 10 : parsed;
+    const parsed = parseInt(limit || String(API.LIMITS.DEFAULT_PAGE_SIZE), 10);
+    return isNaN(parsed) || parsed < 1 || parsed > API.LIMITS.MAX_PAGE_SIZE
+        ? API.LIMITS.DEFAULT_PAGE_SIZE
+        : parsed;
 };
 
 const validateMode = (mode: string | null): string | null => {
@@ -85,8 +138,7 @@ const validateMode = (mode: string | null): string | null => {
 };
 
 const validateCategory = (category: string | null): string | null => {
-    const validCategories = ['person', 'concept', 'place', 'event', 'mitzvah', 'sefirah'];
-    return category && validCategories.includes(category) ? category : null;
+    return category && (CONTENT.TOPIC_TYPES as readonly string[]).includes(category) ? category : null;
 };
 
 export async function GET(request: NextRequest) {

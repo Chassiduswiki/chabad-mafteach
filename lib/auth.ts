@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { SECURITY } from '@/lib/constants';
 
 /**
  * Authentication utilities for API routes
@@ -66,7 +67,7 @@ export function createAuthToken(userId: string, role: string = 'user'): string {
   return jwt.sign(
     { userId, role, iat: Date.now() / 1000 },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: SECURITY.JWT.ACCESS_TOKEN_EXPIRY }
   );
 }
 
@@ -184,8 +185,8 @@ export function checkAccountLockout(email: string): { isLocked: boolean; lockout
   }
 
   const now = Date.now();
-  const maxAttempts = 5;
-  const lockoutDuration = 30 * 60 * 1000; // 30 minutes
+  const maxAttempts = SECURITY.ACCOUNT_LOCKOUT.MAX_ATTEMPTS;
+  const lockoutDuration = SECURITY.ACCOUNT_LOCKOUT.DURATION_MS;
 
   const record = accountLockoutStore.get(email);
 
@@ -214,8 +215,8 @@ export function recordFailedLogin(email: string): void {
   }
 
   const now = Date.now();
-  const maxAttempts = 5;
-  const lockoutDuration = 30 * 60 * 1000; // 30 minutes
+  const maxAttempts = SECURITY.ACCOUNT_LOCKOUT.MAX_ATTEMPTS;
+  const lockoutDuration = SECURITY.ACCOUNT_LOCKOUT.DURATION_MS;
 
   const record = accountLockoutStore.get(email) || { attempts: 0, lockoutUntil: 0, lastAttempt: 0 };
 
@@ -246,7 +247,7 @@ export function createRefreshToken(userId: string): string {
   return jwt.sign(
     { userId, type: 'refresh' },
     JWT_SECRET,
-    { expiresIn: '7d' } // Refresh tokens last 7 days
+    { expiresIn: SECURITY.JWT.REFRESH_TOKEN_EXPIRY }
   );
 }
 

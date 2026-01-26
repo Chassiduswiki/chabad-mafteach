@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { History, RotateCcw, User, Calendar, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { History, RotateCcw, User, Calendar, ChevronRight, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+// Native scroll instead of missing ScrollArea for now
 
 interface Revision {
   id: string;
@@ -16,9 +19,10 @@ interface Revision {
 interface TopicVersionHistoryProps {
   slug: string;
   onRevert?: () => void;
+  className?: string;
 }
 
-export const TopicVersionHistory: React.FC<TopicVersionHistoryProps> = ({ slug, onRevert }) => {
+export const TopicVersionHistory: React.FC<TopicVersionHistoryProps> = ({ slug, onRevert, className }) => {
   const [revisions, setRevisions] = useState<Revision[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReverting, setIsReverting] = useState<string | null>(null);
@@ -79,82 +83,128 @@ export const TopicVersionHistory: React.FC<TopicVersionHistoryProps> = ({ slug, 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center p-12 space-y-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+        <p className="text-sm text-muted-foreground animate-pulse">Loading history...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 flex items-center gap-2 text-red-500 bg-red-50 rounded-lg">
-        <AlertCircle className="h-4 w-4" />
-        <span className="text-sm font-medium">{error}</span>
+      <div className="p-6 flex flex-col items-center gap-3 text-center bg-destructive/5 rounded-xl border border-destructive/10 mx-4 mt-4">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <div>
+          <h3 className="font-semibold text-destructive">Error Loading History</h3>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchHistory} className="mt-2">
+          Try Again
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
+    <div className={cn("flex flex-col h-full", className)}>
+      <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/10">
         <History className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Revision History</h3>
+        <h3 className="font-semibold text-foreground">Version History</h3>
+        <span className="ml-auto text-xs text-muted-foreground">{revisions.length} revisions</span>
       </div>
 
-      {revisions.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No history found for this topic.</p>
-      ) : (
-        <div className="space-y-3">
-          {revisions.map((rev) => (
-            <div 
-              key={rev.id}
-              className="bg-card border border-border rounded-lg p-3 hover:border-primary/30 transition-colors group"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
-                    <User className="h-3 w-3 text-muted-foreground" />
-                    <span>
-                      {rev.user ? `${rev.user.first_name} ${rev.user.last_name}` : 'System / Unknown'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{formatDistanceToNow(new Date(rev.timestamp), { addSuffix: true })}</span>
-                  </div>
-                  
-                  {/* Summary of changes */}
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {Object.keys(rev.delta).slice(0, 3).map(field => (
-                      <span key={field} className="text-[10px] px-1.5 py-0.5 bg-muted rounded-full uppercase tracking-wider font-semibold">
-                        {field.replace(/_/g, ' ')}
-                      </span>
-                    ))}
-                    {Object.keys(rev.delta).length > 3 && (
-                      <span className="text-[10px] text-muted-foreground ml-1">
-                        +{Object.keys(rev.delta).length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleRevert(rev.id)}
-                  disabled={!!isReverting}
-                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                  title="Revert to this version"
-                >
-                  {isReverting === rev.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="h-4 w-4" />
-                  )}
-                </button>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {revisions.length === 0 ? (
+            <div className="text-center py-12 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                <History className="h-6 w-6 text-muted-foreground/50" />
               </div>
+              <p className="text-muted-foreground font-medium">No history found</p>
+              <p className="text-xs text-muted-foreground/70 max-w-[200px] mx-auto">
+                Edits will appear here once saved.
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="relative border-l border-border/50 ml-4 space-y-8">
+              {revisions.map((rev, index) => {
+                const isLatest = index === 0;
+                return (
+                  <div key={rev.id} className="relative pl-8 group">
+                    {/* Timeline Dot */}
+                    <div className={cn(
+                      "absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 transition-colors",
+                      isLatest
+                        ? "bg-primary border-primary ring-4 ring-primary/10"
+                        : "bg-background border-muted-foreground/30 group-hover:border-primary group-hover:bg-primary/50"
+                    )} />
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground">
+                            {rev.user ? `${rev.user.first_name || ''} ${rev.user.last_name || ''}`.trim() || 'Unknown User' : 'System'}
+                          </span>
+                          {isLatest && (
+                            <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <time className="text-xs text-muted-foreground whitespace-nowrap" title={new Date(rev.timestamp).toLocaleString()}>
+                          {formatDistanceToNow(new Date(rev.timestamp), { addSuffix: true })}
+                        </time>
+                      </div>
+
+                      {/* Changes Summary */}
+                      <div className="mt-2 bg-card border border-border rounded-lg p-3 shadow-sm group-hover:border-primary/20 group-hover:shadow-md transition-all">
+                        <div className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-1">
+                          Changes
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.keys(rev.delta).length > 0 ? (
+                            Object.keys(rev.delta).map(field => (
+                              <div key={field} className="flex items-center gap-1.5 text-xs bg-muted/50 px-2 py-1 rounded-md border border-border/50">
+                                <span className="font-medium text-foreground">{field.replace(/_/g, ' ')}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">No specific field changes recorded</span>
+                          )}
+                        </div>
+
+                        {!isLatest && (
+                          <div className="mt-3 pt-3 border-t border-border/50 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRevert(rev.id)}
+                              disabled={!!isReverting}
+                              className="h-7 text-xs hover:bg-primary/5 hover:text-primary"
+                            >
+                              {isReverting === rev.id ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                                  Restoring...
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="w-3 h-3 mr-1.5" />
+                                  Restore Version
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
+import { SECURITY } from '@/lib/constants';
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutes
-  const maxRequests = 5;
+  const windowMs = SECURITY.RATE_LIMIT.WINDOW_MS;
+  const maxRequests = SECURITY.RATE_LIMIT.MAX_REQUESTS;
 
   // Skip rate limiting in development
   if (process.env.NODE_ENV === 'development') {
@@ -35,8 +36,8 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
 export async function POST(request: NextRequest) {
   // Get client IP for rate limiting
   const ip = request.headers.get('x-forwarded-for') ||
-             request.headers.get('x-real-ip') ||
-             'unknown';
+    request.headers.get('x-real-ip') ||
+    'unknown';
 
   // Check rate limit
   const rateLimitResult = checkRateLimit(ip);
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     try {
       // Step 1: Authenticate against Directus to verify credentials
       const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
-      
+
       if (!directusUrl) {
         console.error('DIRECTUS_URL is not configured');
         return NextResponse.json(

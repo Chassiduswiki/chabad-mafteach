@@ -160,12 +160,12 @@ export default async function RootLayout({
         {/* Performance Optimization: Preload critical assets for LCP */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
+
         {/* Custom Branding CSS Injection */}
         {branding.customCss && (
           <style dangerouslySetInnerHTML={{ __html: branding.customCss }} />
         )}
-        
+
         {/* Custom Branding JS Injection */}
         {branding.customJs && (
           <script dangerouslySetInnerHTML={{ __html: branding.customJs }} />
@@ -182,8 +182,8 @@ export default async function RootLayout({
         <AnalyticsTrackerComp />
         <GlobalBanner />
         {/* Skip to content link for accessibility */}
-        <a 
-          href="#main-content" 
+        <a
+          href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
         >
           Skip to main content
@@ -207,7 +207,7 @@ export default async function RootLayout({
                             {siteSettings?.tagline || 'System Refinement'}
                           </p>
                           <p className="text-muted-foreground font-light pt-2">
-                            We are currently updating the encyclopedia engine to better serve your learning experience. 
+                            We are currently updating the encyclopedia engine to better serve your learning experience.
                             We'll be back online shortly.
                           </p>
                         </div>
@@ -223,7 +223,7 @@ export default async function RootLayout({
                     </div>
                   ) : (
                     <>
-                      <ErrorBoundary>
+                      <ErrorBoundary componentName="RootLayout">
                         {children}
                       </ErrorBoundary>
                       <GlobalPopupRenderer />

@@ -4,12 +4,19 @@ import { createItem, readItems } from '@directus/sdk';
 import { requireEditor } from '@/lib/auth';
 import { isValidSlug, normalizeSlug, generateAlternativeSlugs, isValidSlugLength } from '@/lib/utils/slug-utils';
 
-const directus = createClient();
+// Note: We use the server-side Admin client to create the item, 
+// as the user's App JWT cannot be used directly with Directus.
 
-export const POST = requireEditor(async (request: NextRequest) => {
+export const POST = requireEditor(async (request: NextRequest, context: { userId: string; role: string }) => {
   try {
+    // Extract token from request to likely use for user context, 
+    // but actual DB write happens via Admin Statick Token for reliability
+
+    // Create admin client for this request (ensures env vars are loaded)
+    const adminDirectus = createClient();
+
     const body = await request.json();
-    
+
     const {
       canonical_title,
       canonical_title_en,
@@ -33,21 +40,21 @@ export const POST = requireEditor(async (request: NextRequest) => {
         { status: 400 }
       );
     }
-    
+
     // Normalize the slug
     const normalizedSlug = normalizeSlug(slug);
-    
+
     // Validate slug format
     if (!isValidSlug(normalizedSlug)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Invalid slug format',
         message: 'Slug must contain only lowercase letters, numbers, and hyphens'
       }, { status: 400 });
     }
-    
+
     // Check minimum length
     if (!isValidSlugLength(normalizedSlug)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Slug too short',
         message: 'Slug must be at least 3 characters long'
       }, { status: 400 });
@@ -62,7 +69,7 @@ export const POST = requireEditor(async (request: NextRequest) => {
 
     // Check if slug already exists
     try {
-      const existing = await directus.request(
+      const existing = await adminDirectus.request(
         readItems('topics', {
           filter: { slug: { _eq: normalizedSlug } },
           fields: ['id'],
@@ -73,9 +80,9 @@ export const POST = requireEditor(async (request: NextRequest) => {
       if ((existing as any[]).length > 0) {
         // Generate alternative slugs
         const alternatives = generateAlternativeSlugs(normalizedSlug);
-        
+
         return NextResponse.json(
-          { 
+          {
             error: 'A topic with this slug already exists',
             alternatives,
             normalized: normalizedSlug
@@ -91,9 +98,11 @@ export const POST = requireEditor(async (request: NextRequest) => {
       );
     }
 
-    // Create the topic
-    const newTopic = await directus.request(
+    // Create the topic using the Admin client
+    // We try to attribute it to the user via 'user_created' if possible
+    const newTopic = await adminDirectus.request(
       createItem('topics', {
+        user_created: context.userId, // Attribute to user
         canonical_title,
         canonical_title_en: canonical_title_en || undefined,
         canonical_title_transliteration: canonical_title_transliteration || undefined,
@@ -101,14 +110,17 @@ export const POST = requireEditor(async (request: NextRequest) => {
         topic_type,
         description: description || undefined,
         content_status: 'minimal',
+        status: 'draft' // Default to draft for new topics
       } as any)
     );
 
     return NextResponse.json({ data: newTopic }, { status: 201 });
   } catch (error) {
-    console.error('Failed to create topic:', error);
+    console.error('Failed to create topic:', (error as any)?.message || error);
+    // Return specific Directus error if available
+    const errorMessage = (error as any)?.errors?.[0]?.message || 'Failed to create topic';
     return NextResponse.json(
-      { error: 'Failed to create topic' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

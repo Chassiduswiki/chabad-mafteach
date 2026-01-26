@@ -95,7 +95,7 @@ export interface Statement {
     importance_score?: number;
     metadata?: Record<string, unknown>;
     deleted_at?: string;
-    block_id?: number; 
+    block_id?: number;
     deleted_by?: string;
 }
 
@@ -116,12 +116,12 @@ export interface BlockCommentary {
     rejection_reason?: string;
 
     // Citation support for rabbit hole following
-    citation_source?: number | Source; 
-    citation_page?: string; 
-    citation_reference?: string; 
+    citation_source?: number | Source;
+    citation_page?: string;
+    citation_reference?: string;
 
     // Relations
-    source_links?: SourceLink[]; 
+    source_links?: SourceLink[];
 }
 
 export interface Source {
@@ -138,9 +138,9 @@ export interface Source {
     citation_text?: string;
     metadata?: Record<string, unknown>;
     author_id?: number | Author;
-    document_id?: number | Document; 
-    author?: string; 
-    relationships?: any[]; 
+    document_id?: number | Document;
+    author?: string;
+    relationships?: any[];
     link_id?: number;
     relationship_type?: string;
     page_number?: string;
@@ -148,7 +148,7 @@ export interface Source {
     section_reference?: string;
     notes?: string;
     is_primary?: boolean;
-    statement_id?: number; 
+    statement_id?: number;
 }
 
 export interface SourceLink {
@@ -175,17 +175,19 @@ export interface Topic {
     topic_type?: 'person' | 'concept' | 'place' | 'event' | 'mitzvah' | 'sefirah';
     description?: string;
     metadata?: Record<string, unknown>;
-    
+    date_created?: string;
+    date_updated?: string;
+
     // Citation references for interactive display
     citationMap?: Record<string, any>;
 
     // Legacy compatibility fields (mapped from new schema)
-    name?: string; 
+    name?: string;
     name_hebrew?: string;
     name_transliteration?: string;
     alternate_names?: string[];
-    category?: string; 
-    definition_short?: string; 
+    category?: string;
+    definition_short?: string;
 
     // Content fields (can be stored in metadata or separate content table)
     definition_positive?: string;
@@ -195,8 +197,8 @@ export interface Topic {
     global_nimshal?: string;
     charts?: string;
     article?: string;
-    practical_takeaways?: string; 
-    historical_context?: string; 
+    practical_takeaways?: string;
+    historical_context?: string;
     common_confusions?: { question: string; answer: string }[];
     key_concepts?: { concept: string; explanation: string; link?: string }[];
 
@@ -229,9 +231,9 @@ export interface Topic {
     status?: 'draft' | 'reviewed' | 'published' | 'archived';
     sources_count?: number;
     documents_count?: number;
-    
+
     // Display configuration for section visibility and format
-    display_config?: Record<string, { visible?: boolean; format?: string; [key: string]: unknown }>;
+    display_config?: Record<string, { visible?: boolean; format?: string;[key: string]: unknown }>;
 
     // Collection relations
     topic_collection_topics?: TopicCollectionTopic[];
@@ -253,7 +255,7 @@ export interface TopicCollection {
     status: 'draft' | 'published' | 'archived';
     date_created: string;
     date_updated: string;
-    
+
     // Relations
     topic_collection_topics?: TopicCollectionTopic[];
 }
