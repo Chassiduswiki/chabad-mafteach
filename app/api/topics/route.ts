@@ -4,6 +4,7 @@ const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 import { verifyAuth } from '@/lib/auth';
+import { API, CONTENT } from '@/lib/constants';
 
 // Add translation query
 const TOPIC_FIELDS = ['id', 'canonical_title', 'canonical_title_en', 'canonical_title_transliteration', 'slug', 'topic_type', 'description', 'description_en', 'practical_takeaways', 'historical_context', 'status'];
@@ -39,7 +40,7 @@ async function fetchTopicsWithTranslations(filter: Record<string, unknown> = {},
 
     // If not privileged, only show published topics
     const baseFilter = privileged ? {} : { status: { _eq: 'published' } };
-    
+
     query.filter = {
         _and: [
             baseFilter,
@@ -75,8 +76,10 @@ function getDisplayDescription(topic: { description_en?: string; description?: s
     return topic.description_en || topic.description || '';
 }
 const validateLimit = (limit: string | null): number => {
-    const parsed = parseInt(limit || '10', 10);
-    return isNaN(parsed) || parsed < 1 || parsed > 100 ? 10 : parsed;
+    const parsed = parseInt(limit || String(API.LIMITS.DEFAULT_PAGE_SIZE), 10);
+    return isNaN(parsed) || parsed < 1 || parsed > API.LIMITS.MAX_PAGE_SIZE
+        ? API.LIMITS.DEFAULT_PAGE_SIZE
+        : parsed;
 };
 
 const validateMode = (mode: string | null): string | null => {
@@ -85,8 +88,7 @@ const validateMode = (mode: string | null): string | null => {
 };
 
 const validateCategory = (category: string | null): string | null => {
-    const validCategories = ['person', 'concept', 'place', 'event', 'mitzvah', 'sefirah'];
-    return category && validCategories.includes(category) ? category : null;
+    return category && (CONTENT.TOPIC_TYPES as readonly string[]).includes(category) ? category : null;
 };
 
 export async function GET(request: NextRequest) {

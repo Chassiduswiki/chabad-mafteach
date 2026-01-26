@@ -48,3 +48,6 @@ local-dev/
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Local data fallback (environment-specific settings)
+/.data/

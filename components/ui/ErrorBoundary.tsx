@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,30 +10,49 @@ interface Props {
   children?: ReactNode;
   fallback?: ReactNode;
   componentName?: string;
+  /** If true, don't report to Sentry (useful for expected errors) */
+  silent?: boolean;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  eventId: string | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    eventId: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`Uncaught error in ${this.props.componentName || "ErrorBoundary"}:`, error, errorInfo);
-    // Future integration: Sentry.captureException(error, { extra: errorInfo });
+    const componentName = this.props.componentName || "Unknown Component";
+
+    console.error(`[ErrorBoundary] Uncaught error in ${componentName}:`, error, errorInfo);
+
+    // Report to Sentry unless silent mode
+    if (!this.props.silent) {
+      const eventId = Sentry.captureException(error, {
+        tags: {
+          component: componentName,
+          errorBoundary: true,
+        },
+        extra: {
+          componentStack: errorInfo.componentStack,
+        },
+      });
+      this.setState({ eventId });
+    }
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, eventId: null });
   };
 
   public render() {

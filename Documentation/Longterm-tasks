@@ -51,15 +51,16 @@ The frontend TypeScript types now match the new Directus schema:
 **Goal**: Ensure the app is fast, reliable, and observable before public launch. (Blindspots #1, #2, #3)
 
 ### Phase 17a: Performance & Scalability
-- [ ] **Performance Budgets**: Set targets (API <500ms, Page Load <3s).
-- [ ] **Pagination & Optimization**: Implement query pagination for large collections (topics/sources).
-- [ ] **Caching Layer**: Add Redis caching for Directus queries and AI search.
+- [x] **Performance Budgets**: Set targets in `lib/constants.ts` (API <500ms, Page Load <3s, LCP <2.5s).
+- [x] **Pagination & Optimization**: Replaced `limit: -1` with `MAX_BULK_LOAD` (500) constant; all APIs use centralized limits.
+- [x] **Constants Centralization**: All magic numbers moved to `lib/constants.ts` (cache TTLs, security, pagination).
+- [ ] **Caching Layer**: Redis caching for Directus queries and AI search (future - currently in-memory).
 - [ ] **Asset Optimization**: Optimize image/font delivery via CDN.
 
 ### Phase 17b: Observability & Monitoring
-- [ ] **Error Tracking**: Integrate Sentry/LogRocket for frontend/backend errors.
+- [x] **Error Tracking**: Sentry integrated for frontend/backend errors (DSN configured, edge + server + client).
+- [x] **Error Boundaries**: React Error Boundaries implemented with Sentry reporting (components tagged for tracking).
 - [ ] **Uptime Monitoring**: Set up alerts for Directus API availability.
-- [ ] **Error Boundaries**: Implement React Error Boundaries for major UI sections.
 
 ### Phase 17c: Data Migration & Versioning
 - [ ] **Staging Workflow**: Document and enforce Staging → Production sync process.
@@ -254,6 +255,45 @@ The following admin pages have been created but require backend data integration
 **Required Action**: Same as #1 - connect analytics provider.
 
 ---
+
+## 🔧 MCP / DIRECTUS TEAM TODO (Jan 26, 2026)
+
+> **For the team member managing Directus collections and MCP connections.**
+
+### Create `site_settings` Singleton Collection
+
+The branding style settings UI (`/admin/branding/style`) now has a robust fallback to local file storage, but for proper multi-instance persistence (e.g., Railway deployments), a Directus singleton is required.
+
+**Steps to create in Directus Admin:**
+
+1. Go to **Settings > Data Model**
+2. Click **Create Collection**
+3. Configure:
+   - **Name**: `site_settings`
+   - **Type**: Singleton (toggle ON)
+   - **Primary Key**: Auto-generated UUID
+4. Add the following field:
+   - **Field Name**: `style_settings`
+   - **Type**: JSON
+   - **Interface**: Code (JSON)
+   - **Note**: "Stores branding design tokens (colors, fonts, radius, theme)"
+5. Set **Permissions**:
+   - **Public**: No access
+   - **Administrator**: Full CRUD
+
+**Expected JSON structure** for `style_settings`:
+```json
+{
+  "primaryColor": "#2563eb",
+  "accentColor": "#8b5cf6",
+  "fontFamily": "system",
+  "borderRadius": "lg",
+  "darkModeDefault": false
+}
+```
+
+**After Creation**: The frontend API at `/api/admin/branding/style` will automatically detect and use this collection. No code changes required.
+
 
 ## 🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
 - ✅ **Directus Permissions Fix**: Verified static token access and directus-proxy path reconstruction.
