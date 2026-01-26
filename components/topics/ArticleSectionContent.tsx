@@ -89,6 +89,7 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
 
     // Special case: Sefiros Chart for the Sefiros topic
     if (section.type === 'charts' && topic.slug === 'sefiros') {
+        console.log('Rendering SefirosChart for sefiros topic');
         return (
             <div className="space-y-4">
                 <div className="text-center space-y-2 mb-6">

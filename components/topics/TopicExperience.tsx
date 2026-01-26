@@ -515,7 +515,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         ...(topic.charts && isSectionVisible('charts', topic.charts) ? [{
             type: 'charts' as SectionType,
             order: 8,
-            content: highlightTerms(topic.charts)
+            content: topic.slug === 'sefiros' ? topic.charts : highlightTerms(topic.charts)
         }] : []),
         ...(topic.common_confusions && topic.common_confusions.length > 0 && isSectionVisible('common_confusions', topic.common_confusions) ? [{
             type: 'confusions' as SectionType,
@@ -542,7 +542,8 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
     // Debug: Log sections for sefiros topic
     if (topic.slug === 'sefiros') {
         console.log('Sefiros sections:', sections.map(s => ({ type: s.type, order: s.order, hasContent: !!s.content })));
-        console.log('Topic data:', { slug: topic.slug, hasCharts: !!topic.charts, chartsLength: topic.charts?.length });
+        console.log('Topic data:', { slug: topic.slug, hasCharts: !!topic.charts, chartsLength: topic.charts?.length, chartsContent: topic.charts });
+        console.log('Charts section visible?', isSectionVisible('charts', topic.charts));
     }
 
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
