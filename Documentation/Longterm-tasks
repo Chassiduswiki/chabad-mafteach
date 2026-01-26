@@ -2,6 +2,28 @@
 
 **Note from critique (Jan 25, 2026):** Infrastructure, Performance, Governance, and SEO are now elevated to first-class priorities to prevent technical debt and ensure public-launch readiness.
 
+## 🚨 Critical System Gaps (Jan 2026 Audit)
+These items are blocking core functionality and must be addressed before public launch.
+
+### 1. User Management & Authentication (MISSING)
+**Status**: 🔴 **CRITICAL MISSING**
+- **Issue**: No public signup (`/auth/signup`) or invite flow exists. Users can only exist if manually created in Directus database.
+- **Impact**: Editors cannot be onboarded without manual DB intervention.
+- **Action**: Build `/admin/users/invite` (UI) and `/auth/accept-invite` (Flow).
+
+### 2. Admin CRM Integration
+**Status**: 🟡 **PARTIAL / MOCK**
+- **Issue**: Dashboard analytics are real (Umami), but "User List" and "Activity" are largely mock data or placeholders.
+- **Action**: Connect Admin Dashboard to real Directus `users` collection and `directus_activity`.
+
+### 3. Editor Experience Bugs
+**Status**: 🟠 **BUG**
+- **Issue**: TipTap cursor behaves erratically when mixing Hebrew (RTL) and English (LTR).
+- **Cause**: Likely missing `dir="auto"` or BiDirectional extension configuration.
+- **Action**: Implement explicit RTL support in `EditorProvider`.
+
+---
+
 ## 🎯 JANUARY 2026 PIVOT: Focus on Digital Chassidus Encyclopedia
 **Goal**: Temporarily hide the "sources" (Seforim/Torah Reader) side of the platform to focus on the core "Digital Chassidus Encyclopedia" (Topics). This ensures a high-quality, focused experience before re-introducing source deep-diving.
 
