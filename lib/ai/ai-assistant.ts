@@ -11,7 +11,7 @@ export class AIAssistant {
   private client: OpenRouterClient;
 
   constructor() {
-    this.client = new OpenRouterClient();
+    this.client = new OpenRouterClient({});
   }
 
   /**

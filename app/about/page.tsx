@@ -12,7 +12,21 @@ async function getSettings() {
     const settings = await directus.request(readSingleton('site_settings'));
     return settings;
   } catch (error) {
-    console.error('Error fetching settings for about metadata:', error);
+    const isProd = process.env.NODE_ENV === 'production';
+    if (!isProd) {
+      const err: any = error;
+      const message =
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        (typeof err === 'string' ? err : 'Unknown error');
+      const status = err?.response?.status || err?.status;
+      console.error('Error fetching settings for about metadata:', {
+        message,
+        status,
+        hasDirectusUrl: !!(process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL),
+        hasStaticToken: !!process.env.DIRECTUS_STATIC_TOKEN
+      });
+    }
     return null;
   }
 }

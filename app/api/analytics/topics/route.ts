@@ -1,15 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
+import { getTopPages } from '@/lib/analytics/umami';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const range = searchParams.get('range') || '30d';
+    
+    // Calculate date range
+    const endAt = new Date();
+    const startAt = new Date();
+    if (range === '7d') {
+      startAt.setDate(endAt.getDate() - 7);
+    } else if (range === '30d') {
+      startAt.setDate(endAt.getDate() - 30);
+    } else {
+      startAt.setHours(endAt.getHours() - 24); // 24h default
+    }
 
+    const websiteId = process.env.UMAMI_WEBSITE_ID;
+    const umamiHost = process.env.UMAMI_HOST;
+    const umamiUsername = process.env.UMAMI_USERNAME;
+    const umamiPassword = process.env.UMAMI_PASSWORD;
+    const umamiCloudKey = process.env.UMAMI_CLOUD_API_KEY || process.env.UMAMI_API_KEY;
+
+    // Try to get real analytics from Umami if configured
+    // - Cloud: UMAMI_CLOUD_API_KEY (or UMAMI_API_KEY) + UMAMI_WEBSITE_ID
+    // - Self-hosted: UMAMI_HOST + UMAMI_USERNAME + UMAMI_PASSWORD + UMAMI_WEBSITE_ID
+    if (websiteId && (umamiCloudKey || (umamiHost && umamiUsername && umamiPassword))) {
+      try {
+        // Get top pages from Umami
+        const topPages = await getTopPages(websiteId, startAt, endAt, 100);
+        
+        // Get topics from Directus to map URLs
+        const directus = createClient();
+        const topics = await directus.request(readItems('topics', {
+          fields: ['id', 'canonical_title', 'slug', 'topic_type', 'status', 'date_updated', 'date_created'],
+          sort: ['-date_updated'],
+          limit: 200
+        }));
+
+        // Create URL-to-topic mapping
+        const topicMap = new Map();
+        topics.forEach((topic: any) => {
+          const url = `/topics/${topic.slug}`;
+          topicMap.set(url, topic);
+        });
+
+        // Merge Umami data with topic data
+        const topicsWithAnalytics = topPages
+          .filter(page => topicMap.has(page.url)) // Only include actual topic pages
+          .map(page => {
+            const topic = topicMap.get(page.url);
+            return {
+              id: topic.id,
+              canonical_title: topic.canonical_title,
+              slug: topic.slug,
+              topic_type: topic.topic_type,
+              status: topic.status,
+              // Real analytics data from Umami
+              views: page.pageviews,
+              visitors: page.visitors,
+              bounces: page.bounces,
+              // Calculate trend based on recent activity
+              trend: page.pageviews > 10 ? 'up' : page.pageviews > 0 ? 'stable' : undefined,
+              changePercent: page.pageviews > 0 ? Math.min(page.pageviews * 2, 100) : 0
+            };
+          });
+
+        // Sort by views
+        topicsWithAnalytics.sort((a, b) => b.views - a.views);
+
+        // Calculate summary from real data
+        const publishedTopics = topicsWithAnalytics.filter(t => t.status === 'published');
+        const totalViews = topicsWithAnalytics.reduce((sum, t) => sum + t.views, 0);
+        const totalVisitors = topicsWithAnalytics.reduce((sum, t) => sum + (t.visitors || 0), 0);
+        
+        const summary = {
+          totalViews,
+          totalTopics: publishedTopics.length,
+          avgViewsPerTopic: publishedTopics.length > 0 ? Math.round(totalViews / publishedTopics.length * 10) / 10 : 0
+        };
+
+        return NextResponse.json({
+          topics: topicsWithAnalytics,
+          summary,
+          dataSource: 'umami', // Using real Umami analytics
+          dateRange: { startAt: startAt.toISOString(), endAt: endAt.toISOString() }
+        });
+      } catch (umamiError) {
+        console.error('Umami analytics error, falling back to Directus:', umamiError);
+        // Fall back to Directus data if Umami fails
+      }
+    }
+
+    // Fallback: Use Directus statement counts as proxy
     const directus = createClient();
-
-    // Get all topics with their data
     const topics = await directus.request(readItems('topics', {
       fields: ['id', 'canonical_title', 'slug', 'topic_type', 'status', 'date_updated', 'date_created'],
       sort: ['-date_updated'],
@@ -24,14 +111,12 @@ export async function GET(req: NextRequest) {
         limit: -1
       }));
       
-      // Count statements per topic
       statementTopics.forEach((st: any) => {
         if (st.topic_id) {
           statementCounts[st.topic_id] = (statementCounts[st.topic_id] || 0) + 1;
         }
       });
     } catch (e) {
-      // statement_topics might not exist or be accessible
       console.log('Could not fetch statement_topics:', e);
     }
 
@@ -67,8 +152,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       topics: topicsWithAnalytics,
       summary,
-      dataSource: 'directus', // Using Directus data
-      note: 'Views represent statement counts. Connect analytics provider for real page views.'
+      dataSource: 'directus', // Using Directus data as fallback
+      note: 'Views represent statement counts. Configure Umami for real page views.'
     });
   } catch (error) {
     console.error('Topics analytics error:', error);

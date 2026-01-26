@@ -10,6 +10,7 @@ import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { AnalyticsTrackerComp } from "@/lib/analytics-tracker";
+import { UmamiTracker } from "@/components/analytics/UmamiTracker";
 
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
@@ -171,6 +172,13 @@ export default async function RootLayout({
         )}
       </head>
       <body className={inter.variable}>
+        {/* Umami Analytics - only in production and when configured */}
+        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <UmamiTracker
+            websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            scriptSrc={process.env.UMAMI_CLOUD_SCRIPT_SRC || 'https://cloud.umami.is/script.js'}
+          />
+        )}
         <AnalyticsTrackerComp />
         <GlobalBanner />
         {/* Skip to content link for accessibility */}
