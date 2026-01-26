@@ -539,6 +539,12 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         }] : [])
     ];
 
+    // Debug: Log sections for sefiros topic
+    if (topic.slug === 'sefiros') {
+        console.log('Sefiros sections:', sections.map(s => ({ type: s.type, order: s.order, hasContent: !!s.content })));
+        console.log('Topic data:', { slug: topic.slug, hasCharts: !!topic.charts, chartsLength: topic.charts?.length });
+    }
+
     // Handle Inline Term Clicks (if we have a way to detect them in HTML content)
     const handleContentInteraction = (term: string) => {
         const conceptData = topic.key_concepts?.find(c => c.concept.toLowerCase() === term.toLowerCase());
