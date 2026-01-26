@@ -5,6 +5,7 @@ import { useEditor, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
 import { createTipTapExtensions } from './extensions';
 
 interface CitationData {
@@ -69,6 +70,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         codeBlock: {},
         bulletList: {},
         orderedList: {},
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+        defaultAlignment: 'left',
       }),
       CharacterCount.configure({
         limit: characterLimit,
@@ -140,9 +146,38 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       attributes: {
         class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-6',
         dir: 'auto', // Enable browser-native RTL detection
+        lang: 'he', // Hint for Hebrew text
+        style: 'unicode-bidi: plaintext;', // Better handling of mixed LTR/RTL content
       },
       handlePaste: (view, event) => {
         // Let the OCR extension handle image pastes
+        return false;
+      },
+      handleKeyDown: (view, event) => {
+        // Handle RTL/LTR switching with Ctrl/Cmd + Shift
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+          if (event.key === 'L') {
+            // Set LTR direction
+            const { state } = view;
+            const tr = state.tr.setNodeMarkup(state.selection.from, undefined, {
+              ...state.selection.$from.parent.attrs,
+              dir: 'ltr',
+            });
+            view.dispatch(tr);
+            event.preventDefault();
+            return true;
+          } else if (event.key === 'R') {
+            // Set RTL direction
+            const { state } = view;
+            const tr = state.tr.setNodeMarkup(state.selection.from, undefined, {
+              ...state.selection.$from.parent.attrs,
+              dir: 'rtl',
+            });
+            view.dispatch(tr);
+            event.preventDefault();
+            return true;
+          }
+        }
         return false;
       },
     },

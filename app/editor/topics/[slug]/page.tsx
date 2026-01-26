@@ -907,57 +907,10 @@ export default function TopicEditorPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6 ${(isLocked && !isOwner) ? 'opacity-75 pointer-events-none' : ''}`}>
-          {/* Sidebar - Completeness */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="sticky top-[120px] space-y-4">
-              <TopicCompleteness
-                formData={formData}
-                relationshipCount={relationships.length}
-                sourceCount={linkedSources.length}
-                onGenerateField={handleGenerateField}
-                isAICompleting={isAICompleting}
-              />
-
-              <Dialog open={showHistory} onOpenChange={setShowHistory}>
-                <DialogContent className="max-w-2xl h-[80vh] p-0 overflow-hidden flex flex-col">
-                  <TopicVersionHistory
-                    slug={slug}
-                    onRevert={() => {
-                      loadTopic();
-                      markAsSaved();
-                      setShowHistory(false);
-                    }}
-                    className="h-full"
-                  />
-                </DialogContent>
-              </Dialog>
-
-            </div>
-
-            <ProactiveSuggestionsPanel
-              topicId={topic.id}
-              content={Object.values(formData).join(' ')}
-            />
-
-            {/* Keyboard shortcuts hint */}
-            <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2 mb-2">
-                <Keyboard className="h-4 w-4" />
-                <span className="font-medium">Shortcuts</span>
-              </div>
-              <div className="space-y-1">
-                <div>⌘/Ctrl + S — Save</div>
-                <div>/ — Slash commands</div>
-                <div>? — All shortcuts</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className={`grid grid-cols-1 gap-6 ${(isLocked && !isOwner) ? 'opacity-75 pointer-events-none' : ''}`}>
         {/* Main Editor Area */}
-        <div className="lg:col-span-3 order-1 lg:order-2">
+        <div className="w-full">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TopicEditorTab)}>
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -1741,7 +1694,44 @@ export default function TopicEditorPage() {
             </TabsContent>
           </Tabs>
         </div>
+        </div>
       </main>
+
+      {/* Bottom Panel - Completeness & Tools */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <TopicCompleteness
+              formData={formData}
+              relationshipCount={relationships.length}
+              sourceCount={linkedSources.length}
+              onGenerateField={handleGenerateField}
+              isAICompleting={isAICompleting}
+            />
+          </div>
+          
+          <div className="lg:col-span-2">
+            <Dialog open={showHistory} onOpenChange={setShowHistory}>
+              <DialogContent className="max-w-2xl h-[80vh] p-0 overflow-hidden flex flex-col">
+                <TopicVersionHistory
+                  slug={slug}
+                  onRevert={() => {
+                    loadTopic();
+                    markAsSaved();
+                    setShowHistory(false);
+                  }}
+                  className="h-full"
+                />
+              </DialogContent>
+            </Dialog>
+            
+            <ProactiveSuggestionsPanel
+              topicId={topic.id}
+              content={Object.values(formData).join(' ')}
+            />
+          </div>
+        </div>
+      </div>
 
     {/* Save Status Toast */}
     <SaveStatusToast

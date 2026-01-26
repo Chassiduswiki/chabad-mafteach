@@ -106,12 +106,34 @@ export async function POST(request: NextRequest) {
             })) as any[];
 
             if (fallbackDocs.length === 0) {
-                return NextResponse.json(
-                    { error: 'No associated document found for this topic. Cannot create content block.' },
-                    { status: 400 }
-                );
+                // Auto-create a document for this topic
+                const createDocResponse = await fetch(`${process.env.DIRECTUS_URL}/items/documents`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        topic: parseInt(topic_id),
+                        title: `Entry for Topic ${topic_id}`,
+                        doc_type: 'entry',
+                        status: 'published'
+                    })
+                });
+
+                if (createDocResponse.ok) {
+                    const docData = await createDocResponse.json();
+                    docId = docData.data.id;
+                    console.log(`Auto-created document ${docId} for topic ${topic_id}`);
+                } else {
+                    return NextResponse.json(
+                        { error: 'Failed to create document for topic. Cannot create content block.' },
+                        { status: 500 }
+                    );
+                }
+            } else {
+                docId = fallbackDocs[0].id;
             }
-            docId = fallbackDocs[0].id;
         } else {
             docId = topicDocuments[0].id;
         }

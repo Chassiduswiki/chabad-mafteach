@@ -29,7 +29,7 @@ interface SectionHeaderProps {
 // --- Refactored Components ---
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => (
-  <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
+  <header className="dashboard-header">
     <div className="max-w-7xl mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -54,7 +54,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => (
 );
 
 const HeroAction = () => (
-  <div className="relative rounded-2xl border bg-card p-6 md:p-8 overflow-hidden">
+  <div className="relative dashboard-card p-6 md:p-8 overflow-hidden">
     <div className="absolute -inset-x-20 top-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent h-20 opacity-50 blur-3xl" />
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="flex-1">
@@ -83,7 +83,7 @@ const DashboardCard = ({ href, icon: Icon, title, children, className, iconClass
   <Link
     href={href}
     className={cn(
-      "group relative rounded-xl border bg-card p-5 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:shadow-lg hover:-translate-y-1",
+      "group relative dashboard-card p-5 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5 hover:shadow-lg hover:-translate-y-1",
       className
     )}
   >
@@ -145,20 +145,20 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dashboard-layout">
       <DashboardHeader user={user} onLogout={handleLogout} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+      <main className="dashboard-main">
         <div className="space-y-12">
           
           {/* Main Actions */}
           <section className="space-y-6">
             <HeroAction />
-            <div className="grid gap-6 md:grid-cols-2">
-              <DashboardCard href="/editor/topics" icon={Search} title="Research Topics" iconClassName="bg-green-500/10 text-green-600" className="">
+            <div className="card-grid card-grid-2">
+              <DashboardCard href="/editor/topics" icon={Search} title="Research Topics" iconClassName="bg-green-500/10 text-green-600" className="dashboard-card">
                 Explore and improve topic definitions, boundaries, and explanations.
               </DashboardCard>
-              <DashboardCard href="/editor/import" icon={Upload} title="Import Content" iconClassName="bg-orange-500/10 text-orange-600" className="">
+              <DashboardCard href="/editor/import" icon={Upload} title="Import Content" iconClassName="bg-orange-500/10 text-orange-600" className="dashboard-card">
                 Add seforim from Sefaria, upload PDFs, or import text files.
               </DashboardCard>
             </div>
@@ -167,14 +167,14 @@ export default function EditorPage() {
           {/* AI Tools */}
           <section>
             <SectionHeader icon={Sparkles} title="AI-Powered Tools" />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <DashboardCard href="/admin/ai-settings" icon={Settings} title="AI Settings" iconClassName="bg-blue-500/10 text-blue-600" className="">
+            <div className="card-grid card-grid-3">
+              <DashboardCard href="/admin/ai-settings" icon={Settings} title="AI Settings" iconClassName="bg-blue-500/10 text-blue-600" className="dashboard-card">
                 Configure OpenRouter API and translation models.
               </DashboardCard>
-              <DashboardCard href="#" icon={Brain} title="AI Translation" iconClassName="bg-purple-500/10 text-purple-600" className="">
+              <DashboardCard href="#" icon={Brain} title="AI Translation" iconClassName="bg-purple-500/10 text-purple-600" className="dashboard-card">
                 Available in topic editors and writing tools.
               </DashboardCard>
-              <DashboardCard href="#" icon={Sparkles} title="Content Enhancement" iconClassName="bg-teal-500/10 text-teal-600" className="">
+              <DashboardCard href="#" icon={Sparkles} title="Content Enhancement" iconClassName="bg-teal-500/10 text-teal-600" className="dashboard-card">
                 AI-powered writing assistance and improvements.
               </DashboardCard>
             </div>
@@ -183,17 +183,17 @@ export default function EditorPage() {
           {/* Library Management */}
           <section>
             <SectionHeader icon={BookOpen} title="Library Management" />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <DashboardCard href="/admin/books" icon={BookOpen} title="Books" iconClassName="bg-sky-500/10 text-sky-600" className="">
+            <div className="card-grid card-grid-4">
+              <DashboardCard href="/admin/books" icon={BookOpen} title="Books" iconClassName="bg-sky-500/10 text-sky-600" className="dashboard-card">
                 Manage seforim and sources in your library.
               </DashboardCard>
-              <DashboardCard href="/admin/authors" icon={User} title="Authors" iconClassName="bg-indigo-500/10 text-indigo-600" className="">
+              <DashboardCard href="/admin/authors" icon={User} title="Authors" iconClassName="bg-indigo-500/10 text-indigo-600" className="dashboard-card">
                 Manage authors and biographical info.
               </DashboardCard>
-              <DashboardCard href="/admin/topic-collections" icon={Layers} title="Collections" iconClassName="bg-amber-500/10 text-amber-600" className="">
+              <DashboardCard href="/admin/topic-collections" icon={Layers} title="Collections" iconClassName="bg-amber-500/10 text-amber-600" className="dashboard-card">
                 Organize topics into collections.
               </DashboardCard>
-              <DashboardCard href="/admin" icon={Settings} title="Admin" iconClassName="bg-slate-500/10 text-slate-600" className="">
+              <DashboardCard href="/admin" icon={Settings} title="Admin" iconClassName="bg-slate-500/10 text-slate-600" className="dashboard-card">
                 Full admin dashboard & stats.
               </DashboardCard>
             </div>

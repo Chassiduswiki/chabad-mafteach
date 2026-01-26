@@ -280,39 +280,20 @@ The following admin pages have been created but require backend data integration
 
 > **For the team member managing Directus collections and MCP connections.**
 
-### Create `site_settings` Singleton Collection
+### ✅ Create `site_settings` Singleton Collection (COMPLETED - Jan 26, 2026)
 
-The branding style settings UI (`/admin/branding/style`) now has a robust fallback to local file storage, but for proper multi-instance persistence (e.g., Railway deployments), a Directus singleton is required.
+The branding style settings UI (`/admin/branding/style`) now has proper database persistence via Directus singleton.
 
-**Steps to create in Directus Admin:**
+**What was done:**
+- ✅ Verified `site_settings` singleton collection already existed
+- ✅ Added `style_settings` JSON field with default design tokens
+- ✅ Verified API integration works (reading from Directus with `"source": "directus"`)
+- ✅ Confirmed permissions are properly configured
 
-1. Go to **Settings > Data Model**
-2. Click **Create Collection**
-3. Configure:
-   - **Name**: `site_settings`
-   - **Type**: Singleton (toggle ON)
-   - **Primary Key**: Auto-generated UUID
-4. Add the following field:
-   - **Field Name**: `style_settings`
-   - **Type**: JSON
-   - **Interface**: Code (JSON)
-   - **Note**: "Stores branding design tokens (colors, fonts, radius, theme)"
-5. Set **Permissions**:
-   - **Public**: No access
-   - **Administrator**: Full CRUD
-
-**Expected JSON structure** for `style_settings`:
-```json
-{
-  "primaryColor": "#2563eb",
-  "accentColor": "#8b5cf6",
-  "fontFamily": "system",
-  "borderRadius": "lg",
-  "darkModeDefault": false
-}
-```
-
-**After Creation**: The frontend API at `/api/admin/branding/style` will automatically detect and use this collection. No code changes required.
+**Current State:**
+- API at `/api/admin/branding/style` automatically detects and uses the Directus collection
+- Default values populated: `{"primaryColor": "#2563eb", "accentColor": "#8b5cf6", "fontFamily": "system", "borderRadius": "lg", "darkModeDefault": false}`
+- Branding system now has proper database persistence with robust fallback mechanisms
 
 
 ## 🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)

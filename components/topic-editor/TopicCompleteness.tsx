@@ -152,13 +152,13 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Overall Progress */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="dashboard-card p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
+            <TrendingUp className="h-4 w-4 text-primary" />
             <h3 className="font-semibold text-foreground text-sm">Completeness</h3>
           </div>
-          <span className={`text-2xl font-bold ${
+          <span className={`text-lg font-bold ${
             completeness.overall >= 80 ? 'text-green-500' :
             completeness.overall >= 50 ? 'text-yellow-500' : 'text-red-500'
           }`}>
@@ -167,7 +167,7 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
         </div>
 
         {/* Overall Progress Bar */}
-        <div className="h-3 bg-muted rounded-full overflow-hidden mb-4">
+        <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
           <div
             className={`h-full transition-all duration-500 ${getProgressColor(completeness.overall)}`}
             style={{ width: `${completeness.overall}%` }}
@@ -176,33 +176,34 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
 
         {/* AI Quick Actions */}
         {completeness.overall < 100 && (
-          <div className="mb-6 space-y-2">
+          <div className="mb-4">
             <Button 
               size="sm" 
-              className="w-full h-9 rounded-xl shadow-md bg-primary hover:shadow-primary/20 transition-all gap-2"
+              className="w-full h-8 text-xs rounded-lg shadow-sm bg-primary hover:shadow-primary/20 transition-all gap-1.5"
               onClick={() => window.dispatchEvent(new CustomEvent('ai-generate-all-missing'))}
               disabled={isAICompleting}
             >
-              {isAICompleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-              Auto-generate All Missing
+              {isAICompleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+              <span className="hidden sm:inline">Auto-generate Missing</span>
+              <span className="sm:hidden">Auto-fill</span>
             </Button>
           </div>
         )}
 
         {/* Section Breakdown */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {Object.entries(completeness.sections).map(([section, percentage]) => (
-            <div key={section} className="space-y-2">
+            <div key={section} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {getStatusIcon(percentage)}
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {SECTION_LABELS[section as keyof typeof SECTION_LABELS]}
                   </span>
                 </div>
-                <span className="text-xs font-bold">{percentage}%</span>
+                <span className="text-[10px] font-bold">{percentage}%</span>
               </div>
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-1 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full ${getProgressColor(percentage)}`}
                   style={{ width: `${percentage}%` }}
@@ -211,31 +212,31 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
               
               {/* Specific AI Triggers per section */}
               {percentage < 100 && (
-                <div className="grid grid-cols-1 gap-1.5 pt-1">
+                <div className="grid grid-cols-1 gap-1 pt-1">
                   {section === 'content' && (
                     <>
                       {isFieldMissing('definition_positive') && (
                         <button 
                           onClick={() => onGenerateField?.('definition_positive')}
-                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                          className="flex items-center gap-1 text-[9px] text-primary hover:underline font-medium leading-tight"
                         >
-                          <Sparkles className="w-3 h-3" /> Generate Definition
+                          <Sparkles className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Definition</span><span className="sm:hidden">Def</span>
                         </button>
                       )}
                       {isFieldMissing('article') && (
                         <button 
                           onClick={() => onGenerateField?.('article')}
-                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                          className="flex items-center gap-1 text-[9px] text-primary hover:underline font-medium leading-tight"
                         >
-                          <Sparkles className="w-3 h-3" /> Generate Full Article
+                          <Sparkles className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Article</span><span className="sm:hidden">Art</span>
                         </button>
                       )}
                       {isFieldMissing('practical_takeaways') && (
                         <button 
                           onClick={() => onGenerateField?.('practical_takeaways')}
-                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                          className="flex items-center gap-1 text-[9px] text-primary hover:underline font-medium leading-tight"
                         >
-                          <Sparkles className="w-3 h-3" /> Generate Takeaways
+                          <Sparkles className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Takeaways</span><span className="sm:hidden">Tips</span>
                         </button>
                       )}
                     </>
@@ -243,17 +244,17 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
                   {section === 'relationships' && percentage < 100 && (
                     <button 
                       onClick={() => window.dispatchEvent(new CustomEvent('ai-find-relationships'))}
-                      className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                      className="flex items-center gap-1 text-[9px] text-primary hover:underline font-medium leading-tight"
                     >
-                      <Sparkles className="w-3 h-3" /> Find Related Topics
+                      <Sparkles className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Find Topics</span><span className="sm:hidden">Topics</span>
                     </button>
                   )}
                   {section === 'sources' && percentage < 100 && (
                     <button 
                       onClick={() => window.dispatchEvent(new CustomEvent('ai-suggest-citations'))}
-                      className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                      className="flex items-center gap-1 text-[9px] text-primary hover:underline font-medium leading-tight"
                     >
-                      <Sparkles className="w-3 h-3" /> Suggest Sources
+                      <Sparkles className="w-2.5 h-2.5" /> <span className="hidden sm:inline">Sources</span><span className="sm:hidden">Src</span>
                     </button>
                   )}
                 </div>
@@ -265,18 +266,23 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
 
       {/* Proactive Suggestions */}
       {completeness.suggestions.length > 0 && (
-        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3 text-primary">
-            <Sparkles className="w-4 h-4" />
-            <h4 className="text-xs font-black uppercase tracking-widest">AI Insights</h4>
+        <div className="dashboard-card p-3 bg-primary/5 border-primary/10">
+          <div className="flex items-center gap-1.5 mb-2 text-primary">
+            <Sparkles className="w-3 h-3" />
+            <h4 className="text-[10px] font-black uppercase tracking-widest">AI Insights</h4>
           </div>
-          <ul className="space-y-3">
-            {completeness.suggestions.map((suggestion, index) => (
-              <li key={index} className="text-[11px] leading-relaxed text-muted-foreground italic border-l-2 border-primary/20 pl-3">
+          <ul className="space-y-2">
+            {completeness.suggestions.slice(0, 2).map((suggestion, index) => (
+              <li key={index} className="text-[10px] leading-tight text-muted-foreground italic border-l-2 border-primary/20 pl-2">
                 {suggestion}
               </li>
             ))}
           </ul>
+          {completeness.suggestions.length > 2 && (
+            <p className="text-[9px] text-muted-foreground mt-1">
+              +{completeness.suggestions.length - 2} more suggestions
+            </p>
+          )}
         </div>
       )}
     </div>

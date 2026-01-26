@@ -139,215 +139,219 @@ export const SmartEditor: React.FC<SmartEditorProps> = ({
   const selectedPara = selectedParagraph ? document.paragraphs.find(p => p.id === selectedParagraph) : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{document.title}</h1>
-          <p className="text-muted-foreground">
-            {document.paragraphs.length} paragraphs •
-            {document.paragraphs.reduce((sum, p) => sum + p.statements.length, 0)} statements
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {hasChanges && (
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-              Unsaved Changes
-            </Badge>
-          )}
-          <Button
-            onClick={handleSaveDocument}
-            disabled={!hasChanges}
-            className="flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            Save Document
-          </Button>
+    <div className="editor-layout editor-layout-with-sidebar">
+      {/* Sidebar - Document Structure */}
+      <div className="editor-sidebar">
+        <h3 className="font-semibold text-foreground mb-4">Document Structure</h3>
+        <div className="space-y-2">
+          {document.paragraphs.map((paragraph) => (
+            <button
+              key={paragraph.id}
+              onClick={() => setSelectedParagraph(paragraph.id)}
+              className={`w-full text-left p-3 border rounded-lg hover:bg-accent transition-colors text-sm ${
+                selectedParagraph === paragraph.id ? 'border-primary bg-primary/5' : 'border-border'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <Badge variant={paragraph.status === 'published' ? 'default' : 'secondary'} className="text-xs">
+                  {paragraph.status}
+                </Badge>
+                <Badge variant="outline" className="text-xs">{paragraph.original_lang.toUpperCase()}</Badge>
+              </div>
+              <p className="font-medium">Paragraph {paragraph.order_key}</p>
+              <p className="text-xs text-muted-foreground">
+                {paragraph.statements.length} statements
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="edit" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Edit Content
-          </TabsTrigger>
-          <TabsTrigger value="structure" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            Data Structure
-          </TabsTrigger>
-          <TabsTrigger value="preview" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            Preview
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Content Area */}
+      <div className="editor-main">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{document.title}</h1>
+            <p className="text-muted-foreground">
+              {document.paragraphs.length} paragraphs •
+              {document.paragraphs.reduce((sum, p) => sum + p.statements.length, 0)} statements
+            </p>
+          </div>
 
-        <TabsContent value="edit" className="space-y-6">
-          {/* Paragraph Selector */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Select Paragraph to Edit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {document.paragraphs.map((paragraph) => (
-                  <button
-                    key={paragraph.id}
-                    onClick={() => setSelectedParagraph(paragraph.id)}
-                    className={`p-4 text-left border rounded-lg hover:bg-accent transition-colors ${
-                      selectedParagraph === paragraph.id ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant={paragraph.status === 'published' ? 'default' : 'secondary'}>
-                        {paragraph.status}
-                      </Badge>
-                      <Badge variant="outline">{paragraph.original_lang.toUpperCase()}</Badge>
+          <div className="flex items-center gap-3">
+            {hasChanges && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                Unsaved Changes
+              </Badge>
+            )}
+            <Button
+              onClick={handleSaveDocument}
+              disabled={!hasChanges}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Document
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="edit" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Edit Content
+            </TabsTrigger>
+            <TabsTrigger value="structure" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Data Structure
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Preview
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="edit" className="space-y-6">
+            {/* Editor */}
+            {selectedPara && (
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">
+                      Editing Paragraph {selectedPara.order_key}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBreakIntoStatements(selectedPara.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <Link className="h-4 w-4" />
+                        Break into Statements
+                      </Button>
                     </div>
-                    <p className="text-sm font-medium">Paragraph {paragraph.order_key}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {paragraph.statements.length} statements
-                    </p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                      {paragraph.text.substring(0, 100)}...
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Editor */}
-          {selectedPara && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    Editing Paragraph {selectedPara.order_key}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBreakIntoStatements(selectedPara.id)}
-                      className="flex items-center gap-2"
-                    >
-                      <Link className="h-4 w-4" />
-                      Break into Statements
-                    </Button>
                   </div>
-                </div>
+                </CardHeader>
+                <CardContent>
+                  <TipTapEditor
+                    docId={documentId}
+                    className="min-h-[600px]"
+                    onBreakStatements={() => handleBreakIntoStatements(selectedPara.id)}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {!selectedPara && (
+              <Card className="dashboard-card">
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  Select a paragraph from the sidebar to start editing
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="structure" className="space-y-6">
+            {/* Document Structure Tree */}
+            <Card className="dashboard-card">
+              <CardHeader>
+                <CardTitle className="text-lg">Document Structure</CardTitle>
               </CardHeader>
               <CardContent>
-                <TipTapEditor
-                  docId={documentId}
-                  className="min-h-[600px]"
-                  onBreakStatements={() => handleBreakIntoStatements(selectedPara.id)}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="structure" className="space-y-6">
-          {/* Document Structure Tree */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Document Structure</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {document.paragraphs.map((paragraph) => (
-                  <div key={paragraph.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium">Paragraph {paragraph.order_key}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{paragraph.original_lang}</Badge>
-                        <Badge variant={paragraph.status === 'published' ? 'default' : 'secondary'}>
-                          {paragraph.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="ml-4 space-y-2">
-                      {paragraph.statements.map((statement) => (
-                        <div key={statement.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                          <div className="flex-1">
-                            <p className="text-sm">Statement {statement.order_key}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {statement.text.substring(0, 80)}...
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            {statement.topics.slice(0, 2).map((topic) => (
-                              <Badge key={topic.id} variant="outline" className="text-xs">
-                                {topic.canonical_title}
-                              </Badge>
-                            ))}
-                            {statement.topics.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{statement.topics.length - 2}
-                              </Badge>
-                            )}
-                          </div>
+                <div className="space-y-4">
+                  {document.paragraphs.map((paragraph) => (
+                    <div key={paragraph.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium">Paragraph {paragraph.order_key}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{paragraph.original_lang}</Badge>
+                          <Badge variant={paragraph.status === 'published' ? 'default' : 'secondary'}>
+                            {paragraph.status}
+                          </Badge>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      </div>
 
-        <TabsContent value="preview" className="space-y-6">
-          {/* Full Document Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Document Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {document.paragraphs.map((paragraph) => (
-                  <div key={paragraph.id} className="border-l-4 border-primary/20 pl-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline">Paragraph {paragraph.order_key}</Badge>
-                      <Badge variant="outline">{paragraph.original_lang}</Badge>
-                    </div>
-
-                    <div
-                      className="prose prose-slate dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: paragraph.text }}
-                    />
-
-                    {paragraph.statements.length > 0 && (
-                      <div className="mt-4 space-y-2">
+                      <div className="ml-4 space-y-2">
                         {paragraph.statements.map((statement) => (
-                          <div key={statement.id} className="ml-4 p-3 bg-muted/30 rounded border-l-2 border-primary/30">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="secondary" className="text-xs">
-                                Statement {statement.order_key}
-                              </Badge>
-                              {statement.topics.map((topic) => (
+                          <div key={statement.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                            <div className="flex-1">
+                              <p className="text-sm">Statement {statement.order_key}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {statement.text.substring(0, 80)}...
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              {statement.topics.slice(0, 2).map((topic) => (
                                 <Badge key={topic.id} variant="outline" className="text-xs">
                                   {topic.canonical_title}
                                 </Badge>
                               ))}
+                              {statement.topics.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{statement.topics.length - 2}
+                                </Badge>
+                              )}
                             </div>
-                            <p className="text-sm">{statement.text}</p>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="preview" className="space-y-6">
+            {/* Full Document Preview */}
+            <Card className="dashboard-card">
+              <CardHeader>
+                <CardTitle className="text-lg">Document Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {document.paragraphs.map((paragraph) => (
+                    <div key={paragraph.id} className="border-l-4 border-primary/20 pl-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">Paragraph {paragraph.order_key}</Badge>
+                        <Badge variant="outline">{paragraph.original_lang}</Badge>
+                      </div>
+
+                      <div
+                        className="prose prose-slate dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: paragraph.text }}
+                      />
+
+                      {paragraph.statements.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {paragraph.statements.map((statement) => (
+                            <div key={statement.id} className="ml-4 p-3 bg-muted/30 rounded border-l-2 border-primary/30">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  Statement {statement.order_key}
+                                </Badge>
+                                {statement.topics.map((topic) => (
+                                  <Badge key={topic.id} variant="outline" className="text-xs">
+                                    {topic.canonical_title}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <p className="text-sm">{statement.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
