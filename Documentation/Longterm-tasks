@@ -198,6 +198,12 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Site Status Dashboard**: Maintenance mode switch and uptime monitoring.
 - [ ] **Comprehensive Logging**: Recent activity log (audit trail) and error log viewer.
 - [x] Create `/admin/audit-log` page. ✅ (Jan 25, 2026)
+  - [x] Pulls real data from `directus_activity` table
+  - [x] Shows user actions (create/update/delete) on all collections
+  - [x] Includes user details, timestamps, and collection context
+  - [x] Search and filter by action, collection, user, date range
+  - [x] Pagination for large activity logs
+  - [x] Proper error handling and auth protection
 - [ ] **Analytics**:
 - [x] Create `/analytics/topics` page. ✅ (Jan 25, 2026) ⚠️ **DATA STREAM MISSING**: Requires integration with analytics provider (Umami/Plausible/GA). Currently returns placeholder data from Directus topics list only.
 - [ ] **Access Control**: Detailed editor permissions and page locking.
