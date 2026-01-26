@@ -74,6 +74,8 @@ function clearRecentSearches() {
     }
 }
 
+import { useSiteSettings } from '@/hooks/useSiteSettings';
+
 export function CommandMenu() {
     const { open, setOpen } = useSearch();
     const { search: trackSearch } = useAnalytics();
@@ -82,6 +84,7 @@ export function CommandMenu() {
     const [loading, setLoading] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
     const router = useRouter();
+    const { data: settings } = useSiteSettings();
 
     // Load recent searches on mount
     React.useEffect(() => {
@@ -229,7 +232,7 @@ export function CommandMenu() {
                                         <Command.Input
                                             value={search}
                                             onValueChange={setSearch}
-                                            placeholder="Search topics, sources..."
+                                            placeholder={settings?.search_placeholder || "Search topics, sources..."}
                                             className="flex h-14 w-full bg-transparent px-3 py-3 text-base outline-none placeholder:text-muted-foreground disabled:opacity-50"
                                             autoFocus
                                         />
@@ -371,7 +374,7 @@ export function CommandMenu() {
                                 <Command.Input
                                     value={search}
                                     onValueChange={setSearch}
-                                    placeholder="Search command menu..."
+                                    placeholder={settings?.search_placeholder || "Search command menu..."}
                                     className="flex h-16 w-full bg-transparent py-3 text-lg outline-none placeholder:text-muted-foreground"
                                     autoFocus
                                 />

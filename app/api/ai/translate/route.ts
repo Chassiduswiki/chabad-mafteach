@@ -1,8 +1,8 @@
 // app/api/ai/translate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import OpenRouterClient from '@/lib/ai/openrouter-client';
+import OpenRouterClient, { AISettings } from '@/lib/ai/openrouter-client';
 import { getDirectus, Topic } from '@/lib/directus';
-import { createItem, readItems, updateItem } from '@directus/sdk';
+import { createItem, readItems, readSingleton, updateItem } from '@directus/sdk';
 
 async function getTopicField(topicId: string, field: string): Promise<string> {
   const directus = getDirectus();
@@ -72,9 +72,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const openRouterClient = new OpenRouterClient();
+    const directus = getDirectus();
+    
+    // 1. Fetch AI settings from Directus
+    const settings = await directus.request(readSingleton('ai_settings'));
+    const openRouterClient = new OpenRouterClient(settings);
 
-    // 1. Fetch content from Directus
+    // 2. Fetch content from Directus
     const contentToTranslate = await getTopicField(topic_id, field);
 
     if (!contentToTranslate) {

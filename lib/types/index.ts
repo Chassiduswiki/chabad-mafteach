@@ -226,6 +226,7 @@ export interface Topic {
     content_status?: 'comprehensive' | 'partial' | 'minimal';
     status_label?: string;
     badge_color?: string;
+    status?: 'draft' | 'reviewed' | 'published' | 'archived';
     sources_count?: number;
     documents_count?: number;
     

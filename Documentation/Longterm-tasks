@@ -42,7 +42,9 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Accessibility Audit**: Run axe DevTools on every page, fix critical issues. (Blindspot #6)
 - [ ] **Internationalization (i18n)**: Plan for Yiddish text rendering and RTL layout switching. (Blindspot #7)
 - [ ] **Mobile Strategy**: Decide between Native vs PWA (Push notifications, offline-first). (Blindspot #9)
-- [ ] **Content Governance**: Add "draft vs published" status to topics. (Blindspot #4)
+- ✅ **Content Governance**: Added "draft vs published" status field to topics and statements (Blindspot #4).
+- ✅ **Encyclopedia Manager**: Dashboard section with status distribution chart implemented.
+- ✅ **Bulk Topic Management**: Content Manager page (/admin/content) created for bulk status updates.
 
 ## TRACK 17: Infrastructure, Performance & Observability (URGENT)
 
@@ -160,12 +162,15 @@ The frontend TypeScript types now match the new Directus schema:
 ## � NEW FEATURE PRIORITIES (Jan 2026)
 
 ### Editor & Content Management
-- [ ] **Hide Entry from Website**: Add toggle to topics to hide from public view.
+- [x] **Hide Entry from Website**: Add toggle to topics to hide from public view.
 - [ ] **Topic Version History**: Track and revert content changes.
 - [ ] **Auto-Translate**: Integrated AI translation for entry fields.
 - [ ] **Language Dropdown**: Improved selection for multi-language editing.
-- [ ] **Seder Hishtalshelus Integration**: Make the custom chart component accessible/editable via the editor (not hardcoded).
+- [x] **Seder Hishtalshelus Integration**: Custom component (`TabularDataDisplay.tsx`) renders structured tables from content, detected by "Reference Chart" keyword.
 - [ ] **ISSUE: New Topic Creation**: Debug token/auth issues preventing new topic saves.
+- [x] **Mobile Feedback Button**: Fixed z-index conflict with nav (moved to `z-[101]`, `bottom-24`) and updated icon to `AlertTriangle`.
+- [ ] **Quick Edit Link**: Add edit button for admins/editors when viewing topics (UI design needed).
+- [ ] **Editor Top Bar Z-Depth**: Fix z-index conflicts with sticky header (`z-40` conflicts).
 
 ### Main Site Enhancements
 - [ ] **User Auth**: Sign up/login for community features.
@@ -178,28 +183,73 @@ The frontend TypeScript types now match the new Directus schema:
 - [ ] **Advanced Analytics**: Full Google Analytics integration.
 
 ### Admin Dashboard (Chassidus Wiki Backend)
-#### Content & Branding
+#### Content & Branding Management
 - [ ] **CMS Pages**: Edit About, Homepage, and Search Bar text from Admin.
-- [ ] **Branding**: Logo upload, color scheme customizer, and font selection.
-- [ ] **Site Banners**: Site-wide announcement toggle.
-- [ ] **Custom Injection**: CSS/JS injection points for quick fixes.
+- ✅ **Branding System**: Branding Studio page (/admin/branding) created with logo, color scheme, and custom CSS/JS injection points.
+- ✅ **Site Banners**: Global Banner component implemented, consumes branding settings from API.
+- [x] **Mobile Nav Z-Index**: Fixed feedback button positioning conflict.
+- [x] **HMR Icon Error**: Fixed lucide-react Palette icon module factory deletion in development.
+- ✅ **Hydration Mismatch**: Fixed Math.random() and Date.now() causing server/client rendering differences (Jan 2026).
+- ✅ **React Query Singleton**: Implemented singleton pattern for QueryClient to fix hydration boundary errors in Next.js 16/React 19.
+- ✅ **Mock Data Removal**: Eliminated all mock data from admin dashboard, now shows real data or empty states.
+- [x] **Trend Data Fix**: Removed misleading hard-coded trend values from metrics cards.
 
 #### Monitoring & Security
-- [ ] **Site Status**: Maintenance mode switch and uptime dashboard.
-- [ ] **Logs**: Recent activity log (audit trail) and error log viewer.
+- [ ] **Site Status Dashboard**: Maintenance mode switch and uptime monitoring.
+- [ ] **Comprehensive Logging**: Recent activity log (audit trail) and error log viewer.
+- [x] Create `/admin/audit-log` page. ✅ (Jan 25, 2026)
+- [ ] **Analytics**:
+- [x] Create `/analytics/topics` page. ✅ (Jan 25, 2026) ⚠️ **DATA STREAM MISSING**: Requires integration with analytics provider (Umami/Plausible/GA). Currently returns placeholder data from Directus topics list only.
 - [ ] **Access Control**: Detailed editor permissions and page locking.
-- [ ] **Session Management**: Force logout and password policies.
+- [ ] **Session Management**: Force logout all users and password policies.
 - [ ] **Data Safety**: Backup/Restore functionality and API key management.
+- [x] **User Menu Z-Depth**: Fixed dropdown positioning with proper z-index hierarchy.
 
-#### Performance & Advanced
-- [ ] **Technical Ops**: Cache clearing, image optimization, and DB optimization tools.
-- [ ] **Growth**: A/B testing manager and webhook configuration.
-- [ ] **Publishing**: Multi-language support and scheduled publishing.
-- [ ] **Reporting**: Custom report builder and conversion tracking.
+#### Performance & Technical Operations
+- ✅ **Technical Ops Panel**: Cache clearing, database optimization, and storage purging tools connected to API.
+- [ ] **Growth Tools**: A/B testing manager and webhook configuration.
+- [ ] **Publishing System**: Multi-language support and scheduled publishing.
+- [ ] **Reporting Suite**: Custom report builder and conversion tracking.
+
+#### SEO & Marketing
+- [ ] **SEO Management**: Meta descriptions, page titles, and social media preview images.
+- [ ] **Analytics Integration**: Google Analytics ID management and tracking setup.
+- [ ] **Sitemap Generation**: Automated sitemap.xml and Schema.org markup.
+- [ ] **Branding Details**:
+- [x] Create `/admin/branding/style` page. ✅ (Jan 25, 2026) ⚠️ **DATA STREAM MISSING**: Requires `site_settings` singleton collection in Directus with `style_settings` JSON field to persist design tokens. Currently settings not persisted to database.
+- [ ] **Topic Management**:
+- [x] Create `/admin/topics` listing page. ✅ (Jan 25, 2026) - Uses existing `/api/admin/content/list` API.
 
 ---
 
-## �🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
+## 🚨 MISSING DATA STREAMS (Jan 25, 2026)
+
+The following admin pages have been created but require backend data integration:
+
+### 1. Analytics Topics (`/analytics/topics`)
+**Issue**: No real analytics data source connected.
+**Current State**: Returns list of published topics from Directus with placeholder view counts (all zeros).
+**Required Action**: 
+- Integrate with analytics provider (Umami, Plausible, or Google Analytics)
+- Create API endpoint to fetch page views per topic slug
+- Map analytics data to topic records
+
+### 2. Branding Style Settings (`/admin/branding/style`)
+**Issue**: No persistence layer for design tokens.
+**Current State**: Settings UI works but changes are not saved to database.
+**Required Action**:
+- Create `site_settings` singleton collection in Directus
+- Add `style_settings` field (JSON type) to store design tokens
+- Alternatively: Use localStorage for client-side persistence only
+
+### 3. Real-Time Dashboard Metrics
+**Issue**: Real-time metrics (active users, today's views) require live analytics integration.
+**Current State**: Dashboard shows zeros or mock data when analytics provider not connected.
+**Required Action**: Same as #1 - connect analytics provider.
+
+---
+
+## 🚨 INFRASTRUCTURE STATUS (Jan 6, 2026)
 - ✅ **Directus Permissions Fix**: Verified static token access and directus-proxy path reconstruction.
 - ✅ **API Stability**: Paragraphs and Statements API refactored to use `content_blocks` schema.
 - ✅ **Editor Reliability**: Resolved infinite loop in ParagraphsEditor and fixed stuck loading spinner.

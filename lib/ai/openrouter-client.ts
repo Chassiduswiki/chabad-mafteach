@@ -1,19 +1,19 @@
 // lib/ai/openrouter-client.ts
 import { DEFAULT_AI_MODEL } from './config';
 
-interface TranslationQuality {
+export interface TranslationQuality {
   score: number;
   explanation: string;
 }
 
-interface TranslationResult {
+export interface TranslationResult {
   translation: string;
   quality: TranslationQuality;
   model: string;
   isFallback: boolean;
 }
 
-interface AISettings {
+export interface AISettings {
   provider: string;
   api_key: string;
   primary_model: string;
@@ -26,54 +26,39 @@ class OpenRouterClient {
   private apiKey: string;
   private primaryModel: string;
   private fallbackModel: string;
-  private settingsLoaded: boolean = false;
 
-  constructor() {
-    // Initialize with empty values - will be loaded dynamically
-    this.apiKey = '';
-    this.primaryModel = '';
-    this.fallbackModel = '';
-  }
-
-  private async loadSettings(): Promise<void> {
-    if (this.settingsLoaded) return;
-
-    try {
-      const response = await fetch('/api/ai/settings');
-      if (!response.ok) {
-        throw new Error('Failed to fetch AI settings');
-      }
-
-      const settings: AISettings = await response.json();
-      this.apiKey = settings.api_key || process.env.OPENROUTER_API_KEY || '';
-      this.primaryModel = settings.primary_model || DEFAULT_AI_MODEL;
-      this.fallbackModel = settings.fallback_model || 'anthropic/claude-3.5-sonnet';
-      this.settingsLoaded = true;
-
-      if (!this.apiKey) {
-        throw new Error('API key is required. Please configure it in AI Settings.');
-      }
-    } catch (error) {
-      console.error('Failed to load AI settings:', error);
-      throw new Error('Failed to load AI settings. Please configure them in the admin panel.');
-    }
+  constructor(settings: Partial<AISettings>) {
+    this.apiKey = settings.api_key || process.env.OPENROUTER_API_KEY || '';
+    this.primaryModel = settings.primary_model || DEFAULT_AI_MODEL;
+    this.fallbackModel = settings.fallback_model || 'anthropic/claude-3.5-sonnet';
   }
 
   private getChassidicPrompt(text: string, sourceLang: string, targetLang: string, context?: string): string {
     return `
+      You are a scholar of Chassidic philosophy and an expert translator specializing in Chabad terminology. 
       Translate the following text from ${sourceLang} to ${targetLang}. 
-      The text is from Chassidic literature, so please use appropriate mystical and philosophical terminology.
-      ${context ? `Context: ${context}` : ''}
+      
+      CRITICAL INSTRUCTIONS:
+      1. Use precise mystical and philosophical terminology (e.g., "Achdus Hashem", "Bittul", "Sovev Kol Almin", "Memale Kol Almin").
+      2. Maintain the scholarly tone appropriate for Torah study.
+      3. Preserve any HTML tags or Markdown formatting exactly.
+      4. If the source contains Hebrew terms transliterated into English, ensure they are translated accurately into the target language's equivalent scholarly term or kept if it's a standard term.
+      
+      ${context ? `ADDITIONAL CONTEXT: ${context}` : ''}
 
-      Text to translate: "${text}"
+      TEXT TO TRANSLATE:
+      "${text}"
 
-      Respond with a JSON object containing two keys: 'translation' (the translated text) and 'quality' (an object with 'score' from 0.0 to 1.0 for translation quality and a brief 'explanation').
+      RESPONSE FORMAT:
+      You MUST respond with a valid JSON object only. No other text.
+      Format: { "translation": "...", "quality": { "score": 0.0-1.0, "explanation": "..." } }
     `;
   }
 
   async translate(text: string, sourceLang: string, targetLang: string, context?: string): Promise<TranslationResult> {
-    // Load settings dynamically before making requests
-    await this.loadSettings();
+    if (!this.apiKey) {
+      throw new Error('API key is required for AI translation.');
+    }
 
     let model = this.primaryModel;
     let isFallback = false;
@@ -102,11 +87,14 @@ class OpenRouterClient {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'Chabad Mafteach',
       },
       body: JSON.stringify({
         model: model,
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
+        temperature: 0.2, // Keep it low for translation accuracy
       }),
     });
 
@@ -116,15 +104,21 @@ class OpenRouterClient {
     }
 
     const data = await response.json();
-    const content = JSON.parse(data.choices[0].message.content);
+    let content;
+    try {
+      content = JSON.parse(data.choices[0].message.content);
+    } catch (e) {
+      // Handle cases where the model might return a string that is not valid JSON
+      console.error('Failed to parse AI response as JSON:', data.choices[0].message.content);
+      throw new Error('AI returned an invalid response format.');
+    }
 
     return {
       translation: content.translation,
       quality: content.quality,
       model: model,
-      isFallback: false, // This will be adjusted in the main translate method if needed
+      isFallback: false,
     };
-
   }
 }
 

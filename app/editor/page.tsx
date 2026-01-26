@@ -29,7 +29,7 @@ interface SectionHeaderProps {
 // --- Refactored Components ---
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => (
-  <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
+  <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
     <div className="max-w-7xl mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

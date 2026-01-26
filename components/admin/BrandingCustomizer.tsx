@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Palette, Code, Type, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Code, Type, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for Palette to avoid HMR issues
+const Palette = dynamic(() => import('lucide-react').then(mod => ({ default: mod.Palette })), { 
+  ssr: false,
+  loading: () => <div className="w-4 h-4 animate-pulse bg-muted rounded" />
+});
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
