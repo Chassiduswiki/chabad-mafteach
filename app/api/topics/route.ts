@@ -56,8 +56,58 @@ async function fetchTopicsWithTranslations(filter: Record<string, unknown> = {},
         const topics = await directus.request(readItems('topics', query as { fields: string[] }));
         return topics as unknown as RawTopic[];
     } catch (error) {
-        console.warn('Failed to fetch topics:', error);
-        return [];
+        console.warn('Failed to fetch topics via SDK, trying direct API call:', error);
+        
+        // Fallback to direct API call
+        try {
+            const directusUrl = process.env.DIRECTUS_URL || 'https://directus-production-20db.up.railway.app';
+            const staticToken = process.env.DIRECTUS_STATIC_TOKEN;
+            
+            if (!staticToken) {
+                console.warn('No Directus static token configured');
+                return [];
+            }
+
+            // Build query string
+            const params = new URLSearchParams();
+            params.append('fields', TOPIC_FIELDS.join(','));
+            params.append('sort', 'canonical_title');
+            
+            if (query.limit) {
+                params.append('limit', query.limit.toString());
+            }
+            
+            // Add filter parameters
+            if (query.filter && query.filter._and) {
+                const filters = query.filter._and as any[];
+                filters.forEach(f => {
+                    if (f.status && f.status._eq) {
+                        params.append('filter[status][_eq]', f.status._eq);
+                    }
+                    if (f.topic_type && f.topic_type._eq) {
+                        params.append('filter[topic_type][_eq]', f.topic_type._eq);
+                    }
+                });
+            }
+
+            const response = await fetch(`${directusUrl}/items/topics?${params.toString()}`, {
+                headers: {
+                    'Authorization': `Bearer ${staticToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.warn('Directus API error for topics:', response.status);
+                return [];
+            }
+
+            const data = await response.json();
+            return data.data || [];
+        } catch (fallbackError) {
+            console.error('Fallback API call also failed:', fallbackError);
+            return [];
+        }
     }
 }
 

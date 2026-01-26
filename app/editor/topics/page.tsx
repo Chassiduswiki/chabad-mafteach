@@ -48,7 +48,15 @@ export default function TopicsEditorPage() {
   const loadTopics = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/topics?limit=100');
+      
+      // In development, use the static token for authentication
+      const headers: Record<string, string> = {};
+      if (process.env.NODE_ENV === 'development') {
+        const staticToken = 'qolRjZQj-yoaxKaEnmPQ8HVcn_ngyNDs'; // Directus static token
+        headers['Authorization'] = `Bearer ${staticToken}`;
+      }
+      
+      const response = await fetch('/api/topics?limit=100', { headers });
       if (response.ok) {
         const data = await response.json();
         // Handle both { data: [...] } and { topics: [...] } formats

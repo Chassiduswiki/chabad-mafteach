@@ -1741,15 +1741,14 @@ export default function TopicEditorPage() {
             </TabsContent>
           </Tabs>
         </div>
-    </div>
-      </main >
+      </main>
 
-    {/* Save Status Toast */ }
-    < SaveStatusToast
-  status = { autoSaveStatus }
-  lastSaved = { lastSaved }
-  hasUnsavedChanges = { hasUnsavedChanges }
+    {/* Save Status Toast */}
+    <SaveStatusToast
+      status={autoSaveStatus}
+      lastSaved={lastSaved}
+      hasUnsavedChanges={hasUnsavedChanges}
     />
-    </div >
+    </div>
   );
 }

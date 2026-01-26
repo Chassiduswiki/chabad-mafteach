@@ -40,7 +40,7 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
                     limit: 1
                 }
             })
-        );
+        ) as { data: Array<{ id: string }> };
 
         // Note: directus-sdk specific call structure might differ slightly depending on version,
         // usually readRoles or using request() with a custom query.
