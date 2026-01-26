@@ -1,7 +1,64 @@
 @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
-@import "tailwindcss";
+@theme {
+  /* Typography Scale - Obsidian Inspired */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-hebrew: "Frank Ruhl Libre", "Noto Serif Hebrew", "David Libre", serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-@custom-variant dark (&:is(.dark *));
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* Spacing Scale - 8px base unit */
+  --spacing-section-sm: 2rem;
+  --spacing-section-md: 3rem;
+  --spacing-section-lg: 4rem;
+  --spacing-section-xl: 6rem;
+
+  --spacing-card-sm: 1rem;
+  --spacing-card-md: 1.5rem;
+  --spacing-card-lg: 2rem;
+
+  /* Semantic Colors - Dark First */
+  --color-interactive: hsl(var(--primary));
+  --color-interactive-hover: hsl(var(--primary) / 0.9);
+  --color-success: hsl(142 76% 36%);
+  --color-warning: hsl(38 92% 50%);
+  --color-error: hsl(0 84% 60%);
+  --color-info: hsl(217 91% 60%);
+
+  --color-depth-comprehensive: hsl(142 76% 36%);
+  --color-depth-partial: hsl(38 92% 50%);
+  --color-depth-minimal: hsl(var(--muted-foreground));
+}
+
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
 
 /* Crown & Earth Design System - Premium Blue Theme */
 /* stylelint-disable-next-line at-rule-no-unknown */

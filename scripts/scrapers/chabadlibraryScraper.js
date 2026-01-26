@@ -2,32 +2,36 @@
 const fs = require('fs');
 const path = require('path');
 
-async function getEntireChabadLibraryBookSequential(idx) {
+const { parseTextIntoStatements } = require('../../lib/content/ingestion-parser');
+const { routeContent } = require('../../lib/content/content-router');
 
-    // This helper function will handle the recursive fetching for a given item,
-    // ensuring sequential data fetching.
+async function getEntireChabadLibraryBookSequential(idx) {
     async function processItemSequential(item) {
         const id = item.id;
         const heading = item.heading;
 
-        // --- FIRST REQUEST: Fetch data for the current item ---
-        const data = await getData(id); // This is one request at a time
+        const data = await getData(id);
 
-        // If 'data' has 'text' and 'haoros', it's a leaf node (actual content)
         if (data && data.text !== undefined && data.haoros !== undefined) {
+            // Use advanced parser for leaf nodes
+            const statements = parseTextIntoStatements(data.text, data.haoros);
+            // Auto-detect content type for routing
+            const routing = routeContent(heading, statements);
+            
             return {
                 heading: heading,
                 id: id,
-                text: data.text,
-                notes: data.haoros,
+                type: routing.type,
+                confidence: routing.confidence,
+                routing_reason: routing.reasoning,
+                statements: statements,
+                raw_text: data.text,
+                raw_notes: data.haoros,
             };
         } else if (data && Array.isArray(data)) {
-            // If 'data' is an array, it means it's a list of children
             const children = [];
-            // --- SEQUENTIAL PROCESSING OF CHILDREN ---
-            // Instead of Promise.all, we loop and await each child process
             for (const childItem of data) {
-                const processedChild = await processItemSequential(childItem); // Recursive call, awaited
+                const processedChild = await processItemSequential(childItem);
                 children.push(processedChild);
             }
 
@@ -37,7 +41,6 @@ async function getEntireChabadLibraryBookSequential(idx) {
                 children: children,
             };
         } else {
-            // Handle cases where data might be empty or in an unexpected format
             console.warn(`Unexpected data format for id: ${id}`, data);
             return {
                 heading: heading,
@@ -46,8 +49,7 @@ async function getEntireChabadLibraryBookSequential(idx) {
         }
     }
 
-    // --- INITIAL REQUEST: Fetch the top-level items ---
-    const topLevelItems = await getData(idx); // This is the first request
+    const topLevelItems = await getData(idx);
 
     if (!Array.isArray(topLevelItems)) {
         console.error("Initial getData(idx) did not return an array. Cannot proceed.");
@@ -55,10 +57,8 @@ async function getEntireChabadLibraryBookSequential(idx) {
     }
 
     const allBooks = {};
-    // --- SEQUENTIAL PROCESSING OF TOP-LEVEL ITEMS ---
     for (const m of topLevelItems) {
-        // 'm' is a top-level item with heading and id
-        const processedBook = await processItemSequential(m); // Process each top-level item sequentially
+        const processedBook = await processItemSequential(m);
         allBooks[m.heading] = processedBook;
     }
 

@@ -61,10 +61,15 @@ interface AuthStatus {
   };
 }
 
+import { useSiteSettings } from '@/hooks/useSiteSettings';
+
 export default function AdminSettingsPage() {
   const [authStatus, setAuthStatus] = React.useState<AuthStatus | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = React.useState(true);
+  const [authError, setAuthError] = React.useState<string | null>(null);
+  const { data: settings, isLoading: isLoadingSettings } = useSiteSettings();
+
+  const isLoading = isLoadingAuth || isLoadingSettings;
 
   React.useEffect(() => {
     async function fetchAuthStatus() {
@@ -86,9 +91,9 @@ export default function AdminSettingsPage() {
         const data = await response.json();
         setAuthStatus(data);
       } catch (err: any) {
-        setError(err.message);
+        setAuthError(err.message);
       } finally {
-        setIsLoading(false);
+        setIsLoadingAuth(false);
       }
     }
 
@@ -100,9 +105,9 @@ export default function AdminSettingsPage() {
       title: 'General',
       icon: Globe,
       items: [
-        { name: 'Platform Name', value: 'Chabad Mafteach', description: 'The display name of the platform' },
-        { name: 'Primary Language', value: 'Bilingual (EN/HE)', description: 'Default content language' },
-        { name: 'Timezone', value: 'UTC-5 (EST)', description: 'System reporting timezone' },
+        { name: 'Platform Name', value: settings?.site_name || 'Chabad Mafteach', description: 'The display name of the platform' },
+        { name: 'Tagline', value: settings?.tagline || 'Deepen your understanding', description: 'The site subtitle' },
+        { name: 'Search Placeholder', value: settings?.search_placeholder || 'Search topics...', description: 'Default text in search bars' },
       ]
     },
     {
@@ -156,12 +161,12 @@ export default function AdminSettingsPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-sm font-light italic">Loading authentication status...</span>
               </div>
-            ) : error ? (
+            ) : authError ? (
               <div className="p-6 rounded-2xl border border-destructive/20 bg-destructive/5 flex items-start gap-4">
                 <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
                 <div>
                   <h3 className="text-sm font-bold text-destructive uppercase tracking-widest mb-1">Access Error</h3>
-                  <p className="text-sm text-destructive/80 font-light italic">{error}</p>
+                  <p className="text-sm text-destructive/80 font-light italic">{authError}</p>
                 </div>
               </div>
             ) : authStatus && (

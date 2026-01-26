@@ -5,17 +5,21 @@ import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft, Save, Eye, CheckCircle, AlertCircle,
   Settings, Link2, BookOpen, Tag, LayoutGrid, FileText,
-  Clock, Keyboard
+  Clock, Keyboard, Trash2, Plus, Languages, Wand2
 } from 'lucide-react';
 import { Topic, TopicRelationship, Source } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { TipTapEditor } from '@/components/editor/TipTapEditor';
+import { cn } from '@/lib/utils';
 import {
   TopicRelationshipManager,
   SourceLinker,
   ConceptTagger,
   DisplayFormatSelector,
   TopicCompleteness,
+  TopicVersionHistory,
+  TopicHierarchyTree,
   useAutoSave,
   useSaveShortcut,
   TopicFormData,
@@ -39,6 +43,9 @@ import {
 import { SaveStatusToast } from '@/components/ui/SaveStatusToast';
 import { useSmartSlug } from '@/hooks/useSmartSlug';
 import { useAIFieldAutoComplete } from '@/hooks/useAIFieldAutoComplete';
+import { useTopicLock } from '@/hooks/useTopicLock';
+import { TranslateButton } from '@/components/editor/TranslateButton';
+import { GenerateSectionButton } from '@/components/editor/GenerateSectionButton';
 
 // Content sections configuration
 const CONTENT_SECTIONS: SectionConfig[] = [
@@ -46,6 +53,7 @@ const CONTENT_SECTIONS: SectionConfig[] = [
   { id: 'description', label: 'Short Description', field: 'description', required: true, displayConfig: { format: 'prose', visible: true }, helpText: 'Brief overview (appears in search results and hero section)' },
   { id: 'definition_positive', label: 'What It Is', field: 'definition_positive', displayConfig: { format: 'prose', visible: true }, helpText: 'Define what this concept encompasses' },
   { id: 'definition_negative', label: 'What It\'s Not', field: 'definition_negative', displayConfig: { format: 'prose', visible: true }, helpText: 'Clarify boundaries and common confusions' },
+  { id: 'common_confusions', label: 'Common Confusions', field: 'common_confusions', displayConfig: { format: 'prose', visible: true }, helpText: 'Address frequent misunderstandings or misapplications' },
   
   // Main Content
   { id: 'overview', label: 'Overview', field: 'overview', displayConfig: { format: 'prose', visible: true }, helpText: 'Detailed overview for the main page' },
@@ -95,7 +103,17 @@ export default function TopicEditorPage() {
     content_status: 'minimal',
     status_label: '',
     badge_color: '',
+    status: 'draft',
+    common_confusions: [],
   });
+
+  const topicContext = {
+    title: formData.canonical_title,
+    title_en: formData.canonical_title_en,
+    type: formData.topic_type,
+    description: formData.description,
+    slug: formData.slug,
+  };
 
   // Related data
   const [relationships, setRelationships] = useState<TopicRelationship[]>([]);
@@ -203,17 +221,123 @@ export default function TopicEditorPage() {
     const handleGenerateArticle = () => setShowContentGenerator(true);
     const handleFindRelationships = () => setShowRelationshipFinder(true);
     const handleSuggestCitations = () => setShowCitationSuggestor(true);
+    const handleGenerateAllMissing = async () => {
+      const missingFields = [
+        'definition_positive',
+        'definition_negative',
+        'overview',
+        'article',
+        'practical_takeaways',
+        'historical_context',
+        'mashal',
+        'global_nimshal'
+      ].filter(field => !formData[field as keyof TopicFormData]);
+
+      if (missingFields.length === 0) return;
+
+      setIsLoading(true);
+      for (const field of missingFields) {
+        await handleGenerateField(field);
+      }
+      setIsLoading(false);
+    };
+
+    const handleTranslateAllToEnglish = async () => {
+      const translatableFields: Array<{source: keyof TopicFormData, target: keyof TopicFormData}> = [
+        { source: 'canonical_title', target: 'canonical_title_en' },
+        { source: 'description', target: 'description_en' },
+        { source: 'definition_positive', target: 'definition_positive' }, // These update the same field but target language is different in API
+        { source: 'definition_negative', target: 'definition_negative' },
+        { source: 'overview', target: 'overview' },
+        { source: 'article', target: 'article' },
+        { source: 'practical_takeaways', target: 'practical_takeaways' },
+        { source: 'historical_context', target: 'historical_context' },
+        { source: 'mashal', target: 'mashal' },
+        { source: 'global_nimshal', target: 'global_nimshal' },
+      ];
+
+      setIsLoading(true);
+      for (const { source, target } of translatableFields) {
+        const content = formData[source];
+        if (!content || (typeof content === 'string' && content.length < 2)) continue;
+
+        try {
+          const response = await fetch('/api/ai/translate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            },
+            body: JSON.stringify({
+              topic_id: topic?.id,
+              source_language: 'he',
+              target_language: 'en',
+              field: source,
+              content: content,
+              context: topicContext
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.translation) {
+              if (target === 'canonical_title_en' || target === 'description_en') {
+                updateFormField(target, data.translation);
+              } else {
+                handleEditorUpdate(target, data.translation);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to translate ${source}:`, err);
+        }
+      }
+      setIsLoading(false);
+    };
 
     window.addEventListener('ai-generate-article', handleGenerateArticle);
     window.addEventListener('ai-find-relationships', handleFindRelationships);
     window.addEventListener('ai-suggest-citations', handleSuggestCitations);
+    window.addEventListener('ai-generate-all-missing', handleGenerateAllMissing);
+    window.addEventListener('ai-translate-all', handleTranslateAllToEnglish);
 
     return () => {
       window.removeEventListener('ai-generate-article', handleGenerateArticle);
       window.removeEventListener('ai-find-relationships', handleFindRelationships);
       window.removeEventListener('ai-suggest-citations', handleSuggestCitations);
+      window.removeEventListener('ai-generate-all-missing', handleGenerateAllMissing);
+      window.removeEventListener('ai-translate-all', handleTranslateAllToEnglish);
     };
-  }, []);
+  }, [topic, formData, topicContext]);
+
+  const handleGenerateField = async (fieldId: string) => {
+    // This is called from the sidebar
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/ai/generate-section', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          topic_id: topic?.id,
+          field_name: fieldId,
+          topic_context: topicContext
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.generated_content) {
+          handleEditorUpdate(fieldId as keyof TopicFormData, data.generated_content);
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to generate ${fieldId}:`, err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Load topic data
   useEffect(() => {
@@ -273,6 +397,8 @@ export default function TopicEditorPage() {
         content_status: topicData.content_status || 'minimal',
         status_label: topicData.status_label || '',
         badge_color: topicData.badge_color || '',
+        status: topicData.status || 'draft',
+        common_confusions: topicData.common_confusions || [],
       });
 
       // Load relationships
@@ -539,7 +665,7 @@ export default function TopicEditorPage() {
 
   const handleEditorUpdate = (field: keyof TopicFormData, content: string) => {
     setFormData(prev => ({ ...prev, [field]: content }));
-    if (['description', 'overview', 'article', 'definition_positive', 'definition_negative', 'practical_takeaways', 'historical_context', 'mashal', 'global_nimshal', 'charts'].includes(field)) {
+    if (['description', 'overview', 'article', 'definition_positive', 'definition_negative', 'practical_takeaways', 'historical_context', 'mashal', 'global_nimshal', 'charts', 'common_confusions'].includes(field)) {
       handleTranslationSave(field, content);
     }
   };
@@ -547,6 +673,8 @@ export default function TopicEditorPage() {
   const updateFormField = (field: keyof TopicFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const { isLocked, lockedBy, isOwner, error: lockError } = useTopicLock({ slug, enabled: !!topic && !isLoading });
 
   // Loading state
   if (isLoading) {
@@ -611,6 +739,20 @@ export default function TopicEditorPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Lock Banner */}
+      {isLocked && !isOwner && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          <span>Read Only: This topic is currently being edited by another user ({lockedBy}).</span>
+        </div>
+      )}
+      {lockError && (
+        <div className="bg-red-500 text-white px-4 py-2 flex items-center justify-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          <span>{lockError}</span>
+        </div>
+      )}
+
       <AIContentGeneratorDialog 
         open={showContentGenerator}
         onOpenChange={setShowContentGenerator}
@@ -647,7 +789,7 @@ export default function TopicEditorPage() {
       />
       <FloatingAIChatButton onClick={() => setShowChatPanel(true)} />
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
+      <header className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -678,6 +820,52 @@ export default function TopicEditorPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 mr-2 px-2 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.dispatchEvent(new CustomEvent('ai-translate-all'))}
+                  disabled={isLoading || manualSaveStatus === 'saving'}
+                  className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/10"
+                  title="Translate all Hebrew fields to English"
+                >
+                  <Languages className="w-3.5 h-3.5 mr-1.5" />
+                  Translate All
+                </Button>
+                <div className="w-px h-4 bg-primary/20 mx-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.dispatchEvent(new CustomEvent('ai-generate-all-missing'))}
+                  disabled={isLoading || manualSaveStatus === 'saving'}
+                  className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/10"
+                  title="Generate content for all empty fields"
+                >
+                  <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                  Fill All
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 mr-4 bg-muted/50 px-3 py-1 rounded-lg border border-border/50">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Status:</span>
+                <select
+                  value={formData.status || 'draft'}
+                  onChange={(e) => updateFormField('status', e.target.value)}
+                  className={cn(
+                    "text-xs font-bold uppercase tracking-wider bg-transparent outline-none cursor-pointer",
+                    formData.status === 'published' ? "text-emerald-600" :
+                    formData.status === 'draft' ? "text-amber-600" :
+                    formData.status === 'reviewed' ? "text-blue-600" :
+                    "text-rose-600"
+                  )}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
               <button
                 onClick={() => router.push(`/topics/${slug}`)}
                 className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md hover:bg-muted transition-colors"
@@ -688,7 +876,7 @@ export default function TopicEditorPage() {
 
               <button
                 onClick={handleManualSave}
-                disabled={manualSaveStatus === 'saving'}
+                disabled={manualSaveStatus === 'saving' || (isLocked && !isOwner)}
                 className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {manualSaveStatus === 'saving' ? (
@@ -709,15 +897,27 @@ export default function TopicEditorPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6 ${(isLocked && !isOwner) ? 'opacity-75 pointer-events-none' : ''}`}>
           {/* Sidebar - Completeness */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="sticky top-20 space-y-4">
+            <div className="sticky top-[120px] space-y-4">
               <TopicCompleteness
                 formData={formData}
                 relationshipCount={relationships.length}
                 sourceCount={linkedSources.length}
+                onGenerateField={handleGenerateField}
+                isAICompleting={isAICompleting}
               />
+
+              <div className="bg-card border border-border rounded-lg p-4">
+                <TopicVersionHistory 
+                  slug={slug} 
+                  onRevert={() => {
+                    loadTopic();
+                    markAsSaved();
+                  }} 
+                />
+              </div>
 
               <ProactiveSuggestionsPanel 
                 topicId={topic.id} 
@@ -816,9 +1016,18 @@ export default function TopicEditorPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Title (Hebrew) *
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium text-foreground">
+                          Title (Hebrew) *
+                        </label>
+                        <TranslateButton
+                          content={formData.canonical_title || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => updateFormField('canonical_title_en', translation)}
+                          topicId={topic?.id}
+                          field="canonical_title"
+                        />
+                      </div>
                       <input
                         type="text"
                         value={formData.canonical_title}
@@ -913,9 +1122,18 @@ export default function TopicEditorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Short Description *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Short Description *
+                      </label>
+                      <TranslateButton
+                        content={formData.description}
+                        targetLanguage="en"
+                        onTranslation={(translation) => handleEditorUpdate('description_en', translation)}
+                        topicId={topic?.id}
+                        field="description"
+                      />
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1000,9 +1218,27 @@ export default function TopicEditorPage() {
                   <h2 className="text-lg font-semibold text-foreground">Definitions & Boundaries</h2>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      What It IS (Positive Definition)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        What It IS (Positive Definition)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="definition_positive"
+                          currentContent={formData.definition_positive}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('definition_positive', content)}
+                        />
+                        <TranslateButton
+                          content={formData.definition_positive || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('definition_positive', translation)}
+                          topicId={topic?.id}
+                          field="definition_positive"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1020,9 +1256,27 @@ export default function TopicEditorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      What It's NOT (Boundaries)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        What It's NOT (Boundaries)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="definition_negative"
+                          currentContent={formData.definition_negative}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('definition_negative', content)}
+                        />
+                        <TranslateButton
+                          content={formData.definition_negative || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('definition_negative', translation)}
+                          topicId={topic?.id}
+                          field="definition_negative"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1045,9 +1299,27 @@ export default function TopicEditorPage() {
                   <h2 className="text-lg font-semibold text-foreground">Main Content</h2>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Overview
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Overview
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="overview"
+                          currentContent={formData.overview}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('overview', content)}
+                        />
+                        <TranslateButton
+                          content={formData.overview || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('overview', translation)}
+                          topicId={topic?.id}
+                          field="overview"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1065,9 +1337,27 @@ export default function TopicEditorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Article Content
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Article Content
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="article"
+                          currentContent={formData.article}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('article', content)}
+                        />
+                        <TranslateButton
+                          content={formData.article || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('article', translation)}
+                          topicId={topic?.id}
+                          field="article"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1090,9 +1380,27 @@ export default function TopicEditorPage() {
                   <h2 className="text-lg font-semibold text-foreground">Additional Content</h2>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Practical Takeaways
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Practical Takeaways
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="practical_takeaways"
+                          currentContent={formData.practical_takeaways}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('practical_takeaways', content)}
+                        />
+                        <TranslateButton
+                          content={formData.practical_takeaways || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('practical_takeaways', translation)}
+                          topicId={topic?.id}
+                          field="practical_takeaways"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1110,9 +1418,27 @@ export default function TopicEditorPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Historical Context
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Historical Context
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="historical_context"
+                          currentContent={formData.historical_context}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('historical_context', content)}
+                        />
+                        <TranslateButton
+                          content={formData.historical_context || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('historical_context', translation)}
+                          topicId={topic?.id}
+                          field="historical_context"
+                        />
+                      </div>
+                    </div>
                     <div className="border border-border rounded-md overflow-hidden">
                       <TipTapEditor
                         docId={null}
@@ -1131,9 +1457,27 @@ export default function TopicEditorPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Mashal (Parable)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium text-foreground">
+                          Mashal (Parable)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <GenerateSectionButton
+                            topicId={topic?.id}
+                            fieldName="mashal"
+                            currentContent={formData.mashal}
+                            topicContext={topicContext}
+                            onGenerated={(content) => handleEditorUpdate('mashal', content)}
+                          />
+                          <TranslateButton
+                            content={formData.mashal || ''}
+                            targetLanguage="en"
+                            onTranslation={(translation) => handleEditorUpdate('mashal', translation)}
+                            topicId={topic?.id}
+                            field="mashal"
+                          />
+                        </div>
+                      </div>
                       <div className="border border-border rounded-md overflow-hidden">
                         <TipTapEditor
                           docId={null}
@@ -1151,9 +1495,27 @@ export default function TopicEditorPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        Nimshal (Application)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium text-foreground">
+                          Nimshal (Application)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <GenerateSectionButton
+                            topicId={topic?.id}
+                            fieldName="global_nimshal"
+                            currentContent={formData.global_nimshal}
+                            topicContext={topicContext}
+                            onGenerated={(content) => handleEditorUpdate('global_nimshal', content)}
+                          />
+                          <TranslateButton
+                            content={formData.global_nimshal || ''}
+                            targetLanguage="en"
+                            onTranslation={(translation) => handleEditorUpdate('global_nimshal', translation)}
+                            topicId={topic?.id}
+                            field="global_nimshal"
+                          />
+                        </div>
+                      </div>
                       <div className="border border-border rounded-md overflow-hidden">
                         <TipTapEditor
                           docId={null}
@@ -1168,6 +1530,132 @@ export default function TopicEditorPage() {
                           onBreakStatements={async () => { }}
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-foreground">
+                        Charts & Tables
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <GenerateSectionButton
+                          topicId={topic?.id}
+                          fieldName="charts"
+                          currentContent={formData.charts}
+                          topicContext={topicContext}
+                          onGenerated={(content) => handleEditorUpdate('charts', content)}
+                        />
+                        <TranslateButton
+                          content={formData.charts || ''}
+                          targetLanguage="en"
+                          onTranslation={(translation) => handleEditorUpdate('charts', translation)}
+                          topicId={topic?.id}
+                          field="charts"
+                        />
+                      </div>
+                    </div>
+                    <div className="border border-border rounded-md overflow-hidden">
+                      <TipTapEditor
+                        docId={null}
+                        className="min-h-[150px]"
+                        onEditorReady={(editor) => {
+                          if (formData.charts && editor) {
+                            editor.commands.setContent(formData.charts);
+                          }
+                          editorsRef.current['charts'] = editor;
+                        }}
+                        onUpdate={(newContent) => handleEditorUpdate('charts', newContent)}
+                        onBreakStatements={async () => { }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">
+                      Tip: Use the "Table" tool in the editor or start with "Reference Chart" keyword for advanced rendering.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Common Confusions
+                    </label>
+                    <div className="space-y-4">
+                      {(formData.common_confusions || []).map((item, index) => (
+                        <div key={index} className="p-4 bg-muted/30 rounded-lg border border-border/50 relative group">
+                          <button 
+                            onClick={() => {
+                              const newConfusions = [...(formData.common_confusions || [])];
+                              newConfusions.splice(index, 1);
+                              updateFormField('common_confusions', newConfusions as any);
+                            }}
+                            className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Question</label>
+                                <TranslateButton 
+                                  content={item.question} 
+                                  targetLanguage="en" 
+                                  onTranslation={(translation) => {
+                                    const newConfusions = [...(formData.common_confusions || [])];
+                                    newConfusions[index] = { ...item, question: translation };
+                                    updateFormField('common_confusions', newConfusions as any);
+                                  }}
+                                  className="h-6"
+                                />
+                              </div>
+                              <input 
+                                type="text"
+                                value={item.question}
+                                onChange={(e) => {
+                                  const newConfusions = [...(formData.common_confusions || [])];
+                                  newConfusions[index] = { ...item, question: e.target.value };
+                                  updateFormField('common_confusions', newConfusions as any);
+                                }}
+                                placeholder="Question (e.g., Is this the same as... ?)"
+                                className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm font-medium"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Answer</label>
+                                <TranslateButton 
+                                  content={item.answer} 
+                                  targetLanguage="en" 
+                                  onTranslation={(translation) => {
+                                    const newConfusions = [...(formData.common_confusions || [])];
+                                    newConfusions[index] = { ...item, answer: translation };
+                                    updateFormField('common_confusions', newConfusions as any);
+                                  }}
+                                  className="h-6"
+                                />
+                              </div>
+                              <textarea 
+                                value={item.answer}
+                                onChange={(e) => {
+                                  const newConfusions = [...(formData.common_confusions || [])];
+                                  newConfusions[index] = { ...item, answer: e.target.value };
+                                  updateFormField('common_confusions', newConfusions as any);
+                                }}
+                                placeholder="Answer..."
+                                className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm min-h-[80px]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => {
+                          const newConfusions = [...(formData.common_confusions || []), { question: '', answer: '' }];
+                          updateFormField('common_confusions', newConfusions as any);
+                        }}
+                        className="w-full py-2 border-2 border-dashed border-border rounded-lg text-xs font-bold uppercase tracking-widest text-muted-foreground hover:border-primary/30 hover:text-primary transition-all flex items-center justify-center gap-2"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Confusion/FAQ
+                      </button>
                     </div>
                   </div>
                 </div>

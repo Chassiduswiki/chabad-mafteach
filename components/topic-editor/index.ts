@@ -8,6 +8,7 @@ export { SourceLinker } from './SourceLinker';
 export { ConceptTagger } from './ConceptTagger';
 export { DisplayFormatSelector } from './DisplayFormatSelector';
 export { TopicCompleteness } from './TopicCompleteness';
+export { TopicVersionHistory } from './TopicVersionHistory';
 export { TopicHierarchyTree } from './TopicHierarchyTree';
 export { ProactiveSuggestionsPanel } from '../editor/ProactiveSuggestionsPanel';
 export { AIContentGeneratorDialog } from '../editor/AIContentGeneratorDialog';

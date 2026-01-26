@@ -4,7 +4,25 @@ import dynamic from 'next/dynamic';
 import React, { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BookOpen, Lightbulb, User, Globe, Library, ChevronRight, ExternalLink, Sparkles, Share2, Bookmark, BarChart, ArrowUp, ArrowDown, RefreshCcw, GitBranch, Loader2 } from 'lucide-react';
+import { 
+    BookOpen, 
+    Lightbulb, 
+    User, 
+    Globe, 
+    Library, 
+    ChevronRight, 
+    ExternalLink, 
+    Sparkles, 
+    Share2, 
+    Bookmark, 
+    BarChart, 
+    ArrowUp, 
+    ArrowDown, 
+    RefreshCcw, 
+    GitBranch, 
+    Loader2,
+    Edit3
+} from 'lucide-react';
 import { ImmersiveHero } from '@/components/topics/hero/ImmersiveHero';
 import { TopicSkeleton } from '@/components/topics/loading/TopicSkeleton';
 // Heavy components loaded dynamically to improve LCP
@@ -45,7 +63,7 @@ import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
 import { TranslationSurvey } from '@/components/feedback/TranslationSurvey';
 
 // Types
-type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'sources';
+type SectionType = 'definition' | 'overview' | 'article' | 'mashal' | 'personal_nimshal' | 'global_nimshal' | 'historical_context' | 'charts' | 'confusions' | 'sources';
 
 interface ArticleSection {
     type: SectionType;
@@ -232,6 +250,14 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
         bgColor: 'bg-sky-500/5',
         borderColor: 'border-sky-500/20'
     },
+    confusions: {
+        title: 'Common Confusions',
+        shortTitle: 'FAQs',
+        icon: Lightbulb,
+        color: 'text-rose-600 dark:text-rose-400',
+        bgColor: 'bg-rose-500/5',
+        borderColor: 'border-rose-500/20'
+    },
     sources: {
         title: 'Further Reading',
         shortTitle: 'Reading',
@@ -278,13 +304,25 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const userId = localStorage.getItem('chabad-mafteach:user-id');
-            const role = localStorage.getItem('chabad-mafteach:user-role');
-            if (userId !== currentUserId) {
-                Promise.resolve().then(() => setCurrentUserId(userId));
-            }
-            if (role !== userRole) {
-                Promise.resolve().then(() => setUserRole(role));
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    if (payload.role !== userRole) {
+                        setUserRole(payload.role);
+                    }
+                    if (payload.userId !== currentUserId) {
+                        setCurrentUserId(payload.userId);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse token in TopicExperience');
+                }
+            } else {
+                // Check legacy keys just in case
+                const legacyRole = localStorage.getItem('chabad-mafteach:user-role');
+                const legacyUserId = localStorage.getItem('chabad-mafteach:user-id');
+                if (legacyRole && legacyRole !== userRole) setUserRole(legacyRole);
+                if (legacyUserId && legacyUserId !== currentUserId) setCurrentUserId(legacyUserId);
             }
         }
     }, [currentUserId, userRole]);
@@ -361,6 +399,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
         global_nimshal: null,
         historical_context: null,
         charts: null,
+        confusions: null,
         sources: null
     });
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -469,6 +508,26 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
             type: 'charts' as SectionType,
             order: 8,
             content: highlightTerms(topic.charts)
+        }] : []),
+        ...(topic.common_confusions && topic.common_confusions.length > 0 && isSectionVisible('common_confusions', topic.common_confusions) ? [{
+            type: 'confusions' as SectionType,
+            order: 9,
+            content: (
+                <div className="space-y-6">
+                    {topic.common_confusions.map((item, idx) => (
+                        <div key={idx} className="space-y-2 pb-4 border-b border-border/30 last:border-0 last:pb-0">
+                            <h4 className="font-bold text-foreground flex items-start gap-3">
+                                <span className="text-primary opacity-50 font-mono">Q.</span>
+                                <span>{item.question}</span>
+                            </h4>
+                            <div className="pl-7 text-muted-foreground flex items-start gap-3">
+                                <span className="text-emerald-500 opacity-50 font-mono shrink-0">A.</span>
+                                <div className="prose-content">{item.answer}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) as unknown as string
         }] : [])
     ];
 
@@ -658,7 +717,19 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                             </span>
                             <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
                         </div>
-                        <LanguageSelectorWrapper topicSlug={topic.slug} />
+                        <div className="flex items-center gap-2">
+                            {isAuthorized && (
+                                <Link 
+                                    href={`/editor/topics/${topic.slug}`}
+                                    className="p-1.5 rounded-lg hover:bg-primary/5 text-primary transition-colors flex items-center gap-1.5"
+                                    title="Edit Topic"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>
+                                </Link>
+                            )}
+                            <LanguageSelectorWrapper topicSlug={topic.slug} />
+                        </div>
                     </div>
                 </div>
                 

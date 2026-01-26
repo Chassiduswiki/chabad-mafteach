@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDirectus } from '@/lib/directus';
+import { readSingleton } from '@directus/sdk';
+import { DEFAULT_AI_MODEL } from '@/lib/ai/config';
 
 interface FieldData {
   canonical_title?: string;
@@ -21,6 +24,17 @@ export async function POST(req: NextRequest) {
 
     if (!fields || typeof fields !== 'object') {
       return NextResponse.json({ error: 'Fields object is required' }, { status: 400 });
+    }
+
+    const directus = getDirectus();
+    
+    // Fetch AI settings for model configuration
+    const aiSettings = await directus.request(readSingleton('ai_settings')).catch(() => ({})) as any;
+    const modelToUse = aiSettings?.primary_model || 'google/gemini-2.0-flash-exp:free';
+    const apiKey = aiSettings?.api_key || process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({ error: 'AI provider not configured' }, { status: 500 });
     }
 
     // Determine what we have and what we need

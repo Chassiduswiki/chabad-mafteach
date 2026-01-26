@@ -1,15 +1,17 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle, AlertCircle, Circle, TrendingUp, Sparkles } from 'lucide-react';
+import { CheckCircle, AlertCircle, Circle, TrendingUp, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TopicCompleteness as CompletenessType, TopicFormData } from './types';
+import { TopicCompleteness as CompletenessType, TopicFormData, SectionConfig } from './types';
 
 interface TopicCompletenessProps {
   formData: TopicFormData;
   relationshipCount?: number;
   sourceCount?: number;
   className?: string;
+  onGenerateField?: (fieldId: string) => void;
+  isAICompleting?: boolean;
 }
 
 const FIELD_WEIGHTS: Record<string, { weight: number; section: keyof CompletenessType['sections']; label: string }> = {
@@ -21,6 +23,8 @@ const FIELD_WEIGHTS: Record<string, { weight: number; section: keyof Completenes
   article: { weight: 20, section: 'content', label: 'Article' },
   definition_positive: { weight: 10, section: 'content', label: 'Definition (What it is)' },
   definition_negative: { weight: 5, section: 'content', label: 'Definition (What it\'s not)' },
+  common_confusions: { weight: 5, section: 'content', label: 'Common Confusions' },
+  charts: { weight: 5, section: 'content', label: 'Charts & Tables' },
   practical_takeaways: { weight: 10, section: 'content', label: 'Practical Takeaways' },
   historical_context: { weight: 5, section: 'content', label: 'Historical Context' },
 };
@@ -38,6 +42,8 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
   relationshipCount = 0,
   sourceCount = 0,
   className = '',
+  onGenerateField,
+  isAICompleting = false,
 }) => {
   const calculateCompleteness = (): CompletenessType => {
     const sections: CompletenessType['sections'] = {
@@ -65,7 +71,7 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
         
         // Check content quality
         const strValue = String(value);
-        if (config.section === 'content' && strValue.length < 100) {
+        if (config.section === 'content' && strValue.length < 100 && field !== 'common_confusions' && field !== 'charts') {
           suggestions.push(`Consider expanding ${config.label} (currently ${strValue.length} chars)`);
         }
       } else {
@@ -113,6 +119,9 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
     if (!formData.practical_takeaways) {
       suggestions.push('Add practical takeaways to make the content actionable');
     }
+    if (!formData.definition_positive) {
+      suggestions.push('Define what this concept encompasses');
+    }
 
     const overall = Math.round((achievedWeight / totalWeight) * 100);
 
@@ -120,7 +129,7 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
       overall,
       sections,
       missingFields,
-      suggestions: suggestions.slice(0, 3), // Top 3 suggestions
+      suggestions: suggestions.slice(0, 4),
     };
   };
 
@@ -138,6 +147,8 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
     return <Circle className="h-4 w-4 text-red-500" />;
   };
 
+  const isFieldMissing = (field: string) => !formData[field as keyof TopicFormData];
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Overall Progress */}
@@ -145,7 +156,7 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Content Completeness</h3>
+            <h3 className="font-semibold text-foreground text-sm">Completeness</h3>
           </div>
           <span className={`text-2xl font-bold ${
             completeness.overall >= 80 ? 'text-green-500' :
@@ -163,41 +174,87 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
           />
         </div>
 
+        {/* AI Quick Actions */}
+        {completeness.overall < 100 && (
+          <div className="mb-6 space-y-2">
+            <Button 
+              size="sm" 
+              className="w-full h-9 rounded-xl shadow-md bg-primary hover:shadow-primary/20 transition-all gap-2"
+              onClick={() => window.dispatchEvent(new CustomEvent('ai-generate-all-missing'))}
+              disabled={isAICompleting}
+            >
+              {isAICompleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              Auto-generate All Missing
+            </Button>
+          </div>
+        )}
+
         {/* Section Breakdown */}
-        <div className="space-y-3">
-                    {Object.entries(completeness.sections).map(([section, percentage]) => (
-            <div key={section}>
+        <div className="space-y-4">
+          {Object.entries(completeness.sections).map(([section, percentage]) => (
+            <div key={section} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(percentage)}
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     {SECTION_LABELS[section as keyof typeof SECTION_LABELS]}
                   </span>
                 </div>
-                <span className="text-sm font-bold">{percentage}%</span>
+                <span className="text-xs font-bold">{percentage}%</span>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden mt-1">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full ${getProgressColor(percentage)}`}
                   style={{ width: `${percentage}%` }}
                 />
               </div>
+              
+              {/* Specific AI Triggers per section */}
               {percentage < 100 && (
-                <div className="mt-2">
-                  {section === 'content' && !formData.article && (
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-generate-article'))}>
-                      <Sparkles className="h-3 w-3 mr-2" /> AI: Generate Article
-                    </Button>
+                <div className="grid grid-cols-1 gap-1.5 pt-1">
+                  {section === 'content' && (
+                    <>
+                      {isFieldMissing('definition_positive') && (
+                        <button 
+                          onClick={() => onGenerateField?.('definition_positive')}
+                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                        >
+                          <Sparkles className="w-3 h-3" /> Generate Definition
+                        </button>
+                      )}
+                      {isFieldMissing('article') && (
+                        <button 
+                          onClick={() => onGenerateField?.('article')}
+                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                        >
+                          <Sparkles className="w-3 h-3" /> Generate Full Article
+                        </button>
+                      )}
+                      {isFieldMissing('practical_takeaways') && (
+                        <button 
+                          onClick={() => onGenerateField?.('practical_takeaways')}
+                          className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                        >
+                          <Sparkles className="w-3 h-3" /> Generate Takeaways
+                        </button>
+                      )}
+                    </>
                   )}
-                  {section === 'relationships' && (
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-find-relationships'))}>
-                      <Sparkles className="h-3 w-3 mr-2" /> AI: Find Related
-                    </Button>
+                  {section === 'relationships' && percentage < 100 && (
+                    <button 
+                      onClick={() => window.dispatchEvent(new CustomEvent('ai-find-relationships'))}
+                      className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                    >
+                      <Sparkles className="w-3 h-3" /> Find Related Topics
+                    </button>
                   )}
-                  {section === 'sources' && (
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => window.dispatchEvent(new CustomEvent('ai-suggest-citations'))}>
-                      <Sparkles className="h-3 w-3 mr-2" /> AI: Suggest Citations
-                    </Button>
+                  {section === 'sources' && percentage < 100 && (
+                    <button 
+                      onClick={() => window.dispatchEvent(new CustomEvent('ai-suggest-citations'))}
+                      className="flex items-center gap-2 text-[10px] text-primary hover:underline font-medium"
+                    >
+                      <Sparkles className="w-3 h-3" /> Suggest Sources
+                    </button>
                   )}
                 </div>
               )}
@@ -206,27 +263,20 @@ export const TopicCompleteness: React.FC<TopicCompletenessProps> = ({
         </div>
       </div>
 
-      {/* Suggestions */}
+      {/* Proactive Suggestions */}
       {completeness.suggestions.length > 0 && (
-        <div className="bg-muted/30 border border-border rounded-lg p-4">
-          <h4 className="text-sm font-medium text-foreground mb-2">Suggestions</h4>
-          <ul className="space-y-2">
+        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3 text-primary">
+            <Sparkles className="w-4 h-4" />
+            <h4 className="text-xs font-black uppercase tracking-widest">AI Insights</h4>
+          </div>
+          <ul className="space-y-3">
             {completeness.suggestions.map((suggestion, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="text-primary">•</span>
+              <li key={index} className="text-[11px] leading-relaxed text-muted-foreground italic border-l-2 border-primary/20 pl-3">
                 {suggestion}
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {/* Missing Fields */}
-      {completeness.missingFields.length > 0 && completeness.overall < 100 && (
-        <div className="text-xs text-muted-foreground">
-          <span className="font-medium">Missing: </span>
-          {completeness.missingFields.slice(0, 5).join(', ')}
-          {completeness.missingFields.length > 5 && ` +${completeness.missingFields.length - 5} more`}
         </div>
       )}
     </div>

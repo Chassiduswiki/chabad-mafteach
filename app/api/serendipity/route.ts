@@ -37,16 +37,18 @@ export async function GET(req: NextRequest) {
     let connections: any[] = [];
 
     if (currentTopicId) {
-      const sharedSourceTopics = await directus.request(readItems('source_links' as any, {
-        filter: { 
-          _and: [
-            { topic_id: { _neq: currentTopicId } },
-            { source_id: { _in: await getSourceIdsForTopic(directus, currentTopicId) } }
-          ]
-        } as any,
-        fields: ['topic_id.*'],
-        limit: limit
-      })) as any[];
+      const sharedSourceTopics = await directus.request(
+        (readItems as any)('source_links', {
+          filter: { 
+            _and: [
+              { topic_id: { _neq: currentTopicId } },
+              { source_id: { _in: await getSourceIdsForTopic(directus, currentTopicId) } }
+            ]
+          },
+          fields: ['topic_id.*'],
+          limit: limit
+        })
+      ) as any[];
 
       connections = sharedSourceTopics.map((st: any) => ({
         fromTopic: { slug: topicSlug, title: topicSlug },
@@ -78,10 +80,12 @@ export async function GET(req: NextRequest) {
 }
 
 async function getSourceIdsForTopic(directus: any, topicId: number): Promise<number[]> {
-  const links = await directus.request(readItems('source_links' as any, {
-    filter: { topic_id: { _eq: topicId } },
-    fields: ['source_id'],
-    limit: 50
-  }));
-  return links.map((l: any) => l.source_id).filter(Boolean);
+  const links = await directus.request(
+    (readItems as any)('source_links', {
+      filter: { topic_id: { _eq: topicId } },
+      fields: ['source_id'],
+      limit: 50
+    })
+  );
+  return (links as any[]).map((l: any) => l.source_id).filter(Boolean);
 }

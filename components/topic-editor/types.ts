@@ -155,9 +155,11 @@ export interface TopicFormData {
   mashal?: string;
   global_nimshal?: string;
   charts?: string;
+  common_confusions?: { question: string; answer: string }[];
   content_status?: 'minimal' | 'partial' | 'comprehensive';
   status_label?: string;
   badge_color?: string;
+  status?: 'draft' | 'reviewed' | 'published' | 'archived';
   metadata?: Record<string, unknown>;
 }
 

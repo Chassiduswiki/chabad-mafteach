@@ -1,64 +1,45 @@
-# Chabad Maftaiach Book Reader System
+# Chassidus Research Suite (Chabad Mafteach)
 
 ## Executive Summary
 
-Chabad Maftaiach is a comprehensive digital library system for Jewish texts, specifically designed for Chassidic and Kabbalistic literature. The system provides an advanced reading experience with granular citation support, hierarchical text organization, and cross-referential capabilities.
+Chabad Mafteach is a comprehensive digital ecosystem for Chassidic research, bridging traditional scholarship with cutting-edge AI technology. The system provides an advanced book reader for primary sources and a sophisticated Topic Encyclopedia that maps the interconnected world of Chassidus.
 
-**Current Status**: Production-ready book reader with hierarchical navigation, granular citations, and advanced text rendering features.
+**Current Status**: Production-ready research platform with hierarchical text navigation, a content-rich topic engine, and AI-powered editorial assistants.
 
 ---
 
-## 📊 Current System Architecture
+## 📊 Platform Architecture
 
 ### Core Components
 
 #### 1. Data Layer
-- **Directus CMS**: Headless CMS for content management
-- **PostgreSQL**: Primary database via Directus
-- **Hierarchical Data Model**: Parent-child document relationships
-- **Granular Text Segmentation**: Statements as atomic text units
+- **Directus CMS**: Centralized content authority and API orchestration.
+- **PostgreSQL**: Robust relational database for complex topic mapping.
+- **Unified Translation Layer**: Side-by-side Hebrew/English support for all content.
 
-#### 2. Frontend Architecture
-- **Next.js 14**: React framework with App Router
-- **TypeScript**: Full type safety
-- **Tailwind CSS**: Utility-first styling
-- **Client/Server Components**: Optimized rendering
+#### 2. Advanced Topic Encyclopedia (New)
+- **Knowledge Graph**: Interactive mapping of concepts, people, and places.
+- **Content Governance**: Multi-stage review queue (Draft -> Reviewed -> Published).
+- **Dynamic Metadata**: Optimized for academic and public discovery (SEO Phase 18a).
 
-#### 3. Key Features Implemented
+#### 3. AI Intelligence (Phase 1 & 2 Implemented)
+- **AI Translation**: Specialized models for Chassidic terminology.
+- **Writing Assistant**: Automated section generation and field auto-completion.
+- **Topic Completeness**: Proactive heuristic engine guiding content managers.
 
-##### ✅ Hierarchical Book Navigation
-- **Tree Structure**: Documents organized by parent-child relationships
-- **Dynamic Loading**: Content loaded on-demand
-- **Visual Hierarchy**: Indented navigation with expand/collapse
-- **Status Indicators**: Content availability badges
+#### 4. Book Reader System (Original)
+- **Hierarchical Navigation**: Parent-child document relationships.
+- **Granular Citations**: Bottom-up modal experience for footnotes and references.
+- **High-Performance Rendering**: Virtualized scrolling for massive texts.
 
-**Code Location**: `app/seforim/page.tsx` (DocumentTree component)
+---
 
-##### ✅ Enhanced Citation System
-- **Bottom-Up Modal**: Citations open in slide-up modal from screen bottom
-- **Granular Citations**: Each footnote creates individual clickable statement
-- **Citation Parsing**: Automatic reference extraction and metadata storage
-- **Inter-Text Linking**: Future capability for cross-references between texts
-- **Mobile-Optimized**: Higher z-index prevents navbar blocking on mobile
-- **RTL Hebrew Support**: Automatic right-to-left for Hebrew citations
-- **Content Hierarchy**: Citation → Context → References ordering
-- **Accessibility**: Screen reader friendly with proper ARIA labels
+## ✅ Recent Milestones (Phase 9 & 18a)
 
-**Code Location**:
-- `scripts/populate_chabad_book.js` (parsing logic)
-- `app/seforim/[seferId]/page.tsx` (modal implementation)
-
-##### ✅ Advanced Text Rendering
-- **HTML Support**: Proper rendering of markup in text content
-- **RTL Hebrew**: Automatic right-to-left for Hebrew text
-- **Font Controls**: Three size options (Small/Medium/Large)
-- **Continuous Flow**: Seamless text without block boundaries
-
-##### ✅ Performance Optimizations
-- **Virtual Scrolling**: Only render visible content
-- **Lazy Loading**: Progressive content loading
-- **Optimized Queries**: Efficient database fetching
-- **Type Safety**: Full TypeScript coverage
+- **CMS Pages (Phase 9)**: Dynamic content management for About and Homepage via `site_settings`.
+- **SEO Optimization (Phase 18a)**: Dynamic Metadata API, automatic Sitemap.xml, and Robots.txt.
+- **AI Editorial Suite**: Batch translation and content generation tools integrated into the Topic Editor.
+- **System Resilience**: Global Maintenance Mode with administrative bypass.
 
 ---
 

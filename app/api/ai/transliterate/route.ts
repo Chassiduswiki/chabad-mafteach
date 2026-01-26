@@ -8,13 +8,12 @@ export async function POST(req: NextRequest) {
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
-
-    const client = new OpenRouterClient();
+    void OpenRouterClient;
     
     // Use a lightweight model for transliteration
-    const prompt = `Transliterate the following Hebrew text to English using standard Chassidic transliteration conventions (e.g., \"ch\" for ח, \"tz\" for צ):
+    const prompt = `Transliterate the following Hebrew text to English using standard Chassidic transliteration conventions (e.g., "ch" for ח, "tz" for צ):
 
-Hebrew: \"${text}\"
+Hebrew: "${text}"
 
 Respond with ONLY the transliteration, no explanation.`;
 

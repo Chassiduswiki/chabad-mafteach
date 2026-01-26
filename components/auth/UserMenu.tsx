@@ -39,7 +39,7 @@ export function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm font-medium transition-colors z-[110]"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent text-sm font-medium transition-colors relative z-[50]"
       >
         <User className="h-4 w-4" />
         <span className="capitalize">{userRole}</span>

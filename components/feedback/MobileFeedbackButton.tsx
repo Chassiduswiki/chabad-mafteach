@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertCircle, X, Send, ChevronUp, ChevronDown, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, X, Send, ChevronUp, ChevronDown, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -113,7 +113,7 @@ export function MobileFeedbackButton({
   const currentType = feedbackTypes.find(t => t.value === feedback.type);
 
   return (
-    <div className={cn("fixed bottom-20 right-6 z-[100]", className)}>
+    <div className={cn("fixed bottom-24 right-6 z-[101]", className)}>
       {/* Floating Button */}
       {!isOpen && (
         <Button
@@ -122,7 +122,7 @@ export function MobileFeedbackButton({
           className="rounded-full w-14 h-14 shadow-2xl bg-destructive hover:bg-destructive/90 text-destructive-foreground transition-all duration-300 hover:scale-110 group"
           title="Report an issue"
         >
-          <AlertCircle className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+          <AlertTriangle className="h-6 w-6 group-hover:rotate-12 transition-transform" />
         </Button>
       )}
 
@@ -267,7 +267,7 @@ export function MobileFeedbackButton({
 
                 {submitStatus === 'error' && (
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-red-600 animate-in shake-1">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
                     <p className="text-[11px] font-medium">Failed to send. Please try again.</p>
                   </div>
                 )}

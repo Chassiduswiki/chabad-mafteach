@@ -412,6 +412,23 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
 }
 
 /**
+ * Get all topics with minimal fields for sitemap/index
+ */
+export async function getAllTopics() {
+    try {
+        const directus = createClient();
+        const topics = await directus.request(readItems('topics', {
+            fields: ['id', 'slug', 'canonical_title', 'date_updated'],
+            limit: -1
+        }));
+        return topics;
+    } catch (error) {
+        console.error('Error fetching all topics:', error);
+        return [];
+    }
+}
+
+/**
  * Update topic by slug
  *
  * @param slug Topic slug

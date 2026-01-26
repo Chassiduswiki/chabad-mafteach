@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { createItem, readItems } from '@directus/sdk';
-import { verifyAuth } from '@/lib/auth';
+import { requireEditor } from '@/lib/auth';
 import { isValidSlug, normalizeSlug, generateAlternativeSlugs, isValidSlugLength } from '@/lib/utils/slug-utils';
 
 const directus = createClient();
 
-export async function POST(request: NextRequest) {
+export const POST = requireEditor(async (request: NextRequest) => {
   try {
     const body = await request.json();
     
-    // Check auth - allow bypass in development
-    const auth = verifyAuth(request);
-    const isDev = process.env.NODE_ENV === 'development';
-    
-    if (!auth && !isDev) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
     const {
       canonical_title,
       canonical_title_en,
@@ -123,4 +112,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
