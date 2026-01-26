@@ -21,6 +21,7 @@ These items are blocking core functionality and must be addressed before public 
 - **Issue**: TipTap cursor behaves erratically when mixing Hebrew (RTL) and English (LTR).
 - **Cause**: Likely missing `dir="auto"` or BiDirectional extension configuration.
 - **Action**: Implement explicit RTL support in `EditorProvider`.
+- **TODO**: Install `@tiptap/extension-text-align` (Deferred per user request Jan 26).
 
 ---
 

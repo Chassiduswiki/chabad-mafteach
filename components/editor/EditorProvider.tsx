@@ -108,10 +108,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
           const response = await fetch('/api/ai/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               action: 'translate',
               content: text,
-              targetLanguage: targetLang 
+              targetLanguage: targetLang
             }),
           });
           const data = await response.json();
@@ -139,6 +139,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     editorProps: {
       attributes: {
         class: 'prose prose-slate dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-6',
+        dir: 'auto', // Enable browser-native RTL detection
       },
       handlePaste: (view, event) => {
         // Let the OCR extension handle image pastes
@@ -159,16 +160,16 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setShowCitationModal(true);
   };
 
-  const insertCitation = (citation: { 
-    sourceId: number | null; 
-    sourceTitle: string; 
+  const insertCitation = (citation: {
+    sourceId: number | null;
+    sourceTitle: string;
     reference: string;
     quote?: string;
     note?: string;
     url?: string;
   }) => {
     if (!editor) return;
-    
+
     // Insert citation as a formatted node
     editor.commands.insertContent({
       type: 'citation',
@@ -181,7 +182,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         url: citation.url,
       },
     });
-    
+
     setShowCitationModal(false);
   };
 
@@ -192,7 +193,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   const insertImage = (imageUrl: string, altText: string) => {
     if (!editor) return;
-    
+
     // Insert image into editor
     editor.commands.insertContent(`<img src="${imageUrl}" alt="${altText}" />`);
     setShowImageModal(false);
