@@ -234,12 +234,9 @@ The frontend TypeScript types now match the new Directus schema:
 The following admin pages have been created but require backend data integration:
 
 ### 1. Analytics Topics (`/analytics/topics`)
-**Issue**: No real analytics data source connected.
-**Current State**: Returns list of published topics from Directus with placeholder view counts (all zeros).
-**Required Action**: 
-- Integrate with analytics provider (Umami, Plausible, or Google Analytics)
-- Create API endpoint to fetch page views per topic slug
-- Map analytics data to topic records
+**Status**: ✅ **INTEGRATED** (Jan 26, 2026)
+- Connected to Umami API via `user-analytics` route.
+- Fetches real 30-day visitor trends.
 
 ### 2. Branding Style Settings (`/admin/branding/style`)
 **Issue**: No persistence layer for design tokens.
@@ -250,9 +247,9 @@ The following admin pages have been created but require backend data integration
 - Alternatively: Use localStorage for client-side persistence only
 
 ### 3. Real-Time Dashboard Metrics
-**Issue**: Real-time metrics (active users, today's views) require live analytics integration.
-**Current State**: Dashboard shows zeros or mock data when analytics provider not connected.
-**Required Action**: Same as #1 - connect analytics provider.
+**Status**: ✅ **INTEGRATED** (Jan 26, 2026)
+- Connected to Umami Realtime API.
+- Shows live "Active Users" count.
 
 ---
 
