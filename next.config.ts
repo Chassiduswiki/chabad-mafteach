@@ -1,10 +1,27 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from "next";
+import path from 'path';
 
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   output: 'standalone',
+  webpack: (config: any, { isServer, dev }: { isServer: boolean; dev: boolean }) => {
+    // Fix for fast-equals HMR issue with TipTap
+    if (dev) {
+      // Add rule to handle ESM modules properly
+      config.module.rules.push({
+        test: /\.mjs$/,
+        include: /node_modules/,
+        resolve: {
+          fullySpecified: false,
+        },
+        type: 'javascript/auto',
+      });
+    }
+    
+    return config;
+  },
   async rewrites() {
     const directusUrl = process.env.DIRECTUS_URL;
     if (!directusUrl) {
@@ -83,17 +100,9 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   // tunnelRoute: "/monitoring",
 
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
+  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+  // See the following for more information:
+  // https://docs.sentry.io/product/crons/
+  // https://vercel.com/docs/cron-jobs
+  automaticVercelMonitors: true,
 });
