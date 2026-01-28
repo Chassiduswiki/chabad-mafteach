@@ -92,7 +92,7 @@ npm install
 
 3. **Set up environment variables**
 ```bash
-cp .env.example .env.local
+cp .env.production.example .env.local
 # Edit .env.local with your Directus URL and token
 ```
 
@@ -148,11 +148,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - **[AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md)** - Complete authentication system documentation
 - **[TORAH_READER_DOCUMENTATION.md](TORAH_READER_DOCUMENTATION.md)** - TorahReader component guide
-- **[Documentation/Longterm-tasks](Documentation/Longterm-tasks)** - Comprehensive roadmap and task list
-- **[Documentation/Design-guide.md](Documentation/Design-guide.md)** - Design philosophy and principles
-- **[Documentation/Use%20cases%20and%20persona.MD](Documentation/Use%20cases%20and%20persona.MD)** - User research and personas
-- **[.windsurf/rules.md](.windsurf/rules.md)** - Project rules and dependency management
-- **[.windsurf/pre-commit-check.md](.windsurf/pre-commit-check.md)** - Pre-commit checklist
+- **[TESTING.md](TESTING.md)** - Testing suite documentation
+- **[docs/](docs/)** - Technical documentation (schema, migrations, AI integration)
+- **[docs/archive/](docs/archive/)** - Historical planning documents and brainstorms
 
 ---
 
@@ -189,7 +187,7 @@ npm run dev
 - **Module Factory Error**: Verify all TipTap packages have same version
 - **Dependency Conflicts**: Use `npm ls` to identify and fix conflicts
 
-**See [.windsurf/rules.md](.windsurf/rules.md) for complete development guidelines.**
+**See the Development Guidelines section above for complete guidance.**
 
 ---
 
@@ -243,7 +241,7 @@ We welcome contributions! Whether you're:
 - [ ] Beautiful collections UI
 - [ ] Collaborative annotations
 
-**See [Documentation/Longterm-tasks](Documentation/Longterm-tasks) for complete roadmap.**
+**See [docs/archive/planning/](docs/archive/planning/) for complete historical roadmap.**
 
 ---
 

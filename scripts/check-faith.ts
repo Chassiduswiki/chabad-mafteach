@@ -1,7 +1,16 @@
 import { createDirectus, rest, staticToken, readItems } from '@directus/sdk';
+import dotenv from 'dotenv';
 
-const DIRECTUS_URL = 'https://directus-production-20db.up.railway.app';
-const STATIC_TOKEN = 'Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96';
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
+
+const DIRECTUS_URL = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL;
+const STATIC_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
+
+if (!DIRECTUS_URL || !STATIC_TOKEN) {
+    console.error('❌ Error: DIRECTUS_URL and DIRECTUS_STATIC_TOKEN must be set in environment.');
+    process.exit(1);
+}
 
 const directus = createDirectus(DIRECTUS_URL)
     .with(staticToken(STATIC_TOKEN))

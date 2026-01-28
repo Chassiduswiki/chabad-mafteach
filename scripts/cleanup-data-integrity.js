@@ -7,7 +7,11 @@ dotenv.config({ path: '.env' });
 
 // Directus client configuration
 const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL;
-const directusToken = process.env.DIRECTUS_STATIC_TOKEN || 'Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96';
+const directusToken = process.env.DIRECTUS_STATIC_TOKEN;
+
+if (!directusToken) {
+    throw new Error('DIRECTUS_STATIC_TOKEN environment variable is not set. Please configure .env file.');
+}
 
 if (!directusUrl) {
     throw new Error('DIRECTUS_URL environment variable is not set. Please configure .env file.');

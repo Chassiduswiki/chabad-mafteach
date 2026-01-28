@@ -2,10 +2,20 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 const { getEntireChabadLibraryBookSequential } = require('./scrapers/chabadlibraryScraper');
 
-const DIRECTUS_URL = 'https://directus-production-20db.up.railway.app';
-const TOKEN = 'f4Zk7OBxDQlkQuO60f3PeATYzjdgP2mv';
+// Load environment variables
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
+
+const DIRECTUS_URL = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL;
+const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
+
+if (!DIRECTUS_URL || !TOKEN) {
+    console.error('❌ Error: DIRECTUS_URL and DIRECTUS_STATIC_TOKEN must be set in environment.');
+    process.exit(1);
+}
 
 // Language detection (simple heuristic for Hebrew/English)
 function detectLanguage(text) {
