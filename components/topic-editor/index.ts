@@ -20,5 +20,17 @@ export { FloatingAIChatButton } from '../editor/FloatingAIChatButton';
 export { AIChatPanel } from '../editor/AIChatPanel';
 export { SmartFieldInput } from '../editor/SmartFieldInput';
 
+// New modular components
+export { TopicEditorHeader } from './TopicEditorHeader';
+export { TopicEditorTabs } from './TopicEditorTabs';
+export { TopicEditorSidebar } from './TopicEditorSidebar';
+
+// Section components
+export * from './sections';
+
+// AI components
+export * from './ai';
+
 // Hooks
 export { useAutoSave, useSaveShortcut } from './useAutoSave';
+export * from './hooks';

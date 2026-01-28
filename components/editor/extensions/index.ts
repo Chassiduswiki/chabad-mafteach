@@ -6,6 +6,10 @@ import { AIEnhancementExtension } from './AIEnhancementExtension';
 import { SmartCitationExtension } from './SmartCitationExtension';
 import { RealTimeTranslationExtension } from './RealTimeTranslationExtension';
 import { AutoCompleteExtension } from '../AutoCompleteExtension';
+import { InlineAISuggestionExtension, SuggestionContext } from './InlineAISuggestionExtension';
+
+export { InlineAISuggestionExtension } from './InlineAISuggestionExtension';
+export type { InlineAISuggestionOptions, SuggestionContext } from './InlineAISuggestionExtension';
 
 export const createTipTapExtensions = (options?: {
   onCitationClick?: (citation: any) => void;
