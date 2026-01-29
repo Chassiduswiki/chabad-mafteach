@@ -42,9 +42,11 @@ const INITIAL_FORM_DATA: TopicFormData = {
   badge_color: '',
   status: 'draft',
   common_confusions: [],
+  conceptual_variants: [],
+  terminology_notes: '',
 };
 
-export type NewTopicEditorTab = 'edit' | 'connections' | 'settings';
+export type NewTopicEditorTab = 'edit' | 'connections' | 'scholarly' | 'settings';
 
 export function useTopicEditorState() {
   // Core state
@@ -148,6 +150,8 @@ export function useTopicEditorState() {
       badge_color: data.badge_color || '',
       status: data.status || 'draft',
       common_confusions: data.common_confusions || [],
+      conceptual_variants: data.conceptual_variants || [],
+      terminology_notes: data.terminology_notes || '',
     });
   }, []);
 

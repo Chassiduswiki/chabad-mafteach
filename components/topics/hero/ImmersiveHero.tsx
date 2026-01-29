@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Share2, Headphones, Bookmark, BookmarkCheck, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Share2, Headphones, Bookmark, BookmarkCheck, ChevronDown, Check, Loader2, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 interface ArticleHeroProps {
@@ -31,16 +31,20 @@ export function ImmersiveHero({
     const [isSharing, setIsSharing] = useState(false);
     const [shareSuccess, setShareSuccess] = useState(false);
     const [isListening, setIsListening] = useState(false);
+    const [isScholarly, setIsScholarly] = useState(false);
     const definitionRef = useRef<HTMLParagraphElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll();
 
-    // Check if topic is saved on mount
+    // Check if topic is saved on mount and load scholarly preference
     useEffect(() => {
         if (topicSlug) {
             const savedTopics = JSON.parse(localStorage.getItem('savedTopics') || '[]');
             setIsSaved(savedTopics.includes(topicSlug));
         }
+
+        const scholarlyPref = localStorage.getItem('scholarlyView') === 'true';
+        setIsScholarly(scholarlyPref);
     }, [topicSlug]);
 
     const handleSave = () => {
@@ -206,6 +210,20 @@ export function ImmersiveHero({
                                         Edit Topic
                                     </Link>
                                 )}
+
+                                <button
+                                    onClick={() => {
+                                        const newState = !isScholarly;
+                                        setIsScholarly(newState);
+                                        localStorage.setItem('scholarlyView', newState.toString());
+                                        window.dispatchEvent(new CustomEvent('scholarly-view-change', { detail: { show: newState } }));
+                                    }}
+                                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border font-medium transition-all ${isScholarly ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400' : 'bg-muted/50 hover:bg-muted border-border text-foreground'}`}
+                                    aria-label="Toggle scholarly view"
+                                >
+                                    <GraduationCap className="w-4 h-4" />
+                                    <span>{isScholarly ? 'Scholarly' : 'Standard'}</span>
+                                </button>
                             </div>
                         </div>
                     </div>

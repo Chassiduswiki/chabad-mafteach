@@ -35,6 +35,7 @@ import {
   SupplementarySection,
   AdvancedSection,
   UnifiedCommandPalette,
+  ScholarlyTab,
 } from '@/components/topic-editor';
 import { useTopicEditorState } from '@/components/topic-editor/hooks/useTopicEditorState';
 import { useCommandPalette } from '@/components/topic-editor/hooks/useCommandPalette';
@@ -810,6 +811,13 @@ export default function TopicEditorPage() {
                     }}
                   />
                 </div>
+              }
+              scholarlyContent={
+                <ScholarlyTab
+                  formData={state.formData}
+                  onUpdate={state.updateFormField}
+                  availableSources={state.linkedSources}
+                />
               }
               settingsContent={
                 <div className="space-y-6">

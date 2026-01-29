@@ -10,6 +10,7 @@ interface TopicEditorTabsProps {
   onTabChange: (tab: NewTopicEditorTab) => void;
   editContent: React.ReactNode;
   connectionsContent: React.ReactNode;
+  scholarlyContent: React.ReactNode;
   settingsContent: React.ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function TopicEditorTabs({
   onTabChange,
   editContent,
   connectionsContent,
+  scholarlyContent,
   settingsContent,
 }: TopicEditorTabsProps) {
   return (
@@ -38,6 +40,13 @@ export function TopicEditorTabs({
           Connections
         </TabsTrigger>
         <TabsTrigger
+          value="scholarly"
+          className="flex items-center gap-2 px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+        >
+          <span className="h-4 w-4 flex items-center justify-center font-serif font-bold text-xs">S</span>
+          Scholarly
+        </TabsTrigger>
+        <TabsTrigger
           value="settings"
           className="flex items-center gap-2 px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
         >
@@ -52,6 +61,10 @@ export function TopicEditorTabs({
 
       <TabsContent value="connections" className="mt-6">
         {connectionsContent}
+      </TabsContent>
+
+      <TabsContent value="scholarly" className="mt-6">
+        {scholarlyContent}
       </TabsContent>
 
       <TabsContent value="settings" className="mt-6">

@@ -248,6 +248,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                     'page_number',
                     'verse_reference',
                     'section_reference',
+                    'authority_level',
                     'notes',
                     {
                         source_id: [
@@ -284,8 +285,9 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                 page_number: ts.page_number,
                 verse_reference: ts.verse_reference,
                 section_reference: ts.section_reference,
+                authority_level: ts.authority_level,
                 notes: ts.notes,
-                is_primary: ts.notes?.includes('Primary'), // Infer from notes for now
+                is_primary: ts.notes?.includes('Primary') || ts.authority_level === 'primary', // Infer from notes or use explicit field
                 // Keep relationships array for backward compatibility
                 relationships: [{
                     relationship_type: ts.relationship_type,
@@ -371,6 +373,8 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             current_language: translation?.language_code || lang,
             translation_quality: translation?.translation_quality,
             is_machine_translated: translation?.is_machine_translated,
+            conceptual_variants: translation?.conceptual_variants || topic.conceptual_variants,
+            terminology_notes: translation?.terminology_notes || topic.terminology_notes,
             contentBlocks // **[CHANGED]** from paragraphs
         };
 

@@ -7,7 +7,7 @@ import { Topic, TopicRelationship, Source, Author } from '@/lib/types';
 
 // ============ Display Configuration ============
 
-export type DisplayFormat = 
+export type DisplayFormat =
   | 'prose'      // Standard paragraph text
   | 'list'       // Bullet or numbered list
   | 'table'      // Tabular data
@@ -49,7 +49,7 @@ export interface TopicEditorState {
   validationErrors: Record<string, string>;
 }
 
-export type TopicEditorTab = 
+export type TopicEditorTab =
   | 'overview'
   | 'content'
   | 'relationships'
@@ -59,7 +59,7 @@ export type TopicEditorTab =
 
 // ============ Relationship Types ============
 
-export type RelationType = 
+export type RelationType =
   | 'subcategory'
   | 'instance_of'
   | 'part_of'
@@ -135,6 +135,18 @@ export interface TopicCompleteness {
   suggestions: string[];
 }
 
+// ============ Scholarly Variants ============
+
+export interface ConceptualVariant {
+  id: string; // specialized ID for keying
+  type: 'halachic' | 'kabbalistic' | 'chassidic' | 'historical' | 'linguistic';
+  content: string; // HTML/Prose
+  sources: Array<{
+    source_id: number;
+    authority_level: 'primary' | 'secondary' | 'supporting';
+  }>;
+}
+
 // ============ Form Data ============
 
 export interface TopicFormData {
@@ -161,6 +173,8 @@ export interface TopicFormData {
   badge_color?: string;
   status?: 'draft' | 'reviewed' | 'published' | 'archived';
   metadata?: Record<string, unknown>;
+  conceptual_variants?: ConceptualVariant[];
+  terminology_notes?: string;
 }
 
 // ============ API Response Types ============

@@ -10,6 +10,7 @@ export { DisplayFormatSelector } from './DisplayFormatSelector';
 export { TopicCompleteness } from './TopicCompleteness';
 export { TopicVersionHistory } from './TopicVersionHistory';
 export { TopicHierarchyTree } from './TopicHierarchyTree';
+export { ScholarlyTab } from './ScholarlyTab';
 export { ProactiveSuggestionsPanel } from '../editor/ProactiveSuggestionsPanel';
 export { AIContentGeneratorDialog } from '../editor/AIContentGeneratorDialog';
 export { AIRelationshipFinderDialog } from '../editor/AIRelationshipFinderDialog';
