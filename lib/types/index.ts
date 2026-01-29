@@ -149,6 +149,9 @@ export interface Source {
     notes?: string;
     is_primary?: boolean;
     statement_id?: number;
+
+    // Scholarly authority classification
+    authority_level?: 'foundational' | 'explanatory' | 'contextual';
 }
 
 export interface SourceLink {
@@ -334,10 +337,24 @@ export interface Translation {
     verified_by?: string;
 }
 
+export interface ConceptualVariant {
+    type: 'tanya_framing' | 'kabbalistic_background' | 'later_development' | 'tension_point' | 'custom';
+    title: string;
+    content: string;
+    sources?: string[]; // Source IDs or references
+    order?: number;
+}
+
+
 export interface TopicTranslation {
     id: number;
     topics_id: number;
     languages_code: string;
+
+    // Scholarly conceptual variants
+    conceptual_variants?: ConceptualVariant[];
+    terminology_notes?: string;
+
     [key: string]: any;
 }
 

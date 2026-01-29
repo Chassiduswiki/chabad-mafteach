@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getTopicBySlug } from '@/lib/api/topics';
 import { TopicTracker } from '@/components/shared/TopicTracker';
-import { TopicExperience } from '@/components/topics/TopicExperience';
+import { TopicExperienceV2 as TopicExperience } from '@/components/topics/TopicExperienceV2';
 import { Topic } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';

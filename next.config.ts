@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
       });
     }
     
+    // Enable automatic instrumentation of Vercel Cron Monitors
+    // Replaces deprecated automaticVercelMonitors option
+    if (config.experiments && config.experiments.buildMerging) {
+      config.experiments.buildMerging = true;
+    }
+    
     return config;
   },
   async rewrites() {
@@ -100,9 +106,9 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   // tunnelRoute: "/monitoring",
 
-  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+  // Enables automatic instrumentation of Vercel Cron Monitors is now handled in webpack config
   // See the following for more information:
   // https://docs.sentry.io/product/crons/
   // https://vercel.com/docs/cron-jobs
-  automaticVercelMonitors: true,
+  // automaticVercelMonitors: true, // DEPRECATED - moved to webpack config
 });
