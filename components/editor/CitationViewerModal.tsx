@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Edit2, Save, X, BookOpen, Calendar, User, Hash } from "lucide-react";
 
 interface CitationViewerModalProps {
@@ -248,6 +248,9 @@ export function CitationViewerModal({ open, citation, citationContent, onClose }
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Source: {sourceDetails?.title}</DialogTitle>
+              <DialogDescription>
+                Edit the source details including title, citation format, and publication information.
+              </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
