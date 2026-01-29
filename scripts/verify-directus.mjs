@@ -6,7 +6,12 @@ dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
 
 const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL;
-const directusToken = process.env.DIRECTUS_STATIC_TOKEN || 'Y2uEb9-2oyj8-DEn5eeJypUw7xUGuR96';
+const directusToken = process.env.DIRECTUS_STATIC_TOKEN;
+
+if (!directusToken) {
+    console.error('❌ Error: DIRECTUS_STATIC_TOKEN not found in environment.');
+    process.exit(1);
+}
 
 console.log('--- Directus Connectivity Diagnostic ---');
 console.log('URL:', directusUrl);

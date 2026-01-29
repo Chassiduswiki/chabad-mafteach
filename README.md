@@ -92,7 +92,7 @@ npm install
 
 3. **Set up environment variables**
 ```bash
-cp .env.example .env.local
+cp .env.production.example .env.local
 # Edit .env.local with your Directus URL and token
 ```
 
@@ -148,9 +148,46 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 - **[AUTHENTICATION_GUIDE.md](AUTHENTICATION_GUIDE.md)** - Complete authentication system documentation
 - **[TORAH_READER_DOCUMENTATION.md](TORAH_READER_DOCUMENTATION.md)** - TorahReader component guide
-- **[Documentation/Longterm-tasks](Documentation/Longterm-tasks)** - Comprehensive roadmap and task list
-- **[Documentation/Design-guide.md](Documentation/Design-guide.md)** - Design philosophy and principles
-- **[Documentation/Use%20cases%20and%20persona.MD](Documentation/Use%20cases%20and%20persona.MD)** - User research and personas
+- **[TESTING.md](TESTING.md)** - Testing suite documentation
+- **[docs/](docs/)** - Technical documentation (schema, migrations, AI integration)
+- **[docs/archive/](docs/archive/)** - Historical planning documents and brainstorms
+
+---
+
+## 🛠️ Development Guidelines
+
+### Package Management Rules
+
+**CRITICAL**: All TipTap packages must maintain the same version to prevent HMR errors.
+
+#### Current Package Versions (Updated: 2026-01-27)
+- **TipTap Suite**: 3.17.1 (all @tiptap/* packages)
+- **Next.js**: 16.0.10
+- **React**: 19.2.0
+- **fast-equals**: 5.4.0 (direct dependency)
+
+#### Safe Update Process
+```bash
+# 1. Check current versions
+npm ls @tiptap/react
+
+# 2. Update ALL TipTap packages together
+npm install @tiptap/react@X.Y.Z @tiptap/pm@X.Y.Z @tiptap/starter-kit@X.Y.Z @tiptap/extension-character-count@X.Y.Z @tiptap/extension-placeholder@X.Y.Z
+
+# 3. Verify versions match
+npm ls @tiptap/react @tiptap/pm @tiptap/starter-kit
+
+# 4. Clear cache and test
+rm -rf .next
+npm run dev
+```
+
+#### Common Issues & Solutions
+- **fast-equals HMR Error**: Clear `.next` cache and restart dev server
+- **Module Factory Error**: Verify all TipTap packages have same version
+- **Dependency Conflicts**: Use `npm ls` to identify and fix conflicts
+
+**See the Development Guidelines section above for complete guidance.**
 
 ---
 
@@ -204,7 +241,7 @@ We welcome contributions! Whether you're:
 - [ ] Beautiful collections UI
 - [ ] Collaborative annotations
 
-**See [Documentation/Longterm-tasks](Documentation/Longterm-tasks) for complete roadmap.**
+**See [docs/archive/planning/](docs/archive/planning/) for complete historical roadmap.**
 
 ---
 

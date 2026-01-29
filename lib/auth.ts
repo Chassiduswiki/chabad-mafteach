@@ -9,7 +9,7 @@ import { SECURITY } from '@/lib/constants';
 
 // JWT Secret for token signing and verification
 // Use a fallback during build time to avoid "JWT_SECRET required" errors
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'development-secret-key-12345');
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
 if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
   console.warn('WARNING: JWT_SECRET is not set in production environment!');
@@ -18,14 +18,34 @@ if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
 /**
  * Verify JWT token from Authorization header
  */
+// Verify JWT token from Authorization header or Cookie
 export function verifyAuth(request: NextRequest): { userId?: string; role?: string } | null {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
+    // 1. Trust middleware headers if present (middleware runs before this)
+    const mwUserId = request.headers.get('x-user-id');
+    const mwRole = request.headers.get('x-user-role');
+
+    if (mwUserId && mwRole) {
+      return { userId: mwUserId, role: mwRole };
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // 2. Check Authorization Header
+    const authHeader = request.headers.get('authorization');
+    let token = '';
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      // 3. Fallback to Cookie
+      const cookie = request.cookies.get('auth_token');
+      if (cookie) {
+        token = cookie.value;
+      }
+    }
+
+    if (!token) {
+      return null;
+    }
 
     // Check if it's the Directus Static Token (used as a master key)
     const staticToken = process.env.DIRECTUS_STATIC_TOKEN;

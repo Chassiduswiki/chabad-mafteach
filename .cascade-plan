@@ -1,6 +1,0 @@
-1. Extract editor sync utilities into dedicated modules/hooks to slim EditorPage.
-2. Wire EditorPage to the new sync helper and ensure save still works.
-3. Sanity-check flows and note follow-ups.
-1. Extract editor sync utilities into dedicated modules/hooks to slim EditorPage.
-2. Wire EditorPage to the new sync helper and ensure save still works.
-3. Sanity-check flows and note follow-ups.

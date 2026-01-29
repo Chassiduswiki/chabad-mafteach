@@ -59,13 +59,28 @@ class MemoryCache {
 // Global cache instance
 const cache = new MemoryCache();
 
+// Simple hash function for cache keys
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
 // Cache keys
 const CACHE_KEYS = {
   TOPICS_ALL: 'topics:all',
   TOPICS_DISCOVERY: 'topics:discovery',
   TOPICS_FEATURED: 'topics:featured',
   DOCUMENTS_BY_TYPE: (type: string) => `documents:type:${type}`,
-  SEARCH_RESULTS: (query: string) => `search:${query}`
+  SEARCH_RESULTS: (query: string) => `search:${query}`,
+  // Vector search cache keys
+  QUERY_EMBEDDING: (query: string) => `embed:q:${simpleHash(query)}`,
+  SEMANTIC_RESULTS: (query: string, opts: any) => `search:sem:${simpleHash(query)}:${simpleHash(JSON.stringify(opts))}`,
+  SIMILAR_ITEMS: (id: string, collection: string) => `similar:${collection}:${id}`,
 } as const;
 
 // Cached function wrappers
@@ -197,5 +212,5 @@ export const startCacheCleanup = (intervalMs: number = CACHE.CLEANUP_INTERVAL): 
   }, intervalMs);
 };
 
-// Export cache instance for advanced usage
-export { cache };
+// Export cache instance and keys for advanced usage
+export { cache, CACHE_KEYS };

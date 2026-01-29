@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
   // Get token from Authorization header or localStorage (via cookie)
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.replace('Bearer ', '');
-  
+
   // Also check for auth_token cookie (set by client)
   const cookieToken = request.cookies.get('auth_token')?.value;
   const finalToken = token || cookieToken;
@@ -96,6 +96,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
