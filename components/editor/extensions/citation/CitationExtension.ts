@@ -601,7 +601,10 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
             statementId: citation.statementId,
           });
 
-          return commands.insertContentAt(selection.to, [citationNode, { type: 'text', text: ' ' }]);
+          return commands.insertContent([
+            citationNode.toJSON(),
+            { type: 'text', text: ' ' }
+          ]);
         },
 
       updateCitation:
