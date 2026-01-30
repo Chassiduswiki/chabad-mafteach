@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "directus": {
+      "type": "http",
+      "url": "https://directus-production-20db.up.railway.app/mcp"
+    }
+  }
+}

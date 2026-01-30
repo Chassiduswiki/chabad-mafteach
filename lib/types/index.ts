@@ -376,6 +376,33 @@ export interface TranslationHistory {
 
 // ============ Directus SDK Schema =============
 
+// Re-export idea chain types for convenience
+export type {
+    IdeaChain,
+    IdeaChainCollaborator,
+    IdeaChainVersion,
+    IdeaChainSnapshot,
+    IdeaNode,
+    IdeaNodeLink,
+    IdeaChainTopic,
+    IdeaNodeWithSource,
+    IdeaChainFull,
+    IdeaChainListItem,
+    ContributionType,
+    RelationshipType,
+    ChainStatus,
+    CollaboratorRole,
+} from '../idea-chains/types';
+
+import type {
+    IdeaChain,
+    IdeaChainCollaborator,
+    IdeaChainVersion,
+    IdeaNode,
+    IdeaNodeLink,
+    IdeaChainTopic,
+} from '../idea-chains/types';
+
 export interface Schema {
     authors: Author[];
     documents: Document[];
@@ -391,6 +418,13 @@ export interface Schema {
     translations: Translation[];
     topic_translations: TopicTranslation[];
     translation_history: TranslationHistory[];
+    // Idea Chain collections
+    idea_chains: IdeaChain[];
+    idea_chain_collaborators: IdeaChainCollaborator[];
+    idea_chain_versions: IdeaChainVersion[];
+    idea_nodes: IdeaNode[];
+    idea_node_links: IdeaNodeLink[];
+    idea_chain_topics: IdeaChainTopic[];
 }
 
 // ============ Legacy Type Aliases =============

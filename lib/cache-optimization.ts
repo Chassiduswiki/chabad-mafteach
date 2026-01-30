@@ -103,7 +103,7 @@ export class SemanticCacheManager {
     
     // Remove expired entries
     for (const key of this.getCacheKeys()) {
-      const entry = cache.get(key);
+      const entry = cache.get(key) as any;
       if (entry && entry.expiresAt && entry.expiresAt < now) {
         keysToRemove.push(key);
       }
@@ -146,7 +146,7 @@ export class SemanticCacheManager {
    * Get entry timestamp (simplified)
    */
   private getEntryTimestamp(key: string): number {
-    const entry = cache.get(key);
+    const entry = cache.get(key) as any;
     return entry?.timestamp || 0;
   }
 
@@ -188,11 +188,10 @@ export class SemanticCacheManager {
    */
   getCachedSearchResults(query: string, mode: string, weight: number): any {
     const key = cacheKeys.semanticSearch(query, mode, weight);
-    const entry = cache.get(key);
-
+    const entry = cache.get(key) as any;
     if (entry) {
       this.cacheStats.hits++;
-      return entry.data || entry; // Handle both wrapped and unwrapped entries
+      return entry?.data || entry; // Handle both wrapped and unwrapped entries
     } else {
       this.cacheStats.misses++;
       return null;
@@ -239,11 +238,10 @@ export class SemanticCacheManager {
    */
   getCachedSimilarTopics(topicId: string): any {
     const key = cacheKeys.similarTopics(topicId);
-    const entry = cache.get(key);
-
+    const entry = cache.get(key) as any;
     if (entry) {
       this.cacheStats.hits++;
-      return entry.data || entry;
+      return entry?.data || entry;
     } else {
       this.cacheStats.misses++;
       return null;

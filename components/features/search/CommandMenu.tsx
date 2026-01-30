@@ -9,6 +9,8 @@ import { useSearch } from '@/lib/search-context';
 import { useAnalytics } from '@/lib/analytics-tracker';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { rankSearchResults, getSearchQueryVariants, SearchResult as RankedResult } from '@/lib/utils/search-processor';
+import { SearchExplanation } from '@/components/search/SearchExplanation';
+import { isHebrew } from '@/lib/utils/search';
 
 type SearchResult = {
     id: string;
@@ -23,6 +25,10 @@ type SearchResult = {
     semantic_score?: number;
     hybrid_score?: number;
     keyword_score?: number;
+    // Smart search fields
+    explanation?: string;
+    mode?: string;
+    showSemanticIndicators?: boolean;
 };
 
 // Category color mapping for badges - matches TopicsList colors
@@ -88,8 +94,7 @@ export function CommandMenu() {
     const [results, setResults] = React.useState<SearchResult[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
-    const [searchMode, setSearchMode] = React.useState<'keyword' | 'semantic' | 'hybrid'>('keyword');
-    const [semanticWeight, setSemanticWeight] = React.useState(0.6);
+    const [searchData, setSearchData] = React.useState<any>(null);
     const router = useRouter();
     const { data: settings } = useSiteSettings();
 
@@ -105,6 +110,7 @@ export function CommandMenu() {
     React.useEffect(() => {
         if (!search) {
             setResults([]);
+            setSearchData(null);
             return;
         }
 
@@ -115,7 +121,7 @@ export function CommandMenu() {
                 const variants = getSearchQueryVariants(search);
                 const query = variants[0]; // Primary variant
 
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${searchMode}&semantic_weight=${semanticWeight}`);
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
 
                 // Helper to strip HTML tags
@@ -147,6 +153,9 @@ export function CommandMenu() {
                     subtitle: [s.author, s.doc_type, s.category].filter(Boolean).join(' • '),
                     url: `/seforim/${s.id}`
                 }));
+
+                // Store the API response data for SearchExplanation
+                setSearchData(data);
 
                 const locationResults: SearchResult[] = (data.locations || []).map((l: { id: string | number; display_name?: string; title: string; content_preview?: string; url?: string; sefer?: string | number; document_id?: string | number }) => ({
                     id: `loc-${l.id}`,
@@ -267,64 +276,6 @@ export function CommandMenu() {
                                 </div>
                             </div>
 
-                            {/* Search Mode Selector */}
-                            <div className="px-6 pb-3">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium text-muted-foreground">Mode:</span>
-                                        <div className="flex bg-muted/30 border border-border rounded-lg p-1">
-                                            <button
-                                                onClick={() => setSearchMode('keyword')}
-                                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'keyword'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                Keyword
-                                            </button>
-                                            <button
-                                                onClick={() => setSearchMode('semantic')}
-                                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'semantic'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                <Brain className="w-3 h-3 inline mr-1" />
-                                                Semantic
-                                            </button>
-                                            <button
-                                                onClick={() => setSearchMode('hybrid')}
-                                                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'hybrid'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                Hybrid
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {searchMode === 'hybrid' && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">Semantic:</span>
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="1"
-                                                step="0.1"
-                                                value={semanticWeight}
-                                                onChange={(e) => setSemanticWeight(parseFloat(e.target.value))}
-                                                className="w-16 h-1 bg-muted appearance-none cursor-pointer"
-                                            />
-                                            <span className="text-xs text-muted-foreground w-8">
-                                                {Math.round(semanticWeight * 100)}%
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
 
                             {/* Results Area */}
                             <Command.List className="flex-1 overflow-y-auto px-4 pb-12 scrollbar-none scroll-smooth">
@@ -461,9 +412,8 @@ export function CommandMenu() {
                                     autoFocus
                                 />
                                 <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-                                        <span>ESC</span>
-                                        <span>TO CLOSE</span>
+                                    <div className="text-xs text-muted-foreground">
+                                        Press <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">ESC</kbd> to close
                                     </div>
                                     <button onClick={() => setOpen(false)} className="p-2 hover:bg-muted rounded-xl transition-colors">
                                         <X className="w-5 h-5 text-muted-foreground" />
@@ -471,65 +421,19 @@ export function CommandMenu() {
                                 </div>
                             </div>
 
-                            {/* Search Mode Selector - Desktop */}
-                            <div className="px-6 pb-4 border-b border-border/50">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium text-muted-foreground">Mode:</span>
-                                        <div className="flex bg-muted/30 border border-border rounded-lg p-1">
-                                            <button
-                                                onClick={() => setSearchMode('keyword')}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'keyword'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                Keyword
-                                            </button>
-                                            <button
-                                                onClick={() => setSearchMode('semantic')}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'semantic'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                <Brain className="w-3 h-3 inline mr-1" />
-                                                Semantic
-                                            </button>
-                                            <button
-                                                onClick={() => setSearchMode('hybrid')}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                                                    searchMode === 'hybrid'
-                                                        ? 'bg-background text-foreground shadow-sm'
-                                                        : 'text-muted-foreground hover:text-foreground'
-                                                }`}
-                                            >
-                                                Hybrid
-                                            </button>
-                                        </div>
+                                {/* Smart Search Explanation */}
+                                {search && !loading && results.length > 0 && (
+                                    <div className="px-6 pb-3">
+                                        <SearchExplanation
+                                            explanation={searchData?.explanation || 'Smart search'}
+                                            mode={searchData?.mode || 'keyword'}
+                                            showSemanticIndicators={searchData?.showSemanticIndicators || false}
+                                            isHebrew={isHebrew(search)}
+                                        />
                                     </div>
-                                    {searchMode === 'hybrid' && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">Semantic:</span>
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="1"
-                                                step="0.1"
-                                                value={semanticWeight}
-                                                onChange={(e) => setSemanticWeight(parseFloat(e.target.value))}
-                                                className="w-20 h-1 bg-muted appearance-none cursor-pointer"
-                                            />
-                                            <span className="text-xs text-muted-foreground w-8">
-                                                {Math.round(semanticWeight * 100)}%
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                                )}
 
+                                {/* Results Area */}
                             <Command.List className="max-h-[60vh] overflow-y-auto p-4 scrollbar-thin">
                                 {loading && (
                                     <div className="flex items-center justify-center py-12 text-muted-foreground gap-3">

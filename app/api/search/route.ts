@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
 import { cache } from '@/lib/cache';
@@ -9,6 +8,10 @@ import { generateEmbedding } from '@/lib/vector/embedding-service';
 import { searchTopicsByVector, searchStatementsByVector } from '@/lib/vector/pgvector-client';
 import { calculateHybridScore, normalizeScores } from '@/lib/vector/similarity-search';
 import type { HybridSearchResult } from '@/lib/vector/types';
+import { determineSmartSearchMode, getLanguageOptimizedFilters, getSearchExplanation, shouldShowSemanticIndicators } from '@/lib/search-smart-mode';
+
+// Directus client for server-side operations
+const directus = createClient();
 
 // Simple in-memory rate limiter for search endpoints
 const searchRateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -47,15 +50,15 @@ const getSearchCacheKey = (query: string, mode?: string, weight?: number) => {
     return `search:results:${base}:${mode || 'keyword'}:${weight || 0.6}`;
 };
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const query = searchParams.get('q') || '';
-        const mode = searchParams.get('mode') || 'keyword';
+        const explicitMode = searchParams.get('mode'); // Keep for backward compatibility
         const semanticWeight = parseFloat(searchParams.get('semantic_weight') || '0.6');
 
         // Rate limiting
-        const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+        const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
         const rateLimit = checkSearchRateLimit(ip);
         
         if (!rateLimit.allowed) {
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
                 statements: [],
                 documents: [],
                 locations: [],
-                mode,
+                mode: 'keyword',
                 message: 'Query too short'
             });
         }
@@ -87,25 +90,46 @@ export async function GET(request: NextRequest) {
                 statements: [],
                 documents: [],
                 locations: [],
-                mode,
+                mode: 'keyword',
                 message: 'Query too long'
             });
         }
 
-        // Check cache first
+        // SMART MODE: Determine optimal search strategy
+        const smartConfig = determineSmartSearchMode(query);
+        const mode = explicitMode || smartConfig.mode;
+        
+        console.log(`Smart search: query="${query}" -> mode="${mode}" (${smartConfig.reasoning})`);
+
+        // Check cache first (with timeout protection)
         const cacheKey = getSearchCacheKey(query, mode, semanticWeight);
-        const cached = cache.get(cacheKey);
+        let cached = null;
+        try {
+            // Add timeout to prevent hanging on cache operations
+            const cachePromise = new Promise((resolve) => {
+                setTimeout(() => resolve(null), 1000); // 1 second timeout
+                const result = cache.get(cacheKey);
+                resolve(result);
+            });
+            cached = await Promise.race([cachePromise]);
+        } catch (cacheError) {
+            console.warn('Cache access failed, proceeding without cache:', cacheError);
+            cached = null;
+        }
+        
         if (cached) {
             return NextResponse.json({
                 ...cached,
+                mode,
                 cached: true,
-                mode
+                explanation: getSearchExplanation(smartConfig, query)
             });
         }
 
-        let results;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let results: any = {};
 
-        // Try semantic search first if requested
+        // Execute search based on smart mode
         if (mode === 'semantic' || mode === 'hybrid') {
             try {
                 results = await performSemanticSearch(query, mode, semanticWeight);
@@ -126,21 +150,23 @@ export async function GET(request: NextRequest) {
                 }
             }
         } else {
-            // Keyword search
+            // Keyword search - DIRECT PATH, no AI involved
             results = await performKeywordSearch(query);
         }
 
         // Cache results
-        cache.set(cacheKey, results, 5 * 60 * 1000); // 5 minutes
+        cache.set(cacheKey, results, 5 * 60 * 1000);
 
         return NextResponse.json({
             ...results,
             mode,
-            cached: false
+            cached: false,
+            explanation: getSearchExplanation(smartConfig, query),
+            showSemanticIndicators: shouldShowSemanticIndicators(smartConfig)
         });
 
     } catch (error) {
-        console.error('Search API error:', error);
+        console.error('Search API Error:', error);
         
         // Return a safe fallback response
         return NextResponse.json({
@@ -155,18 +181,22 @@ export async function GET(request: NextRequest) {
     }
 }
 
-async function performSemanticSearch(query: string, mode: string, semanticWeight: number) {
+async function performSemanticSearch(
+  query: string, 
+  mode: string, 
+  semanticWeight: number
+) {
     // Generate embedding for the query
     const embedding = await generateEmbedding({ text: query });
     
     // Search for similar topics and statements
     const [topicResults, statementResults] = await Promise.all([
-        searchTopicsByVector(embedding.embedding, 10),
-        searchStatementsByVector(embedding.embedding, 10)
+        searchTopicsByVector(embedding.embedding, { limit: 10 }),
+        searchStatementsByVector(embedding.embedding, { limit: 10 })
     ]);
 
     // Get keyword results for hybrid mode
-    let keywordResults = { topics: [], statements: [] };
+    let keywordResults: any = { topics: [], statements: [] };
     if (mode === 'hybrid') {
         keywordResults = await performKeywordSearch(query);
     }
@@ -185,43 +215,115 @@ async function performSemanticSearch(query: string, mode: string, semanticWeight
 }
 
 async function performKeywordSearch(query: string) {
-    // Implement keyword search using Directus
-    const topics = await directus.request(
-        readItems('topics', {
-            filter: {
-                _or: [
-                    { name: { _icontains: query } },
-                    { canonical_title: { _icontains: query } },
-                    { definition_short: { _icontains: query } }
-                ]
-            },
-            limit: 20
-        })
-    );
+    // Add timeout protection to prevent hanging
+    const searchPromise = (async () => {
+        // Get language-optimized filters
+        const optimizedFilters = getLanguageOptimizedFilters(query);
+        
+        // Implement keyword search using Directus
+        // Get keyword results
+        let topics = [];
+        try {
+            topics = await directus.request(
+                readItems('topics', {
+                    filter: optimizedFilters,
+                    limit: 20
+                })
+            );
+        } catch (error) {
+            console.warn('Failed to fetch topics via SDK, trying direct API call:', error);
+            
+            // Fallback to direct API call with language optimization
+            try {
+                const directusUrl = process.env.DIRECTUS_URL || 'https://directus-production-20db.up.railway.app';
+                const staticToken = process.env.DIRECTUS_STATIC_TOKEN;
+                
+                if (!staticToken) {
+                    console.warn('No Directus static token configured');
+                    topics = [];
+                } else {
+                    // Build query string with language-optimized filters
+                    const params = new URLSearchParams();
+                    params.append('limit', '20');
+                    
+                    // Add filter parameters based on language
+                    if (isHebrew(query)) {
+                        params.append('filter[canonical_title][_icontains]', query);
+                        params.append('filter[description][_icontains]', query);
+                    } else {
+                        params.append('filter[canonical_title_en][_icontains]', query);
+                        params.append('filter[canonical_title_transliteration][_icontains]', query);
+                        params.append('filter[canonical_title][_icontains]', query); // Fallback
+                    }
+                    
+                    const response = await fetch(`${directusUrl}/items/topics?${params.toString()}`, {
+                        headers: {
+                            'Authorization': `Bearer ${staticToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        topics = data.data || [];
+                    } else {
+                        topics = [];
+                    }
+                }
+            } catch (fallbackError) {
+                console.error('Fallback API call also failed:', fallbackError);
+                topics = [];
+            }
+        }
 
-    const statements = await directus.request(
-        readItems('statements', {
-            filter: {
-                content: { _icontains: query }
-            },
-            limit: 20
-        })
-    );
+        // Try to get statements, but handle if collection doesn't exist
+        let statements: any[] = [];
+        try {
+            statements = await directus.request(
+                readItems('statements', {
+                    filter: {
+                        content: { _icontains: query }
+                    },
+                    limit: 20
+                })
+            );
+        } catch (error) {
+            console.log('Statements collection not available, using empty array');
+            statements = [];
+        }
 
-    return {
-        topics: topics.map((topic: any) => ({
-            ...topic,
-            is_semantic_match: false,
-            keyword_score: 1.0
-        })),
-        statements: statements.map((statement: any) => ({
-            ...statement,
-            is_semantic_match: false,
-            keyword_score: 1.0
-        })),
-        documents: [],
-        locations: []
-    };
+        return {
+            topics: topics.map((topic: any) => ({
+                ...topic,
+                is_semantic_match: false,
+                keyword_score: 1.0
+            })),
+            statements: statements.map((statement: any) => ({
+                ...statement,
+                is_semantic_match: false,
+                keyword_score: 1.0
+            })),
+            documents: [],
+            locations: []
+        };
+    })();
+
+    // Add 5 second timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Keyword search timeout')), 5000);
+    });
+
+    try {
+        return await Promise.race([searchPromise, timeoutPromise]);
+    } catch (error) {
+        console.error('Keyword search failed or timed out:', error);
+        return {
+            topics: [],
+            statements: [],
+            documents: [],
+            locations: []
+        };
+    }
 }
 
 function combineSearchResults(
@@ -233,8 +335,6 @@ function combineSearchResults(
     semanticWeight: number
 ) {
     // Implementation for combining results based on mode
-    // This is a simplified version - would need proper scoring logic
-    
     if (mode === 'semantic') {
         return {
             topics: semanticTopics.map(t => ({ ...t, is_semantic_match: true, semantic_score: 0.8 })),
@@ -255,335 +355,8 @@ function combineSearchResults(
         locations: []
     };
 }
-    // Get client IP for rate limiting
-    const ip = request.headers.get('x-forwarded-for') ||
-        request.headers.get('x-real-ip') ||
-        'unknown';
-
-    // Check rate limit
-    const rateLimitResult = checkSearchRateLimit(ip);
-    if (!rateLimitResult.allowed) {
-        const resetInSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
-        return NextResponse.json(
-            {
-                error: 'Too many search requests. Please try again in a moment.',
-                retryAfter: resetInSeconds
-            },
-            {
-                status: 429,
-                headers: {
-                    'Retry-After': resetInSeconds.toString(),
-                    'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-                    'X-RateLimit-Reset': rateLimitResult.resetTime.toString()
-                }
-            }
-        );
-    }
-
-    const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('q');
-    const mode = searchParams.get('mode') || 'keyword'; // 'keyword', 'semantic', or 'hybrid'
-    const semanticWeight = parseFloat(searchParams.get('semantic_weight') || '0.6');
-
-    if (!query) {
-        return NextResponse.json({ documents: [], locations: [], topics: [], statements: [], seforim: [] });
-    }
-
-    // Normalize query for caching
-    const normalizedQuery = query.toLowerCase().trim();
-
-    // Check cache first (cache search results for 5 minutes)
-    const cacheKey = getSearchCacheKey(normalizedQuery, mode, semanticWeight);
-    const cachedResult = cache.get(cacheKey);
-    if (cachedResult) {
-        return NextResponse.json(cachedResult);
-    }
-
-
-    try {
-        // Limit search to prevent performance issues
-        const MAX_RESULTS_PER_TYPE = 15;
-
-        // For semantic-only mode, skip keyword search
-        if (mode === 'semantic') {
-            try {
-                const embeddingResponse = await generateEmbedding({ text: normalizedQuery });
-                const queryEmbedding = embeddingResponse.embedding;
-
-                const [semanticTopics, semanticStatements] = await Promise.all([
-                    searchTopicsByVector(queryEmbedding, { threshold: 0.7, limit: 20 }),
-                    searchStatementsByVector(queryEmbedding, { threshold: 0.7, limit: MAX_RESULTS_PER_TYPE }),
-                ]);
-
-                const topics = semanticTopics.map((t) => ({
-                    id: t.id,
-                    name: t.title,
-                    slug: t.url.split('/').pop() || '',
-                    category: t.metadata?.category,
-                    definition_short: t.content_preview,
-                    url: t.url,
-                    similarity: t.similarity,
-                    is_semantic_match: true,
-                }));
-
-                const statements = semanticStatements.map((s) => ({
-                    id: s.id,
-                    title: s.title,
-                    content_preview: s.content_preview,
-                    url: s.url,
-                    similarity: s.similarity,
-                    is_semantic_match: true,
-                }));
-
-                const result = {
-                    documents: [],
-                    locations: [],
-                    topics,
-                    statements,
-                    seforim: [],
-                    mode: 'semantic',
-                };
-
-                cache.set(cacheKey, result, 5 * 60 * 1000);
-                return NextResponse.json(result);
-            } catch (error) {
-                console.error('Semantic search error:', error);
-                // Fall back to empty results
-                return NextResponse.json({
-                    documents: [],
-                    locations: [],
-                    topics: [],
-                    statements: [],
-                    seforim: [],
-                    mode: 'semantic',
-                    error: 'Semantic search failed',
-                });
-            }
-        }
-
-        // Execute all searches in parallel with proper error handling
-        const [contentBlocksRes, statementsRes, topicsRes, seforimRes] = await Promise.allSettled([
-            directus.request(
-                readItems('content_blocks', {
-                    search: normalizedQuery,
-                    fields: ['id', 'order_key', 'content', 'page_number', 'chapter_number', 'halacha_number', 'document_id'],
-                    limit: MAX_RESULTS_PER_TYPE,
-                })
-            ),
-            directus.request(
-                readItems('statements', {
-                    search: normalizedQuery,
-                    fields: ['id', 'text', 'appended_text', 'order_key', 'block_id'],
-                    limit: MAX_RESULTS_PER_TYPE,
-                })
-            ),
-            directus.request(
-                readItems('topics', {
-                    search: normalizedQuery,
-                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description', 'overview'],
-                    limit: 20,
-                })
-            ),
-            directus.request(
-                readItems('documents', {
-                    search: normalizedQuery,
-                    fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category', 'content'],
-                    limit: 15,
-                })
-            )
-        ]);
-
-        // Process Content Blocks -> locations
-        const locations = contentBlocksRes.status === 'fulfilled' 
-            ? (contentBlocksRes.value as { id: string | number; content?: string; order_key?: string | number; document_id?: string | number; page_number?: string; chapter_number?: number; halacha_number?: number }[]).map((cb) => {
-                const clean = cb.content?.replace(/<[^>]*>/g, '') || '';
-                return {
-                    id: `content-${cb.id}`,
-                    title: `Content Block ${cb.order_key}`,
-                    display_name: `Section ${cb.order_key}`,
-                    content_preview: clean.substring(0, 150) + (clean.length > 150 ? '...' : ''),
-                    url: `/seforim/${cb.document_id}`,
-                    page_number: cb.page_number,
-                    chapter_number: cb.chapter_number,
-                    halacha_number: cb.halacha_number,
-                    sefer: cb.document_id,
-                };
-            }) 
-            : [];
-
-        // Process Statements -> statements
-        const statements = statementsRes.status === 'fulfilled'
-            ? (statementsRes.value as { id: string | number; text?: string; appended_text?: string; order_key?: string | number; block_id?: string | number }[]).map((stmt) => {
-                const cleanText = stmt.text?.replace(/<[^>]*>/g, '') || '';
-                const cleanAppended = stmt.appended_text?.replace(/<[^>]*>/g, '') || '';
-                return {
-                    id: `statement-${stmt.id}`,
-                    title: cleanText.substring(0, 80) + (cleanText.length > 80 ? '...' : ''),
-                    content_preview: cleanAppended ? `Footnote: ${cleanAppended.substring(0, 100)}` : '',
-                    url: `/seforim/${stmt.block_id}`,
-                    block_id: stmt.block_id,
-                };
-            })
-            : [];
-
-        // Process Topics -> topics
-        const topics = topicsRes.status === 'fulfilled'
-            ? (topicsRes.value as { id: string | number; canonical_title: string; slug: string; topic_type?: string; description?: string; overview?: string }[]).map((t) => ({
-                id: t.id,
-                name: t.canonical_title,
-                slug: t.slug,
-                category: t.topic_type,
-                definition_short: t.description || t.overview,
-                url: `/topics/${t.slug}`,
-            }))
-            : [];
-
-        // Process Seforim -> seforim
-        const seforim = seforimRes.status === 'fulfilled'
-            ? (seforimRes.value as { id: string | number; title: string; author?: string; doc_type?: string; category?: string }[]).map((s) => ({
-                id: s.id,
-                title: s.title,
-                author: s.author,
-                doc_type: s.doc_type,
-                category: s.category,
-                url: `/seforim/${s.id}`,
-            }))
-            : [];
-
-        // Apply hybrid search if mode is 'hybrid'
-        let finalTopics = topics;
-        let finalStatements = statements;
-
-        if (mode === 'hybrid') {
-            try {
-                // Generate query embedding
-                const embeddingResponse = await generateEmbedding({ text: normalizedQuery });
-                const queryEmbedding = embeddingResponse.embedding;
-
-                // Fetch semantic results in parallel
-                const [semanticTopics, semanticStatements] = await Promise.all([
-                    searchTopicsByVector(queryEmbedding, { threshold: 0.7, limit: 20 }),
-                    searchStatementsByVector(queryEmbedding, { threshold: 0.7, limit: MAX_RESULTS_PER_TYPE }),
-                ]);
-
-                // Merge and score topics
-                const topicScoreMap = new Map<string, { item: any; keywordScore: number; semanticScore: number }>();
-
-                // Add keyword results with normalized scores
-                const maxKeywordScore = topics.length > 0 ? topics.length : 1;
-                topics.forEach((topic, index) => {
-                    const keywordScore = 1 - (index / maxKeywordScore); // Higher score for earlier results
-                    topicScoreMap.set(String(topic.id), {
-                        item: topic,
-                        keywordScore,
-                        semanticScore: 0,
-                    });
-                });
-
-                // Add semantic results
-                semanticTopics.forEach((semanticTopic) => {
-                    const existing = topicScoreMap.get(String(semanticTopic.id));
-                    if (existing) {
-                        existing.semanticScore = semanticTopic.similarity;
-                    } else {
-                        topicScoreMap.set(String(semanticTopic.id), {
-                            item: {
-                                id: semanticTopic.id,
-                                name: semanticTopic.title,
-                                slug: semanticTopic.url.split('/').pop() || '',
-                                category: semanticTopic.metadata?.category,
-                                definition_short: semanticTopic.content_preview,
-                                url: semanticTopic.url,
-                            },
-                            keywordScore: 0,
-                            semanticScore: semanticTopic.similarity,
-                        });
-                    }
-                });
-
-                // Calculate hybrid scores and sort
-                finalTopics = Array.from(topicScoreMap.values())
-                    .map(({ item, keywordScore, semanticScore }) => ({
-                        ...item,
-                        hybrid_score: calculateHybridScore(keywordScore, semanticScore, {
-                            keywordWeight: 1 - semanticWeight,
-                            semanticWeight,
-                        }),
-                        keyword_score: keywordScore,
-                        semantic_score: semanticScore,
-                        is_semantic_match: semanticScore > 0,
-                    }))
-                    .sort((a, b) => b.hybrid_score - a.hybrid_score)
-                    .slice(0, 20);
-
-                // Merge and score statements
-                const statementScoreMap = new Map<string, { item: any; keywordScore: number; semanticScore: number }>();
-
-                const maxStatementScore = statements.length > 0 ? statements.length : 1;
-                statements.forEach((statement, index) => {
-                    const keywordScore = 1 - (index / maxStatementScore);
-                    const stmtId = String(statement.id).replace('statement-', '');
-                    statementScoreMap.set(stmtId, {
-                        item: statement,
-                        keywordScore,
-                        semanticScore: 0,
-                    });
-                });
-
-                semanticStatements.forEach((semanticStmt) => {
-                    const existing = statementScoreMap.get(String(semanticStmt.id));
-                    if (existing) {
-                        existing.semanticScore = semanticStmt.similarity;
-                    } else {
-                        statementScoreMap.set(String(semanticStmt.id), {
-                            item: {
-                                id: `statement-${semanticStmt.id}`,
-                                title: semanticStmt.title,
-                                content_preview: semanticStmt.content_preview,
-                                url: semanticStmt.url,
-                            },
-                            keywordScore: 0,
-                            semanticScore: semanticStmt.similarity,
-                        });
-                    }
-                });
-
-                finalStatements = Array.from(statementScoreMap.values())
-                    .map(({ item, keywordScore, semanticScore }) => ({
-                        ...item,
-                        hybrid_score: calculateHybridScore(keywordScore, semanticScore, {
-                            keywordWeight: 1 - semanticWeight,
-                            semanticWeight,
-                        }),
-                        keyword_score: keywordScore,
-                        semantic_score: semanticScore,
-                        is_semantic_match: semanticScore > 0,
-                    }))
-                    .sort((a, b) => b.hybrid_score - a.hybrid_score)
-                    .slice(0, MAX_RESULTS_PER_TYPE);
-            } catch (error) {
-                console.error('Hybrid search error:', error);
-                // Fall back to keyword-only results
-            }
-        }
-
-        const result = {
-            documents: seforim.filter(s => s.doc_type === 'sefer'), // Alias for backward compatibility
-            locations,
-            topics: finalTopics,
-            statements: finalStatements,
-            seforim,
-            mode,
-        };
-
-        // Cache results for 5 minutes
-        cache.set(cacheKey, result, 5 * 60 * 1000);
-
-        return NextResponse.json(result);
-    } catch (error) {
-        console.error('Search API Error:', error);
-        return handleApiError(error);
-    }
-}
 
 // Helper function to check if query looks numeric
+function checkQueryLooksNumeric(query: string): boolean {
+    return !isNaN(Number(query)) && query.trim().length > 0;
+}

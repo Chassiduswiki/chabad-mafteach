@@ -1069,6 +1069,147 @@ span[data-type="citation"][data-source-id=""] {
   .heading-hero { font-size: 3.75rem; } /* 60px */
 }
 
+/* Prose Content Styling - For topic content paragraphs */
+.prose-content {
+  @apply prose prose-neutral max-w-none;
+  color: var(--foreground);
+  line-height: 1.6;
+}
+
+.prose-content p {
+  margin-bottom: 1rem;
+  color: var(--foreground);
+}
+
+.prose-content h1,
+.prose-content h2,
+.prose-content h3,
+.prose-content h4,
+.prose-content h5,
+.prose-content h6 {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.prose-content strong,
+.prose-content b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.prose-content em,
+.prose-content i {
+  color: var(--secondary-foreground);
+}
+
+.prose-content code {
+  background-color: var(--muted);
+  color: var(--foreground);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose-content pre {
+  background-color: var(--muted);
+  color: var(--foreground);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.prose-content blockquote {
+  border-left: 4px solid var(--border);
+  padding-left: 1rem;
+  color: var(--secondary-foreground);
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.prose-content ul,
+.prose-content ol {
+  color: var(--foreground);
+  padding-left: 1.5rem;
+}
+
+.prose-content li {
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+}
+
+.prose-content a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.prose-content a:hover {
+  color: var(--primary-hover, var(--primary));
+}
+
+/* Dark mode specific adjustments - Higher specificity */
+.dark .prose-content,
+.dark .prose-content * {
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content p,
+.dark .prose-content div {
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content h1,
+.dark .prose-content h2,
+.dark .prose-content h3,
+.dark .prose-content h4,
+.dark .prose-content h5,
+.dark .prose-content h6 {
+  color: var(--foreground) !important;
+  font-weight: 600 !important;
+}
+
+.dark .prose-content strong,
+.dark .prose-content b {
+  color: var(--foreground) !important;
+  font-weight: 600 !important;
+}
+
+.dark .prose-content em,
+.dark .prose-content i {
+  color: var(--secondary-foreground) !important;
+}
+
+.dark .prose-content code {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content pre {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content blockquote {
+  border-left-color: var(--border) !important;
+  color: var(--secondary-foreground) !important;
+}
+
+.dark .prose-content ul,
+.dark .prose-content ol {
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content li {
+  color: var(--foreground) !important;
+}
+
+.dark .prose-content a {
+  color: var(--primary) !important;
+}
+
+.dark .prose-content a:hover {
+  color: var(--primary) !important;
+}
+
 /* Accessibility: Respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
