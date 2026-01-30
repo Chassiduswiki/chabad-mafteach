@@ -11,8 +11,8 @@ export {
   generateEmbedding,
   generateEmbeddingsBatch,
   prepareTextForEmbedding,
-  estimateEmbeddingCost,
   clearEmbeddingCache,
+  getEmbeddingQueueStatus,
 } from './embedding-service';
 
 // pgvector Client
