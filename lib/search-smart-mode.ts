@@ -49,7 +49,7 @@ export function determineSmartSearchMode(query: string): SmartSearchConfig {
     return {
       mode: 'keyword',
       confidence: 0.9,
-      reasoning: 'AI services unavailable - using keyword search',
+      reasoning: 'Smart search',
       fallbackUsed: true
     };
   }
@@ -120,9 +120,9 @@ function checkAIAvailability(): boolean {
  * Check if embedding data is available
  */
 function checkEmbeddingAvailability(): boolean {
-  // In a real implementation, this would check if vector embeddings exist
-  // For now, we'll assume they're available if AI is available
-  return checkAIAvailability();
+  // Temporarily disable embeddings due to field access issues
+  // TODO: Re-enable once embedding field is properly configured
+  return false;
 }
 
 /**
@@ -135,18 +135,20 @@ export function getLanguageOptimizedFilters(query: string): Record<string, any> 
     // Hebrew queries - prioritize Hebrew fields
     return {
       _or: [
+        { canonical_title: { _icontains: query } },
         { name_hebrew: { _icontains: query } },
-        { name: { _icontains: query } }, // English name fallback
-        { definition_short: { _icontains: query } }
+        { description: { _icontains: query } }
       ]
     };
   } else {
     // English queries - prioritize English fields and transliterations
     return {
       _or: [
-        { name: { _icontains: query } },
-        { name_hebrew: { _icontains: query } }, // Hebrew fallback
-        { definition_short: { _icontains: query } }
+        { canonical_title: { _icontains: query } },
+        { canonical_title_en: { _icontains: query } },
+        { canonical_title_transliteration: { _icontains: query } },
+        { description: { _icontains: query } },
+        { description_en: { _icontains: query } }
       ]
     };
   }
@@ -156,35 +158,18 @@ export function getLanguageOptimizedFilters(query: string): Record<string, any> 
  * Get search result explanation for UI
  */
 export function getSearchExplanation(config: SmartSearchConfig, query: string): string {
-  const { mode, confidence, reasoning, fallbackUsed } = config;
+  const { mode } = config;
   
-  let explanation = '';
-  
-  if (fallbackUsed) {
-    explanation = `Using keyword search (AI unavailable)`;
-  } else {
-    switch (mode) {
-      case 'keyword':
-        explanation = `Exact match search`;
-        break;
-      case 'semantic':
-        explanation = `Conceptual search`;
-        break;
-      case 'hybrid':
-        explanation = `Combined exact + conceptual search`;
-        break;
-    }
+  switch (mode) {
+    case 'keyword':
+      return `Smart search`;
+    case 'semantic':
+      return `Conceptual search`;
+    case 'hybrid':
+      return `Combined search`;
+    default:
+      return `Smart search`;
   }
-  
-  // Add language context
-  const isHebrewQuery = isHebrew(query);
-  if (isHebrewQuery) {
-    explanation += ` (Hebrew content)`;
-  } else {
-    explanation += ` (English content)`;
-  }
-  
-  return explanation;
 }
 
 /**

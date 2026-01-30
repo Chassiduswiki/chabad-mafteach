@@ -9,6 +9,7 @@ import { searchTopicsByVector, searchStatementsByVector } from '@/lib/vector/pgv
 import { calculateHybridScore, normalizeScores } from '@/lib/vector/similarity-search';
 import type { HybridSearchResult } from '@/lib/vector/types';
 import { determineSmartSearchMode, getLanguageOptimizedFilters, getSearchExplanation, shouldShowSemanticIndicators } from '@/lib/search-smart-mode';
+import { rankSearchResults } from '@/lib/utils/search-processor';
 
 // Directus client for server-side operations
 const directus = createClient();
@@ -292,17 +293,25 @@ async function performKeywordSearch(query: string) {
             statements = [];
         }
 
+        // Apply server-side ranking to ensure proper order
+        const allResults = [
+            ...topics.map((topic: any) => ({ ...topic, type: 'topic' })),
+            ...statements.map((statement: any) => ({ ...statement, type: 'statement' }))
+        ];
+        
+        const rankedResults = rankSearchResults(allResults, query);
+        
+        const rankedTopics = rankedResults
+            .filter(r => r.type === 'topic')
+            .map(r => ({ ...r, is_semantic_match: false, keyword_score: 1.0 }));
+            
+        const rankedStatements = rankedResults
+            .filter(r => r.type === 'statement')
+            .map(r => ({ ...r, is_semantic_match: false, keyword_score: 1.0 }));
+
         return {
-            topics: topics.map((topic: any) => ({
-                ...topic,
-                is_semantic_match: false,
-                keyword_score: 1.0
-            })),
-            statements: statements.map((statement: any) => ({
-                ...statement,
-                is_semantic_match: false,
-                keyword_score: 1.0
-            })),
+            topics: rankedTopics,
+            statements: rankedStatements,
             documents: [],
             locations: []
         };

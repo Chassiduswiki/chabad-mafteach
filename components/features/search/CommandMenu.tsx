@@ -20,6 +20,8 @@ type SearchResult = {
     category?: string;
     slug?: string;
     url: string;
+    canonical_title_transliteration?: string;
+    canonical_title_en?: string;
     // Semantic search fields
     is_semantic_match?: boolean;
     semantic_score?: number;

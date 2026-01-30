@@ -20,16 +20,43 @@ export function rankSearchResults(
     results: SearchResult[],
     query: string
 ): SearchResult[] {
+    const queryLower = query.toLowerCase();
+    
     // Calculate relevance score for each result
     const scoredResults = results.map(result => {
         let score = 0;
 
-        // Score based on title match
-        if (result.title) {
-            score += calculateRelevance(query, result.title, 'title');
+        // Priority 1: Exact transliteration match (highest priority)
+        if (result.canonical_title_transliteration) {
+            const transliterationLower = result.canonical_title_transliteration.toLowerCase();
+            if (transliterationLower === queryLower) {
+                score += 200; // Highest score for exact transliteration match
+            } else if (transliterationLower.includes(queryLower)) {
+                score += 100; // High score for partial transliteration match
+            }
         }
 
-        // Score based on description/content
+        // Priority 2: Exact title match
+        if (result.title) {
+            const titleLower = result.title.toLowerCase();
+            if (titleLower === queryLower) {
+                score += 150; // High score for exact title match
+            } else if (titleLower.includes(queryLower)) {
+                score += 75; // Medium score for partial title match
+            }
+        }
+
+        // Priority 3: English title match
+        if (result.canonical_title_en) {
+            const enTitleLower = result.canonical_title_en.toLowerCase();
+            if (enTitleLower === queryLower) {
+                score += 120; // High score for exact English title match
+            } else if (enTitleLower.includes(queryLower)) {
+                score += 60; // Medium score for partial English title match
+            }
+        }
+
+        // Priority 4: Description/content matches (lower priority)
         if (result.description) {
             score += calculateRelevance(query, result.description, 'description');
         }
@@ -38,7 +65,7 @@ export function rankSearchResults(
         }
 
         // Boost for exact type matches
-        if (result.type && query.toLowerCase() === result.type.toLowerCase()) {
+        if (result.type && queryLower === result.type.toLowerCase()) {
             score += 50;
         }
 
