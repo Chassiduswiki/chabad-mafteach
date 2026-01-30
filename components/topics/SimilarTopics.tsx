@@ -3,8 +3,9 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Sparkles, ExternalLink } from 'lucide-react';
+import { Sparkles, ExternalLink, AlertTriangle } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface SimilarTopicsProps {
   topicId: string;
@@ -21,16 +22,51 @@ interface SimilarTopic {
 }
 
 export function SimilarTopics({ topicId, limit = 3, className = '' }: SimilarTopicsProps) {
-  const { data: similarTopics = [], isLoading, error } = useQuery<SimilarTopic[]>({
+  return (
+    <ErrorBoundary 
+      componentName="SimilarTopics"
+      fallback={
+        <div className={`border rounded-lg p-4 ${className}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+            <h3 className="font-semibold text-sm">Similar Topics</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Unable to load similar topics at this time.
+          </p>
+        </div>
+      }
+    >
+      <SimilarTopicsInner topicId={topicId} limit={limit} className={className} />
+    </ErrorBoundary>
+  );
+}
+
+function SimilarTopicsInner({ topicId, limit = 3, className = '' }: SimilarTopicsProps) {
+  const { data: similarTopics, isLoading, error } = useQuery<SimilarTopic[]>({
     queryKey: ['similar-topics', topicId, limit],
     queryFn: async () => {
+      // First, get the actual topic content to use as search query
+      const topicResponse = await fetch(`/api/topics/${topicId}`);
+      if (!topicResponse.ok) {
+        throw new Error('Failed to fetch topic content');
+      }
+      
+      const topicData = await topicResponse.json();
+      const searchQuery = topicData.name || topicData.canonical_title || topicData.title;
+      
+      if (!searchQuery) {
+        throw new Error('Topic has no searchable content');
+      }
+
+      // Now search for similar topics using the actual content
       const response = await fetch('/api/search/semantic', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: topicId, // Use current topic as query
+          query: searchQuery, // Use actual topic content, not ID
           collections: ['topics'],
           limit,
           threshold: 0.75,
@@ -48,6 +84,8 @@ export function SimilarTopics({ topicId, limit = 3, className = '' }: SimilarTop
     enabled: !!topicId,
     staleTime: 10 * 60 * 1000, // 10 minutes cache
     gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
+    retry: 2, // Retry on failure
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
   if (isLoading) {

@@ -10,12 +10,11 @@ import type {
   EmbeddingCacheEntry,
 } from './types';
 
+import { SEARCH_CONFIG } from '@/lib/config';
+
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/embeddings';
-const EMBEDDING_MODEL = 'text-embedding-3-small';
-const EMBEDDING_DIMENSIONS = 512;
-const MAX_TOKENS_PER_REQUEST = 8192;
-const RATE_LIMIT_PER_MINUTE = 100;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const RATE_LIMIT_PER_MINUTE = SEARCH_CONFIG.RATE_LIMIT_PER_MINUTE;
+const CACHE_TTL = SEARCH_CONFIG.CACHE_TTL.EMBEDDINGS;
 
 // Enhanced rate limiter with queuing and batch processing
 interface EmbeddingJob {
@@ -24,25 +23,36 @@ interface EmbeddingJob {
   model: string;
   resolve: (result: any) => void;
   reject: (error: Error) => void;
+  createdAt: number;
+}
+
+// Simple UUID v4 generator
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 class EmbeddingQueue {
   private queue: EmbeddingJob[] = [];
   private processing = false;
-  private readonly MAX_BATCH_SIZE = 10;
-  private readonly BATCH_DELAY = 6000; // 6 seconds between batches
-  private readonly RATE_LIMIT_PER_MINUTE = 100;
-  private readonly WINDOW_MS = 60000;
+  private readonly MAX_BATCH_SIZE = SEARCH_CONFIG.MAX_BATCH_SIZE;
+  private readonly BATCH_DELAY = SEARCH_CONFIG.BATCH_DELAY_MS;
+  private readonly RATE_LIMIT_PER_MINUTE = SEARCH_CONFIG.RATE_LIMIT_PER_MINUTE;
+  private readonly WINDOW_MS = SEARCH_CONFIG.RATE_LIMIT_WINDOW_MS;
   private requests: number[] = [];
 
   async addToQueue(text: string, model: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const job: EmbeddingJob = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: generateUUID(),
         text,
         model,
         resolve,
-        reject
+        reject,
+        createdAt: Date.now(),
       };
       
       this.queue.push(job);
@@ -123,7 +133,7 @@ class EmbeddingQueue {
 
   private async generateEmbeddingDirect(text: string, model: string): Promise<any> {
     const openrouterUrl = 'https://openrouter.ai/api/v1/embeddings';
-    const embeddingDimensions = 512;
+    const embeddingDimensions = SEARCH_CONFIG.EMBEDDING_DIMENSIONS;
     
     // Prepare text
     const preparedText = this.truncateText(text);
@@ -169,7 +179,7 @@ class EmbeddingQueue {
     };
   }
 
-  private truncateText(text: string, maxTokens: number = 8192): string {
+  private truncateText(text: string, maxTokens: number = SEARCH_CONFIG.MAX_TOKENS_PER_REQUEST): string {
     const estimatedTokens = Math.ceil(text.length / 3); // Conservative estimate
     if (estimatedTokens <= maxTokens) {
       return text;
@@ -249,7 +259,7 @@ function simpleHash(str: string): string {
  * Truncate text to fit within token limit
  * Rough estimate: 1 token ≈ 4 characters for English, ~2 for Hebrew
  */
-function truncateText(text: string, maxTokens: number = MAX_TOKENS_PER_REQUEST): string {
+function truncateText(text: string, maxTokens: number = SEARCH_CONFIG.MAX_TOKENS_PER_REQUEST): string {
   const estimatedTokens = Math.ceil(text.length / 3); // Conservative estimate
   if (estimatedTokens <= maxTokens) {
     return text;
@@ -283,7 +293,7 @@ export function prepareTextForEmbedding(fields: Record<string, string | null | u
 export async function generateEmbedding(
   request: EmbeddingRequest
 ): Promise<EmbeddingResponse> {
-  const { text, model = EMBEDDING_MODEL } = request;
+  const { text, model = SEARCH_CONFIG.EMBEDDING_MODEL } = request;
 
   // Check cache first
   const cacheKey = getCacheKey(text, model);
@@ -331,7 +341,7 @@ export async function generateEmbeddingsBatch(
 ): Promise<Array<{ text: string; embedding: number[] | null; error?: Error }>> {
   const results: Array<{ text: string; embedding: number[] | null; error?: Error }> = [];
   const batchSize = options?.batchSize || 10;
-  const model = options?.model || EMBEDDING_MODEL;
+  const model = options?.model || SEARCH_CONFIG.EMBEDDING_MODEL;
 
   // Process in batches to respect rate limits
   for (let i = 0; i < texts.length; i += batchSize) {
@@ -340,7 +350,10 @@ export async function generateEmbeddingsBatch(
     // Process batch in parallel
     const batchPromises = batch.map(async (text) => {
       try {
-        const response = await generateEmbedding({ text, model });
+        const response = await generateEmbedding({
+          text,
+          model: options?.model || SEARCH_CONFIG.EMBEDDING_MODEL,
+        });
         return {
           text,
           embedding: response.embedding,

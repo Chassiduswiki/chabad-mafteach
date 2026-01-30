@@ -4,6 +4,7 @@
  */
 
 import { useCallback } from 'react';
+import { log } from '@/lib/logger';
 
 interface SearchMetrics {
   query: string;
@@ -37,17 +38,20 @@ class SearchAnalytics {
       this.metrics = this.metrics.slice(-this.maxMetrics);
     }
 
-    // Log to console for development (could be sent to analytics service)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Search metrics:', {
-        query: metrics.query,
-        mode: metrics.mode,
-        latency: `${metrics.latency}ms`,
-        results: metrics.resultCount,
+    // Log with structured logging
+    log.search(
+      metrics.query,
+      metrics.mode,
+      metrics.latency,
+      metrics.resultCount,
+      {
+        semanticWeight: metrics.semanticWeight,
+        userId: metrics.userId,
         error: metrics.error,
         cacheHit: metrics.cacheHit,
-      });
-    }
+        component: 'SearchAnalytics'
+      }
+    );
   }
 
   /**

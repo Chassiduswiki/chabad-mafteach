@@ -48,6 +48,213 @@ const getSearchCacheKey = (query: string, mode?: string, weight?: number) => {
 };
 
 export async function GET(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const query = searchParams.get('q') || '';
+        const mode = searchParams.get('mode') || 'keyword';
+        const semanticWeight = parseFloat(searchParams.get('semantic_weight') || '0.6');
+
+        // Rate limiting
+        const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+        const rateLimit = checkSearchRateLimit(ip);
+        
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { 
+                    error: 'RATE_LIMIT_EXCEEDED',
+                    message: 'Too many search requests. Please try again later.',
+                    resetTime: rateLimit.resetTime
+                },
+                { status: 429 }
+            );
+        }
+
+        // Input validation
+        if (!query || query.trim().length < 1) {
+            return NextResponse.json({
+                topics: [],
+                statements: [],
+                documents: [],
+                locations: [],
+                mode,
+                message: 'Query too short'
+            });
+        }
+
+        if (query.length > 200) {
+            return NextResponse.json({
+                topics: [],
+                statements: [],
+                documents: [],
+                locations: [],
+                mode,
+                message: 'Query too long'
+            });
+        }
+
+        // Check cache first
+        const cacheKey = getSearchCacheKey(query, mode, semanticWeight);
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            return NextResponse.json({
+                ...cached,
+                cached: true,
+                mode
+            });
+        }
+
+        let results;
+
+        // Try semantic search first if requested
+        if (mode === 'semantic' || mode === 'hybrid') {
+            try {
+                results = await performSemanticSearch(query, mode, semanticWeight);
+            } catch (semanticError) {
+                console.warn('Semantic search failed, falling back to keyword:', semanticError);
+                
+                // Fallback to keyword search
+                if (mode === 'semantic') {
+                    results = await performKeywordSearch(query);
+                } else {
+                    // For hybrid mode, try keyword search and combine with partial semantic results
+                    try {
+                        const keywordResults = await performKeywordSearch(query);
+                        results = keywordResults; // Fallback to keyword only
+                    } catch (keywordError) {
+                        throw new Error('Both semantic and keyword search failed');
+                    }
+                }
+            }
+        } else {
+            // Keyword search
+            results = await performKeywordSearch(query);
+        }
+
+        // Cache results
+        cache.set(cacheKey, results, 5 * 60 * 1000); // 5 minutes
+
+        return NextResponse.json({
+            ...results,
+            mode,
+            cached: false
+        });
+
+    } catch (error) {
+        console.error('Search API error:', error);
+        
+        // Return a safe fallback response
+        return NextResponse.json({
+            topics: [],
+            statements: [],
+            documents: [],
+            locations: [],
+            mode: 'keyword',
+            error: 'SEARCH_FAILED',
+            message: 'Search temporarily unavailable. Please try again.',
+        }, { status: 500 });
+    }
+}
+
+async function performSemanticSearch(query: string, mode: string, semanticWeight: number) {
+    // Generate embedding for the query
+    const embedding = await generateEmbedding({ text: query });
+    
+    // Search for similar topics and statements
+    const [topicResults, statementResults] = await Promise.all([
+        searchTopicsByVector(embedding.embedding, 10),
+        searchStatementsByVector(embedding.embedding, 10)
+    ]);
+
+    // Get keyword results for hybrid mode
+    let keywordResults = { topics: [], statements: [] };
+    if (mode === 'hybrid') {
+        keywordResults = await performKeywordSearch(query);
+    }
+
+    // Combine and normalize results
+    const combinedResults = combineSearchResults(
+        topicResults,
+        statementResults,
+        keywordResults.topics,
+        keywordResults.statements,
+        mode,
+        semanticWeight
+    );
+
+    return combinedResults;
+}
+
+async function performKeywordSearch(query: string) {
+    // Implement keyword search using Directus
+    const topics = await directus.request(
+        readItems('topics', {
+            filter: {
+                _or: [
+                    { name: { _icontains: query } },
+                    { canonical_title: { _icontains: query } },
+                    { definition_short: { _icontains: query } }
+                ]
+            },
+            limit: 20
+        })
+    );
+
+    const statements = await directus.request(
+        readItems('statements', {
+            filter: {
+                content: { _icontains: query }
+            },
+            limit: 20
+        })
+    );
+
+    return {
+        topics: topics.map((topic: any) => ({
+            ...topic,
+            is_semantic_match: false,
+            keyword_score: 1.0
+        })),
+        statements: statements.map((statement: any) => ({
+            ...statement,
+            is_semantic_match: false,
+            keyword_score: 1.0
+        })),
+        documents: [],
+        locations: []
+    };
+}
+
+function combineSearchResults(
+    semanticTopics: any[],
+    semanticStatements: any[],
+    keywordTopics: any[],
+    keywordStatements: any[],
+    mode: string,
+    semanticWeight: number
+) {
+    // Implementation for combining results based on mode
+    // This is a simplified version - would need proper scoring logic
+    
+    if (mode === 'semantic') {
+        return {
+            topics: semanticTopics.map(t => ({ ...t, is_semantic_match: true, semantic_score: 0.8 })),
+            statements: semanticStatements.map(s => ({ ...s, is_semantic_match: true, semantic_score: 0.8 })),
+            documents: [],
+            locations: []
+        };
+    }
+
+    // Hybrid mode - combine both results
+    const allTopics = [...semanticTopics, ...keywordTopics];
+    const allStatements = [...semanticStatements, ...keywordStatements];
+
+    return {
+        topics: allTopics.slice(0, 20),
+        statements: allStatements.slice(0, 20),
+        documents: [],
+        locations: []
+    };
+}
     // Get client IP for rate limiting
     const ip = request.headers.get('x-forwarded-for') ||
         request.headers.get('x-real-ip') ||

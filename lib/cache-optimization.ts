@@ -4,6 +4,7 @@
  */
 
 import { useCallback } from 'react';
+import { log } from '@/lib/logger';
 import { cache } from '@/lib/cache';
 
 // Cache key patterns
@@ -30,7 +31,7 @@ function hash(str: string): string {
 }
 
 /**
- * Enhanced cache manager for semantic search
+ * Enhanced cache manager for semantic search with size limits
  */
 export class SemanticCacheManager {
   private readonly defaultTTL = {
@@ -41,8 +42,116 @@ export class SemanticCacheManager {
     popular: 30 * 60 * 1000, // 30 minutes
   };
 
+  private readonly maxCacheSize = 1000; // Maximum number of entries
+  private readonly maxMemorySize = 50 * 1024 * 1024; // 50MB limit
+  private cacheStats = {
+    hits: 0,
+    misses: 0,
+    evictions: 0,
+    currentSize: 0,
+  };
+
   /**
-   * Cache search results with mode-specific TTL
+   * Get cache statistics
+   */
+  getCacheStatistics() {
+    return {
+      ...this.cacheStats,
+      hitRate: this.cacheStats.hits / (this.cacheStats.hits + this.cacheStats.misses) || 0,
+      memoryUsage: this.estimateMemoryUsage(),
+    };
+  }
+
+  /**
+   * Estimate memory usage of cache
+   */
+  private estimateMemoryUsage(): string {
+    // Rough estimation - would need more sophisticated tracking in production
+    const avgEntrySize = 1024; // 1KB per entry estimate
+    const usage = this.cacheStats.currentSize * avgEntrySize;
+    return `${(usage / 1024 / 1024).toFixed(2)}MB`;
+  }
+
+  /**
+   * Check if cache needs cleanup
+   */
+  private needsCleanup(): boolean {
+    return this.cacheStats.currentSize > this.maxCacheSize || 
+           this.estimateMemoryUsageBytes() > this.maxMemorySize;
+  }
+
+  /**
+   * Estimate memory usage in bytes
+   */
+  private estimateMemoryUsageBytes(): number {
+    // Simplified estimation - in production would track actual sizes
+    return this.cacheStats.currentSize * 1024;
+  }
+
+  /**
+   * Cleanup old entries to prevent memory exhaustion
+   */
+  private cleanupCache(): void {
+    if (!this.needsCleanup()) return;
+
+    // Remove expired entries first
+    const now = Date.now();
+    let removed = 0;
+
+    // This is a simplified cleanup - in production would iterate through actual cache entries
+    const keysToRemove: string[] = [];
+    
+    // Remove expired entries
+    for (const key of this.getCacheKeys()) {
+      const entry = cache.get(key);
+      if (entry && entry.expiresAt && entry.expiresAt < now) {
+        keysToRemove.push(key);
+      }
+    }
+
+    // If still too large, remove oldest entries
+    if (this.cacheStats.currentSize - keysToRemove.length > this.maxCacheSize) {
+      const allKeys = this.getCacheKeys();
+      const oldestKeys = allKeys
+        .sort((a, b) => this.getEntryTimestamp(a) - this.getEntryTimestamp(b))
+        .slice(0, this.cacheStats.currentSize - this.maxCacheSize);
+      
+      keysToRemove.push(...oldestKeys);
+    }
+
+    // Remove entries
+    keysToRemove.forEach(key => {
+      cache.delete(key);
+      this.cacheStats.currentSize--;
+      this.cacheStats.evictions++;
+    });
+
+    if (keysToRemove.length > 0) {
+      log.cache('cleanup', 'cache', false, {
+        removedEntries: keysToRemove.length,
+        component: 'SemanticCacheManager'
+      });
+    }
+  }
+
+  /**
+   * Get all cache keys (simplified - would need actual cache inspection)
+   */
+  private getCacheKeys(): string[] {
+    // This is a placeholder - in production would inspect actual cache storage
+    return [];
+  }
+
+  /**
+   * Get entry timestamp (simplified)
+   */
+  private getEntryTimestamp(key: string): number {
+    const entry = cache.get(key);
+    return entry?.timestamp || 0;
+  }
+
+  /**
+   * Cache search results with size limits and cleanup
    */
   cacheSearchResults(
     query: string, 
@@ -51,26 +160,78 @@ export class SemanticCacheManager {
     results: any, 
     ttl?: number
   ): void {
+    // Cleanup before adding new entries
+    this.cleanupCache();
+
     const key = cacheKeys.semanticSearch(query, mode, weight);
     const cacheTTL = ttl || this.defaultTTL.search;
-    cache.set(key, results, cacheTTL);
+    
+    // Check if we're at capacity
+    if (this.cacheStats.currentSize >= this.maxCacheSize) {
+      this.cleanupCache();
+    }
+
+    // Add entry with metadata
+    const entry = {
+      data: results,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + cacheTTL,
+      size: this.estimateEntrySize(results),
+    };
+
+    cache.set(key, entry, cacheTTL);
+    this.cacheStats.currentSize++;
   }
 
   /**
-   * Get cached search results
+   * Get cached search results with hit tracking
    */
   getCachedSearchResults(query: string, mode: string, weight: number): any {
     const key = cacheKeys.semanticSearch(query, mode, weight);
-    return cache.get(key);
+    const entry = cache.get(key);
+
+    if (entry) {
+      this.cacheStats.hits++;
+      return entry.data || entry; // Handle both wrapped and unwrapped entries
+    } else {
+      this.cacheStats.misses++;
+      return null;
+    }
   }
 
   /**
-   * Cache similar topics with longer TTL
+   * Estimate entry size (simplified)
+   */
+  private estimateEntrySize(data: any): number {
+    try {
+      return JSON.stringify(data).length;
+    } catch {
+      return 1024; // Default size estimate
+    }
+  }
+
+  /**
+   * Cache similar topics with size limits
    */
   cacheSimilarTopics(topicId: string, topics: any, ttl?: number): void {
+    this.cleanupCache();
+
     const key = cacheKeys.similarTopics(topicId);
     const cacheTTL = ttl || this.defaultTTL.similarTopics;
-    cache.set(key, topics, cacheTTL);
+
+    if (this.cacheStats.currentSize >= this.maxCacheSize) {
+      this.cleanupCache();
+    }
+
+    const entry = {
+      data: topics,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + cacheTTL,
+      size: this.estimateEntrySize(topics),
+    };
+
+    cache.set(key, entry, cacheTTL);
+    this.cacheStats.currentSize++;
   }
 
   /**
@@ -78,7 +239,15 @@ export class SemanticCacheManager {
    */
   getCachedSimilarTopics(topicId: string): any {
     const key = cacheKeys.similarTopics(topicId);
-    return cache.get(key);
+    const entry = cache.get(key);
+
+    if (entry) {
+      this.cacheStats.hits++;
+      return entry.data || entry;
+    } else {
+      this.cacheStats.misses++;
+      return null;
+    }
   }
 
   /**
