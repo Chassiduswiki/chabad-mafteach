@@ -1,23 +1,15 @@
 import { Plugin, PluginKey } from "prosemirror-state";
+import {
+  CitationAttrs,
+  UnifiedCitation,
+  unifiedToAttrs,
+  attrsToUnified,
+} from "@/lib/citations/types";
 
 export const citationPluginKey = new PluginKey("citation-plugin");
 
-export interface CitationAttrs {
-  source_id: number | string | null;
-  source_title: string;
-  citation_type: string;
-  page_number?: string;
-  chapter_number?: number | null;
-  section_number?: number | null;
-  daf_number?: string;
-  halacha_number?: number | null;
-  verse_number?: string;
-  custom_reference?: string;
-  reference?: string; // Legacy
-  quote?: string; // Quoted text from source
-  note?: string; // Editor's note about this citation
-  url?: string; // Direct link to source
-}
+// Re-export CitationAttrs for backwards compatibility
+export type { CitationAttrs };
 
 interface CitationPluginOptions {
   onTrigger?: (range: { from: number; to: number }) => void;

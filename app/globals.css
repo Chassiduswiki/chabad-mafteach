@@ -784,28 +784,61 @@ html {
   animation: slide-up 0.3s ease-out;
 }
 
-/* Citation Styles - Academic Superscript Format */
+/* ===================================================================
+   CITATION SYSTEM STYLES - Unified & Consistent
+   Standard font size: 0.75em across all citation displays
+   =================================================================== */
+
+/* Base Citation Reference (Editor & Frontend) */
+.citation-ref,
 .citation-node {
   position: relative;
+  display: inline;
   cursor: pointer;
-}
-
-.citation-node sup {
-  color: hsl(var(--primary));
-  font-weight: 600;
   font-size: 0.75em;
-  vertical-align: super;
-  margin-left: 1px;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  color: var(--color-primary);
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
-.citation-node:hover sup {
+/* Citation States - Synced (default), Unsynced, Error */
+.citation-ref.citation-synced,
+.citation-node.citation-synced {
+  color: var(--color-primary);
+}
+
+.citation-ref.citation-unsynced,
+.citation-node.citation-unsynced {
+  color: #94a3b8; /* Slate gray */
+  opacity: 0.7;
+}
+
+.citation-ref.citation-error,
+.citation-node.citation-error {
+  color: hsl(0 84% 60%);
+}
+
+/* Hover Effects - Consistent scale and brightness */
+.citation-ref:hover,
+.citation-node:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 2px;
 }
 
-/* Citation Tooltip */
+/* Academic Superscript Format (for prose content) */
+.citation-node sup {
+  color: inherit;
+  font-weight: inherit;
+  font-size: 1em; /* Already scaled by parent's 0.75em */
+  vertical-align: super;
+  margin-left: 1px;
+}
+
+/* Citation Tooltip - Enhanced with Multi-line Support */
 .citation-tooltip {
   position: relative;
 }
@@ -818,13 +851,22 @@ html {
   transform: translateX(-50%) translateY(-4px);
   background: hsl(var(--popover));
   color: hsl(var(--popover-foreground));
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 6px;
   font-size: 0.8rem;
-  white-space: nowrap;
-  max-width: 300px;
+
+  /* Multi-line support (300-500px dynamic width) */
+  min-width: 300px;
+  max-width: 500px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+
+  /* Max 4 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s, visibility 0.2s;
@@ -839,14 +881,49 @@ html {
   visibility: visible;
 }
 
-/* Frontend Citation Display */
+/* Frontend Citation Display (Prose) */
+.prose .citation-ref,
 .prose .citation-node {
   font-style: normal;
+  font-size: 0.75em;
 }
 
 .prose .citation-node sup {
-  color: hsl(var(--primary));
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Editor Citation Display */
+span[data-type="citation"] {
+  font-size: 0.75em;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+span[data-type="citation"]:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+
+/* Unsynced Citation Indicator (no source_id) */
+span[data-type="citation"]:not([data-source-id]),
+span[data-type="citation"][data-source-id=""] {
+  color: #94a3b8;
+  opacity: 0.7;
+}
+
+/* Statement-level vs Topic-level visual distinction (optional) */
+.citation-statement-level {
+  /* Slightly bolder for statement-level citations */
+  font-weight: 700;
+}
+
+.citation-topic-level {
+  /* Normal weight for topic-level sources */
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .interactive-term {

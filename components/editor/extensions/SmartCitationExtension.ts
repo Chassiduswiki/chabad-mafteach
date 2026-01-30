@@ -1,5 +1,11 @@
 import { Extension } from '@tiptap/core';
 import { Editor } from '@tiptap/react';
+import {
+  CitationSuggestion,
+  UnifiedCitation,
+  suggestionToUnified,
+  unifiedToSuggestion,
+} from '@/lib/citations/types';
 
 export interface SmartCitationOptions {
   onSuggestCitations?: (suggestions: CitationSuggestion[]) => void;
@@ -7,15 +13,8 @@ export interface SmartCitationOptions {
   topicId?: string;
 }
 
-export interface CitationSuggestion {
-  id: string;
-  sourceId: string | number;
-  sourceTitle: string;
-  reference: string;
-  relevanceScore: number;
-  quote?: string;
-  url?: string;
-}
+// Re-export CitationSuggestion for backwards compatibility
+export type { CitationSuggestion };
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

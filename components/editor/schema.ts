@@ -209,7 +209,8 @@ const citation: NodeSpec = {
         return {
           source_id: dom.getAttribute("data-source-id"),
           source_title: dom.getAttribute("data-source-title"),
-          citation_type: dom.getAttribute("data-citation-type") || "page",
+          // FIXED: Read from data-citation-type, fallback to 'reference' for backwards compatibility
+          citation_type: dom.getAttribute("data-citation-type") || "reference",
           page_number: dom.getAttribute("data-page-number") || "",
           chapter_number: dom.getAttribute("data-chapter-number") ? parseInt(dom.getAttribute("data-chapter-number")!) : null,
           section_number: dom.getAttribute("data-section-number") ? parseInt(dom.getAttribute("data-section-number")!) : null,

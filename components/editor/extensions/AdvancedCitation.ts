@@ -1,16 +1,15 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import {
+  CitationData,
+  UnifiedCitation,
+  dataToUnified,
+  unifiedToData,
+} from '@/lib/citations/types';
 
-export interface CitationData {
-  id: string;
-  sourceId?: string;
-  sourceTitle: string;
-  reference: string;
-  url?: string;
-  page?: number;
-  verse?: string;
-}
+// Re-export CitationData for backwards compatibility
+export type { CitationData };
 
 export interface AdvancedCitationOptions {
   onCitationClick?: (citation: CitationData) => void;
