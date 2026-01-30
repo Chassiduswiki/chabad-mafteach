@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, Search, ArrowLeft, Home } from 'lucide-react';
 import { useSearch } from '@/lib/search-context';
 import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
+import { CompactUserMenu } from '@/components/auth/CompactUserMenu';
 import { cn } from '@/lib/utils';
 
 interface GlobalNavProps {
@@ -106,7 +107,7 @@ export function GlobalNav({
                     </Link>
                 </div>
 
-                {/* Right: Search + Theme */}
+                {/* Right: Search + Theme + Compact User Menu */}
                 <div className="flex items-center gap-2 shrink-0">
                     <button
                         onClick={() => setOpen(true)}
@@ -120,6 +121,7 @@ export function GlobalNav({
                         </kbd>
                     </button>
                     <ThemeToggleCompact />
+                    <CompactUserMenu />
                 </div>
             </nav>
         </header>

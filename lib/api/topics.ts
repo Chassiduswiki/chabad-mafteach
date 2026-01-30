@@ -349,7 +349,19 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                 })).filter(c => c.id);
             }
         } catch (error) {
-            console.warn('Could not fetch sources/citations (likely permissions):', error instanceof Error ? error.message : 'Unknown error');
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            console.warn('Could not fetch sources/citations (likely permissions):', {
+                message: errorMessage,
+                stack: errorStack,
+                error: String(error),
+                type: typeof error,
+                keys: error ? Object.keys(error) : [],
+                // Check if it's a Directus SDK error
+                directusError: (error as any)?.code || (error as any)?.status,
+                // Check if it's a network/fetch error
+                networkError: (error as any)?.cause || (error as any)?.errno
+            });
             // Continue without sources - this is not critical
         }
 

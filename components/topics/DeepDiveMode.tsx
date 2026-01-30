@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Compass, ChevronRight, X, ArrowRight, Sparkles, History, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { stripHtml } from '@/lib/utils/text';
 
 interface RelatedTopic {
@@ -28,6 +29,8 @@ interface DeepDiveModeProps {
 }
 
 export function DeepDiveMode({ currentTopic, relatedTopics, isOpen, onClose }: DeepDiveModeProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [history, setHistory] = useState<RelatedTopic[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
@@ -35,6 +38,44 @@ export function DeepDiveMode({ currentTopic, relatedTopics, isOpen, onClose }: D
 
     // Filter out topics without slugs
     const validTopics = relatedTopics.filter(t => t.slug && t.canonical_title);
+
+    // URL state management - prevent infinite loops
+    useEffect(() => {
+        const mode = searchParams.get('mode');
+        if (mode === 'deep-dive' && !isOpen) {
+            // URL indicates deep dive but component is closed - notify parent
+            onClose();
+        }
+    }, [searchParams, isOpen, onClose]);
+
+    // Update URL when mode changes - prevent infinite loops
+    useEffect(() => {
+        const currentMode = searchParams.get('mode');
+        const shouldBeMode = isOpen ? 'deep-dive' : null;
+        
+        if (currentMode !== shouldBeMode) {
+            const url = new URL(window.location.href);
+            if (shouldBeMode) {
+                url.searchParams.set('mode', shouldBeMode);
+            } else {
+                url.searchParams.delete('mode');
+            }
+            window.history.pushState({}, '', url.toString());
+        }
+    }, [isOpen, searchParams]);
+
+    // Handle browser back button
+    useEffect(() => {
+        const handlePopState = () => {
+            const mode = new URL(window.location.href).searchParams.get('mode');
+            if (mode !== 'deep-dive') {
+                onClose();
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [onClose]);
 
     useEffect(() => {
         if (isOpen && validTopics.length > 0) {
@@ -119,9 +160,10 @@ export function DeepDiveMode({ currentTopic, relatedTopics, isOpen, onClose }: D
                             )}
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                className="fixed top-4 right-4 z-50 p-3 bg-background border border-border rounded-lg hover:bg-muted transition-colors shadow-lg"
+                                aria-label="Close Deep Dive Mode"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-6 h-6" />
                             </button>
                         </div>
                     </div>

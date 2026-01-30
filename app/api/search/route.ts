@@ -173,14 +173,14 @@ export async function GET(request: NextRequest) {
             directus.request(
                 readItems('topics', {
                     search: normalizedQuery,
-                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description'],
+                    fields: ['id', 'canonical_title', 'slug', 'topic_type', 'description', 'overview'],
                     limit: 20,
                 })
             ),
             directus.request(
                 readItems('documents', {
                     search: normalizedQuery,
-                    fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category'],
+                    fields: ['id', 'title', 'author', 'doc_type', 'original_lang', 'status', 'published_at', 'category', 'content'],
                     limit: 15,
                 })
             )
@@ -221,12 +221,12 @@ export async function GET(request: NextRequest) {
 
         // Process Topics -> topics
         const topics = topicsRes.status === 'fulfilled'
-            ? (topicsRes.value as { id: string | number; canonical_title: string; slug: string; topic_type?: string; description?: string }[]).map((t) => ({
+            ? (topicsRes.value as { id: string | number; canonical_title: string; slug: string; topic_type?: string; description?: string; overview?: string }[]).map((t) => ({
                 id: t.id,
                 name: t.canonical_title,
                 slug: t.slug,
                 category: t.topic_type,
-                definition_short: t.description,
+                definition_short: t.description || t.overview,
                 url: `/topics/${t.slug}`,
             }))
             : [];

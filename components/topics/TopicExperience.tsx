@@ -1070,7 +1070,7 @@ export function TopicExperience({ topic, relatedTopics, sources, citations, inli
                     {isAuthorized && (
                         <div className="pt-12 mt-12 border-t border-border/50">
                             <TopicAnnotations
-                                topicId={topic.id.toString()}
+                                topicId={topic.slug}
                                 currentUserId={currentUserId || undefined}
                                 className="max-w-4xl mx-auto"
                             />

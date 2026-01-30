@@ -2,9 +2,10 @@
 
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { MobileHome } from '@/components/mobile/MobileHome';
 import { GlobalNav } from '@/components/layout/GlobalNav';
-import { Sparkles, Zap, Globe, Loader2 } from 'lucide-react';
+import { Sparkles, Zap, Globe, Loader2, Hash } from 'lucide-react';
 import { copy } from '@/lib/copy';
 import { SiteSettings } from '@/hooks/useSiteSettings';
 

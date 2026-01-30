@@ -182,6 +182,22 @@ export function MobileHome() {
                         </div>
                         <ArrowRight className="h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 flex-shrink-0" />
                     </Link>
+                    
+                    {/* Sign Up Card */}
+                    <Link
+                        href="/auth/signup"
+                        className="quick-action-card group col-span-2 flex items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 backdrop-blur-sm shadow-sm transition-all duration-200 hover:border-primary/50 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98]"
+                        style={{ minHeight: '80px' }}
+                    >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20 flex-shrink-0">
+                            <Hash className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-semibold text-foreground mb-0.5">Create Account</h3>
+                            <p className="text-xs text-muted-foreground">Save & track progress</p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-primary opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 flex-shrink-0" />
+                    </Link>
                 </div>
             </motion.div>
 

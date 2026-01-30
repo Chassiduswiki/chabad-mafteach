@@ -10,6 +10,10 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/auth/signin',
+    '/auth/signup',
+    '/auth/verify',
+    '/auth/forgot-password',
+    '/auth/reset-password',
     '/about',
     '/topics',
     '/seforim',

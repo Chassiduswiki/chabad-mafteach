@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen, Upload, User, Settings, Edit3, Search, Layers, Sparkles, Brain, ArrowRight, LogOut } from 'lucide-react';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { OnboardingModal, useOnboarding } from "@/components/onboarding/OnboardingModal";
 
 // --- Type Definitions ---
 interface DashboardHeaderProps {
@@ -112,6 +113,7 @@ export default function EditorPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { showOnboarding, closeOnboarding, completeOnboarding } = useOnboarding();
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -149,6 +151,26 @@ export default function EditorPage() {
       <DashboardHeader user={user} onLogout={handleLogout} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        {/* Welcome Banner */}
+        <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Welcome back, {user?.name}!
+              </h2>
+              <p className="text-muted-foreground">
+                Continue your research and contribute to the Chabad Mafteach knowledge base.
+              </p>
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Your Role</div>
+                <div className="font-medium text-foreground capitalize">{user?.role}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-12">
           
           {/* Main Actions */}
@@ -201,6 +223,13 @@ export default function EditorPage() {
 
         </div>
       </main>
+
+      {/* Onboarding Modal */}
+      <OnboardingModal 
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+      />
     </div>
   );
 }

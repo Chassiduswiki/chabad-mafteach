@@ -1,6 +1,6 @@
 'use client';
 
-import { UserMenu } from '@/components/auth/UserMenu';
+import { CompactUserMenu } from '@/components/auth/CompactUserMenu';
 
 export default function AdminLayout({
   children,
@@ -15,7 +15,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">Admin</h1>
           </div>
-          <UserMenu />
+          <CompactUserMenu />
         </div>
       </header>
 

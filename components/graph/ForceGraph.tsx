@@ -72,6 +72,19 @@ export function ForceGraph({
     const simulationRef = useRef<d3.Simulation<GraphNode, GraphEdge> | null>(null);
     const router = useRouter();
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+    const [isInteracting, setIsInteracting] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    
+    // Detect mobile device and handle resize
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
+        };
+        
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleNodeClick = useCallback((node: GraphNode) => {
         if (onNodeClick) {
@@ -97,7 +110,7 @@ export function ForceGraph({
                 container.attr('transform', event.transform);
             });
 
-        if (interactive) {
+        if (interactive && (!isMobile || isInteracting)) {
             svg.call(zoom);
         }
 
@@ -295,7 +308,26 @@ export function ForceGraph({
                 height={height}
                 className="w-full h-auto"
                 style={{ maxHeight: height }}
+                onClick={() => {
+                    // On mobile, clicking outside nodes should stop interaction
+                    if (isMobile && isInteracting) {
+                        setIsInteracting(false);
+                    }
+                }}
             />
+            
+            {/* Mobile Interaction Overlay */}
+            {isMobile && interactive && !isInteracting && (
+                <div 
+                    className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-10 cursor-pointer"
+                    onClick={() => setIsInteracting(true)}
+                >
+                    <div className="text-center">
+                        <div className="text-lg font-medium mb-2">Tap to Explore Graph</div>
+                        <div className="text-sm text-muted-foreground">Drag nodes to move around</div>
+                    </div>
+                </div>
+            )}
             
             {/* Legend */}
             <div className="absolute bottom-2 left-2 flex flex-wrap gap-2 text-xs">
@@ -308,9 +340,16 @@ export function ForceGraph({
             </div>
 
             {/* Instructions */}
-            {interactive && (
+            {interactive && !isMobile && (
                 <div className="absolute top-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
                     Drag nodes • Scroll to zoom • Click to explore
+                </div>
+            )}
+            
+            {/* Mobile Instructions */}
+            {isMobile && isInteracting && (
+                <div className="absolute top-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                    Tap outside to stop
                 </div>
             )}
         </div>

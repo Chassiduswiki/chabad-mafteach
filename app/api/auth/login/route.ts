@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
 import { SECURITY } from '@/lib/constants';
+import { setAuthCookie, setAuthStatusCookie } from '@/lib/cookie-utils';
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -72,10 +73,12 @@ export async function POST(request: NextRequest) {
     // Check account lockout status
     const lockoutStatus = checkAccountLockout(email);
     if (lockoutStatus.isLocked) {
+      const waitTime = Math.ceil(lockoutStatus.lockoutRemaining! / 60);
       return NextResponse.json(
         {
-          error: `Account is temporarily locked due to too many failed login attempts. Try again in ${Math.ceil(lockoutStatus.lockoutRemaining! / 60)} minutes.`,
-          lockoutRemaining: lockoutStatus.lockoutRemaining
+          error: `Account temporarily locked for security. Please try again in ${waitTime} minute${waitTime !== 1 ? 's' : ''}.`,
+          lockoutRemaining: lockoutStatus.lockoutRemaining,
+          isLocked: true
         },
         { status: 429 }
       );
@@ -104,10 +107,24 @@ export async function POST(request: NextRequest) {
         recordFailedLogin(email);
         const errorData = await loginResponse.json().catch(() => ({}));
         console.error('Directus login failed:', errorData);
-        return NextResponse.json(
-          { error: 'Invalid email or password' },
-          { status: 401 }
-        );
+        
+        // Provide more specific error messages
+        if (loginResponse.status === 401) {
+          return NextResponse.json(
+            { error: 'Invalid email or password. Please check your credentials and try again.' },
+            { status: 401 }
+          );
+        } else if (loginResponse.status === 429) {
+          return NextResponse.json(
+            { error: 'Too many login attempts. Please wait a few minutes before trying again.' },
+            { status: 429 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: 'Login service unavailable. Please try again later.' },
+            { status: 503 }
+          );
+        }
       }
 
       const loginData = await loginResponse.json();
@@ -147,11 +164,13 @@ export async function POST(request: NextRequest) {
       const accessToken = createAuthToken(directusUser.id, role);
       const refreshToken = createRefreshToken(directusUser.id);
 
-      // Return tokens and user info
-      return NextResponse.json({
+      // Set secure HttpOnly cookie with access token
+      const authCookie = setAuthCookie(accessToken);
+      const statusCookie = setAuthStatusCookie(true);
+
+      // Create response with cookies
+      const response = NextResponse.json({
         success: true,
-        accessToken,
-        refreshToken,
         user: {
           id: directusUser.id,
           email: directusUser.email,
@@ -159,6 +178,12 @@ export async function POST(request: NextRequest) {
           role: role
         }
       });
+
+      // Set cookies
+      response.headers.set('Set-Cookie', authCookie);
+      response.headers.append('Set-Cookie', statusCookie);
+
+      return response;
     } catch (directusError) {
       console.error('Directus auth error:', directusError);
       recordFailedLogin(email);
