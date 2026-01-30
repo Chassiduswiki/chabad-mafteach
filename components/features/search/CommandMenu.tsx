@@ -423,18 +423,6 @@ export function CommandMenu() {
                                 </div>
                             </div>
 
-                                {/* Smart Search Explanation */}
-                                {search && !loading && results.length > 0 && (
-                                    <div className="px-6 pb-3">
-                                        <SearchExplanation
-                                            explanation={searchData?.explanation || 'Smart search'}
-                                            mode={searchData?.mode || 'keyword'}
-                                            showSemanticIndicators={searchData?.showSemanticIndicators || false}
-                                            isHebrew={isHebrew(search)}
-                                        />
-                                    </div>
-                                )}
-
                                 {/* Results Area */}
                             <Command.List className="max-h-[60vh] overflow-y-auto p-4 scrollbar-thin">
                                 {loading && (
