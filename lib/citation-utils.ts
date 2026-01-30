@@ -31,7 +31,7 @@ export interface CitationReference {
 }
 
 /**
- * Parse HTML content for citation reference spans
+ * Parse HTML content for citation reference spans and plain text citations
  * @param htmlContent The HTML content to parse
  * @returns Array of citation references found in the content
  */
@@ -42,32 +42,61 @@ export function extractCitationReferences(htmlContent: string): CitationReferenc
     const { JSDOM } = require('jsdom');
     const dom = new JSDOM(htmlContent);
     const document = dom.window.document;
-    
-    // Find all citation reference spans
-    const citationSpans = document.querySelectorAll('span.citation-ref');
+
+    // Find all citation reference spans (from TipTap editor)
+    const citationSpans = document.querySelectorAll('span.citation-ref, span[data-citation-id], span[data-type="citation"]');
     const citations: CitationReference[] = [];
-    
+
     citationSpans.forEach((span: Element) => {
       const citation: CitationReference = {
         id: span.getAttribute('data-citation-id') || generateCitationId(),
         sourceId: span.getAttribute('data-source-id') || '',
-        sourceTitle: span.getAttribute('data-source-title') || 'Unknown Source',
+        sourceTitle: span.getAttribute('data-source-title') || span.textContent?.replace(/^\[|\]$/g, '') || 'Unknown Source',
         reference: span.getAttribute('data-reference') || undefined,
         pageNumber: span.getAttribute('data-page-number') || undefined,
-        chapterNumber: span.getAttribute('data-chapter-number') ? 
+        chapterNumber: span.getAttribute('data-chapter-number') ?
           parseInt(span.getAttribute('data-chapter-number')!, 10) : undefined,
-        sectionNumber: span.getAttribute('data-section-number') ? 
+        sectionNumber: span.getAttribute('data-section-number') ?
           parseInt(span.getAttribute('data-section-number')!, 10) : undefined,
         verseNumber: span.getAttribute('data-verse-number') || undefined,
         dafNumber: span.getAttribute('data-daf-number') || undefined,
-        halachaNumber: span.getAttribute('data-halacha-number') ? 
+        halachaNumber: span.getAttribute('data-halacha-number') ?
           parseInt(span.getAttribute('data-halacha-number')!, 10) : undefined,
         customReference: span.getAttribute('data-custom-reference') || undefined,
       };
-      
+
       citations.push(citation);
     });
-    
+
+    // Also extract plain text citations in brackets [Source, p. 23]
+    // This catches citations that haven't been converted to citation nodes yet
+    const textContent = document.body.textContent || '';
+    const bracketRegex = /\[([^\]]+)\]/g;
+    let match;
+
+    while ((match = bracketRegex.exec(textContent)) !== null) {
+      const citationText = match[1];
+
+      // Skip if this looks like it's just a number or very short text (likely not a citation)
+      if (citationText.length < 3 || /^\d+$/.test(citationText)) {
+        continue;
+      }
+
+      // Check if we already have a citation with this exact text (avoid duplicates)
+      const isDuplicate = citations.some(c =>
+        c.sourceTitle === citationText || c.reference === citationText
+      );
+
+      if (!isDuplicate) {
+        citations.push({
+          id: generateCitationId(),
+          sourceId: '',
+          sourceTitle: citationText,
+          reference: citationText,
+        });
+      }
+    }
+
     return citations;
   } else {
     // Fallback for client-side (should not be used)

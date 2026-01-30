@@ -2,9 +2,9 @@
  * Unified Citation Extension
  *
  * Consolidates functionality from:
- * - AdvancedCitation.ts (node definition, rendering, click handlers)
+ * - Unified citation system (node definition, rendering, click handlers)
  * - SmartCitationExtension.ts (AI suggestions, keyboard shortcuts)
- * - comprehensiveCitationPlugin.ts (@ trigger, ProseMirror plugin)
+ * - Legacy citation plugins (@ trigger, ProseMirror plugin)
  *
  * Features:
  * - Single citation node definition
@@ -325,83 +325,118 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
   // ============================================================================
 
   renderHTML({ node, HTMLAttributes }) {
-    // Generate citation ID if missing
-    const citationId =
-      node.attrs.citationId || `cite_${Math.random().toString(36).substring(2, 12)}`;
+    try {
+      // Generate citation ID if missing
+      const citationId =
+        node.attrs.citationId || `cite_${Math.random().toString(36).substring(2, 12)}`;
 
-    // Convert to UnifiedCitation for formatting
-    const unified: UnifiedCitation = {
-      id: citationId,
-      sourceId: node.attrs.sourceId,
-      sourceTitle: node.attrs.sourceTitle,
-      citationType: node.attrs.citationType,
-      reference: node.attrs.reference,
-      pageNumber: node.attrs.pageNumber,
-      chapterNumber: node.attrs.chapterNumber,
-      sectionNumber: node.attrs.sectionNumber,
-      verseNumber: node.attrs.verseNumber,
-      dafNumber: node.attrs.dafNumber,
-      halachaNumber: node.attrs.halachaNumber,
-      customReference: node.attrs.customReference,
-      quote: node.attrs.quote,
-      note: node.attrs.note,
-      url: node.attrs.url,
-      statementId: node.attrs.statementId,
-    };
+      // Convert to UnifiedCitation for formatting
+      const unified: UnifiedCitation = {
+        id: citationId,
+        sourceId: node.attrs.sourceId,
+        sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+        citationType: node.attrs.citationType || 'custom',
+        reference: node.attrs.reference,
+        pageNumber: node.attrs.pageNumber,
+        chapterNumber: node.attrs.chapterNumber,
+        sectionNumber: node.attrs.sectionNumber,
+        verseNumber: node.attrs.verseNumber,
+        dafNumber: node.attrs.dafNumber,
+        halachaNumber: node.attrs.halachaNumber,
+        customReference: node.attrs.customReference,
+        quote: node.attrs.quote,
+        note: node.attrs.note,
+        url: node.attrs.url,
+        statementId: node.attrs.statementId,
+      };
 
-    // Format citation text for display
-    const displayText = formatCitationReference(unified);
+      // Format citation text for display with error handling
+      let displayText = 'Citation';
+      try {
+        displayText = formatCitationReference(unified);
+      } catch (error) {
+        console.warn('Failed to format citation:', error, unified);
+        displayText = unified.sourceTitle || 'Citation';
+      }
 
-    // Determine CSS class based on sync status
-    let cssClass = 'citation-ref';
-    if (node.attrs.sourceId) {
-      cssClass += ' citation-synced';
-    } else {
-      cssClass += ' citation-unsynced';
+      // Determine CSS class based on sync status
+      let cssClass = 'citation-ref';
+      if (node.attrs.sourceId) {
+        cssClass += ' citation-synced';
+      } else {
+        cssClass += ' citation-unsynced';
+      }
+
+      // Add statement/topic level class
+      if (isStatementLevel(unified)) {
+        cssClass += ' citation-statement-level';
+      } else {
+        cssClass += ' citation-topic-level';
+      }
+
+      return [
+        'span',
+        mergeAttributes(HTMLAttributes, {
+          class: cssClass,
+          'data-type': 'citation',
+          'data-citation-id': citationId,
+          'data-citation-type': node.attrs.citationType || '',
+          'data-source-id': node.attrs.sourceId || '',
+          'data-source-title': node.attrs.sourceTitle || '',
+          'data-reference': node.attrs.reference || '',
+          'data-page-number': node.attrs.pageNumber || '',
+          'data-chapter-number': node.attrs.chapterNumber || '',
+          'data-section-number': node.attrs.sectionNumber || '',
+          'data-verse-number': node.attrs.verseNumber || '',
+          'data-daf-number': node.attrs.dafNumber || '',
+          'data-halacha-number': node.attrs.halachaNumber || '',
+          'data-custom-reference': node.attrs.customReference || '',
+          'data-url': node.attrs.url || '',
+          'data-quote': node.attrs.quote || '',
+          'data-note': node.attrs.note || '',
+          'data-statement-id': node.attrs.statementId || '',
+        }),
+        `[${displayText}]`,
+      ];
+    } catch (error) {
+      console.error('Citation rendering error:', error);
+      // Fallback rendering
+      return [
+        'span',
+        mergeAttributes(HTMLAttributes, {
+          class: 'citation-ref citation-error',
+          'data-type': 'citation',
+        }),
+        '[Citation Error]',
+      ];
     }
-
-    // Add statement/topic level class
-    if (isStatementLevel(unified)) {
-      cssClass += ' citation-statement-level';
-    } else {
-      cssClass += ' citation-topic-level';
-    }
-
-    return [
-      'span',
-      mergeAttributes(HTMLAttributes, {
-        class: cssClass,
-        'data-type': 'citation',
-        'data-citation-id': citationId,
-        'data-citation-type': node.attrs.citationType,
-        'data-source-id': node.attrs.sourceId || '',
-        'data-source-title': node.attrs.sourceTitle || '',
-        'data-reference': node.attrs.reference || '',
-        'data-page-number': node.attrs.pageNumber || '',
-        'data-chapter-number': node.attrs.chapterNumber || '',
-        'data-section-number': node.attrs.sectionNumber || '',
-        'data-verse-number': node.attrs.verseNumber || '',
-        'data-daf-number': node.attrs.dafNumber || '',
-        'data-halacha-number': node.attrs.halachaNumber || '',
-        'data-custom-reference': node.attrs.customReference || '',
-        'data-url': node.attrs.url || '',
-        'data-quote': node.attrs.quote || '',
-        'data-note': node.attrs.note || '',
-        'data-statement-id': node.attrs.statementId || '',
-      }),
-      `[${displayText}]`,
-    ];
   },
 
   renderText({ node }) {
-    const unified: UnifiedCitation = {
-      sourceTitle: node.attrs.sourceTitle,
-      citationType: node.attrs.citationType,
-      reference: node.attrs.reference,
-      chapterNumber: node.attrs.chapterNumber,
-      sectionNumber: node.attrs.sectionNumber,
-    };
-    return `[${formatCitationReference(unified)}]`;
+    try {
+      const unified: UnifiedCitation = {
+        id: node.attrs.citationId || 'unknown',
+        sourceId: node.attrs.sourceId ?? null,
+        sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+        citationType: node.attrs.citationType || 'custom',
+        reference: node.attrs.reference,
+        chapterNumber: node.attrs.chapterNumber,
+        sectionNumber: node.attrs.sectionNumber,
+        pageNumber: node.attrs.pageNumber,
+        verseNumber: node.attrs.verseNumber,
+        dafNumber: node.attrs.dafNumber,
+        halachaNumber: node.attrs.halachaNumber,
+        customReference: node.attrs.customReference,
+        quote: node.attrs.quote,
+        note: node.attrs.note,
+        url: node.attrs.url,
+        statementId: node.attrs.statementId,
+      };
+      return `[${formatCitationReference(unified)}]`;
+    } catch (error) {
+      console.warn('Citation text rendering error:', error);
+      return '[Citation]';
+    }
   },
 
   // ============================================================================
@@ -440,8 +475,10 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
 
       // Set display text
       const unified: UnifiedCitation = {
-        sourceTitle: node.attrs.sourceTitle,
-        citationType: node.attrs.citationType,
+        id: node.attrs.citationId || 'unknown',
+        sourceId: node.attrs.sourceId ?? null,
+        sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+        citationType: node.attrs.citationType || 'custom',
         reference: node.attrs.reference,
         chapterNumber: node.attrs.chapterNumber,
         sectionNumber: node.attrs.sectionNumber,
@@ -450,6 +487,10 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
         dafNumber: node.attrs.dafNumber,
         halachaNumber: node.attrs.halachaNumber,
         customReference: node.attrs.customReference,
+        quote: node.attrs.quote,
+        note: node.attrs.note,
+        url: node.attrs.url,
+        statementId: node.attrs.statementId,
       };
       const displayText = formatCitationReference(unified);
       dom.textContent = `[${displayText}]`;
@@ -472,9 +513,9 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
         const pos = typeof getPos === 'function' ? getPos() : 0;
         const citation: UnifiedCitation = {
           id: citationId,
-          sourceId: node.attrs.sourceId,
-          sourceTitle: node.attrs.sourceTitle,
-          citationType: node.attrs.citationType,
+          sourceId: node.attrs.sourceId ?? null,
+          sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+          citationType: node.attrs.citationType || 'custom',
           reference: node.attrs.reference,
           pageNumber: node.attrs.pageNumber,
           chapterNumber: node.attrs.chapterNumber,
@@ -488,8 +529,10 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
           note: node.attrs.note,
           statementId: node.attrs.statementId,
         };
-
-        this.options.onCitationClick?.(citation, pos);
+        
+        if (this.options.onCitationClick && typeof pos === 'number') {
+          this.options.onCitationClick(citation, pos);
+        }
       });
 
       // Double click for edit
@@ -500,9 +543,9 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
         const pos = typeof getPos === 'function' ? getPos() : 0;
         const citation: UnifiedCitation = {
           id: citationId,
-          sourceId: node.attrs.sourceId,
-          sourceTitle: node.attrs.sourceTitle,
-          citationType: node.attrs.citationType,
+          sourceId: node.attrs.sourceId ?? null,
+          sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+          citationType: node.attrs.citationType || 'custom',
           reference: node.attrs.reference,
           pageNumber: node.attrs.pageNumber,
           chapterNumber: node.attrs.chapterNumber,
@@ -516,8 +559,10 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
           note: node.attrs.note,
           statementId: node.attrs.statementId,
         };
-
-        this.options.onCitationEdit?.(citation, pos);
+        
+        if (this.options.onCitationEdit && typeof pos === 'number') {
+          this.options.onCitationEdit(citation, pos);
+        }
       });
 
       return {
@@ -717,14 +762,22 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
             state.doc.descendants((node, pos) => {
               if (node.type.name === 'citation') {
                 const unified: UnifiedCitation = {
-                  sourceTitle: node.attrs.sourceTitle,
-                  citationType: node.attrs.citationType,
+                  id: node.attrs.citationId || 'unknown',
+                  sourceId: node.attrs.sourceId ?? null,
+                  sourceTitle: node.attrs.sourceTitle || 'Unknown Source',
+                  citationType: node.attrs.citationType || 'custom',
                   reference: node.attrs.reference,
                   chapterNumber: node.attrs.chapterNumber,
                   sectionNumber: node.attrs.sectionNumber,
                   pageNumber: node.attrs.pageNumber,
                   verseNumber: node.attrs.verseNumber,
+                  dafNumber: node.attrs.dafNumber,
+                  halachaNumber: node.attrs.halachaNumber,
+                  customReference: node.attrs.customReference,
                   quote: node.attrs.quote,
+                  note: node.attrs.note,
+                  url: node.attrs.url,
+                  statementId: node.attrs.statementId,
                 };
 
                 const tooltipText = formatCitationReference(unified);

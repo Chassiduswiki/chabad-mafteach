@@ -408,6 +408,33 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             }
         });
 
+        // Add database citations to the citation map
+        // Convert topic-level sources (bibliography) to citation references
+        sources.forEach(source => {
+            const citationId = `source_${source.link_id || source.id}`;
+            const citationRef: CitationReference = {
+                id: citationId,
+                sourceId: source.id,
+                sourceTitle: source.title || 'Unknown Source',
+                reference: source.page_number || source.verse_reference || source.section_reference || undefined,
+                pageNumber: source.page_number,
+            };
+            allCitationRefs.push(citationRef);
+        });
+
+        // Convert inline citations (statement-level) to citation references
+        inlineCitations.forEach(citation => {
+            const citationId = `inline_${citation.link_id || citation.id}`;
+            const citationRef: CitationReference = {
+                id: citationId,
+                sourceId: citation.id,
+                sourceTitle: citation.title || 'Unknown Source',
+                reference: citation.page_number || citation.verse_reference || citation.section_reference || undefined,
+                pageNumber: citation.page_number,
+            };
+            allCitationRefs.push(citationRef);
+        });
+
         // Create citation map for frontend use
         const citationMap = createCitationMap(allCitationRefs);
 

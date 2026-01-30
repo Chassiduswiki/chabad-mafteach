@@ -152,6 +152,12 @@ export function SlashCommandMenu({ editor, onInsertCitation, onInsertImage }: Sl
     if (!editor) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if event is from the editor element to avoid capturing global events
+      const editorElement = editor.view.dom;
+      if (!editorElement.contains(event.target as Node)) {
+        return; // Ignore events outside the editor
+      }
+
       // Open menu on /
       if (event.key === '/' && !isOpen) {
         const { from } = editor.state.selection;
@@ -160,18 +166,18 @@ export function SlashCommandMenu({ editor, onInsertCitation, onInsertImage }: Sl
           from,
           '\n'
         );
-        
+
         // Only open if at start of line or after space
         if (from === 1 || textBefore === '' || textBefore === ' ' || textBefore === '\n') {
           event.preventDefault();
-          
+
           // Get cursor position for menu placement
           const coords = editor.view.coordsAtPos(from);
           setPosition({
             top: coords.bottom + 8,
             left: coords.left,
           });
-          
+
           setIsOpen(true);
           setQuery('');
           setSelectedIndex(0);

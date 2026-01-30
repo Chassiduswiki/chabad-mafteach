@@ -241,7 +241,7 @@ const sectionConfig: Record<SectionType, { title: string; shortTitle: string; ic
     },
     personal_nimshal: {
         title: 'Personal Application',
-        shortTitle: 'Personal',
+        shortTitle: 'Application',
         icon: User,
         color: 'text-purple-600 dark:text-purple-400',
         bgColor: 'bg-purple-500/5',
@@ -338,7 +338,13 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
             const token = localStorage.getItem('auth_token');
             if (token) {
                 try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    // Validate token format before parsing
+                    const parts = token.split('.');
+                    if (parts.length !== 3) {
+                        throw new Error('Invalid token format');
+                    }
+                    
+                    const payload = JSON.parse(atob(parts[1]));
                     if (payload.role !== userRole) {
                         setUserRole(payload.role);
                     }
@@ -346,7 +352,9 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
                         setCurrentUserId(payload.userId);
                     }
                 } catch (e) {
-                    console.error('Failed to parse token in TopicExperience');
+                    console.error('Failed to parse token in TopicExperience:', e);
+                    // Clear invalid token
+                    localStorage.removeItem('auth_token');
                 }
             } else {
                 // Check legacy keys just in case

@@ -3,8 +3,8 @@
  *
  * This module provides a single source of truth for citation types across the application.
  * It consolidates the previously fragmented types:
- * - CitationAttrs (from comprehensiveCitationPlugin)
- * - CitationData (from AdvancedCitation)
+ * - CitationAttrs (legacy format)
+ * - CitationData (unified citation format)
  * - CitationSuggestion (from SmartCitationExtension)
  * - CitationReference (legacy)
  *
@@ -320,13 +320,22 @@ export function normalizeCitationType(type: string): CitationType {
 
 /**
  * Formats a citation reference based on type
+ * Handles null/undefined values gracefully
  */
 export function formatCitationReference(citation: UnifiedCitation): string {
   const { citationType, sourceTitle } = citation;
 
+  // Handle missing source title
+  if (!sourceTitle || sourceTitle.trim() === '') {
+    return 'Unknown Source';
+  }
+
   let ref = '';
 
-  switch (citationType) {
+  // Handle null/undefined citationType
+  const type = citationType || 'custom';
+
+  switch (type) {
     case 'page':
       ref = citation.pageNumber ? ` p. ${citation.pageNumber}` : '';
       break;
