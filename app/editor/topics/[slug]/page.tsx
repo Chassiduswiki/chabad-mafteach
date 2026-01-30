@@ -847,6 +847,8 @@ export default function TopicEditorPage() {
                   formData={state.formData}
                   onUpdate={state.updateFormField}
                   availableSources={state.linkedSources}
+                  onSave={handleManualSave}
+                  saveStatus={getSaveStatus()}
                 />
               }
               settingsContent={

@@ -5,15 +5,11 @@ import { useEditor, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
-import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
-import Gapcursor from '@tiptap/extension-gapcursor';
-import Dropcursor from '@tiptap/extension-dropcursor';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
@@ -110,22 +106,20 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
             class: 'list-decimal ml-6',
           },
         },
+        // Configure Link within StarterKit to avoid duplicates
+        link: {
+          openOnClick: true,
+          HTMLAttributes: {
+            class: 'text-primary underline hover:text-primary/80',
+          },
+        },
       }),
 
-      // Text formatting
-      Underline,
+      // Text formatting (StarterKit already includes Underline)
       TextStyle,
       Color,
       Highlight.configure({
         multicolor: true,
-      }),
-
-      // Links
-      Link.configure({
-        openOnClick: true,
-        HTMLAttributes: {
-          class: 'text-primary underline hover:text-primary/80',
-        },
       }),
 
       // Text alignment
@@ -137,9 +131,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       // Typography
       Typography,
 
-      // Navigation helpers
-      Gapcursor,
-      Dropcursor,
+      // Navigation helpers (StarterKit already includes Gapcursor and Dropcursor)
+      // Note: These are already included in StarterKit, so we don't add them separately
 
       // Tables
       Table.configure({
@@ -270,6 +263,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }) => {
     if (!editor) return;
 
+    console.log('insertCitation called with:', citation);
+
     try {
       // Use the dedicated insertCitation command from our extension
       const success = editor.commands.insertCitation({
@@ -283,24 +278,23 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         url: citation.url,
       });
 
+      console.log('insertCitation command result:', success);
+
       if (success) {
         setShowCitationModal(false);
         setFeedback({
           type: "success",
           message: `Citation added: ${citation.sourceTitle} ${citation.reference ? '— ' + citation.reference : ''}`
         });
-
-        // Auto-dismiss success message after 3 seconds
-        setTimeout(() => setFeedback(null), 3000);
       } else {
-        throw new Error('Citation insertion failed');
+        console.error('insertCitation command failed');
       }
     } catch (error) {
-      console.error('Failed to insert citation:', error);
-      setFeedback({ type: "error", message: "Failed to insert citation" });
-
-      // Auto-dismiss error message after 5 seconds
-      setTimeout(() => setFeedback(null), 5000);
+      console.error('insertCitation error:', error);
+      setFeedback({
+        type: "error",
+        message: 'Failed to insert citation. Please try again.'
+      });
     }
   };
 

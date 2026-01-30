@@ -6,16 +6,18 @@ import { TipTapEditor } from '@/components/editor/TipTapEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { GripVertical, Plus, Trash2, BookOpen } from 'lucide-react';
+import { GripVertical, Plus, Trash2, BookOpen, Save } from 'lucide-react';
 import { Source } from '@/lib/types';
 
 interface ScholarlyTabProps {
     formData: TopicFormData;
     onUpdate: (field: keyof TopicFormData, value: any) => void;
     availableSources: Source[];
+    onSave?: () => Promise<void>;
+    saveStatus?: 'idle' | 'saving' | 'success' | 'error';
 }
 
-export function ScholarlyTab({ formData, onUpdate, availableSources }: ScholarlyTabProps) {
+export function ScholarlyTab({ formData, onUpdate, availableSources, onSave, saveStatus = 'idle' }: ScholarlyTabProps) {
     const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
 
     const variants = formData.conceptual_variants || [];
@@ -82,6 +84,35 @@ export function ScholarlyTab({ formData, onUpdate, availableSources }: Scholarly
 
     return (
         <div className="space-y-8">
+            {/* Save Button Section */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold">Scholarly Content</h1>
+                    <p className="text-sm text-muted-foreground">Manage terminology notes, conceptual variants, and advanced scholarly content.</p>
+                </div>
+                {onSave && (
+                    <Button 
+                        onClick={onSave} 
+                        disabled={saveStatus === 'saving'}
+                        className="flex items-center gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                )}
+            </div>
+
+            {/* Save Status Indicator */}
+            {saveStatus === 'success' && (
+                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-md">
+                    Changes saved successfully!
+                </div>
+            )}
+            {saveStatus === 'error' && (
+                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded-md">
+                    Failed to save changes. Please try again.
+                </div>
+            )}
             {/* Terminology Notes Section */}
             <section className="space-y-4">
                 <div className="flex items-center justify-between">

@@ -126,7 +126,8 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                 console.log(`Found ${statementTopics.length} statement_topics records for topic ${topic.id}`);
 
                 if (statementTopics.length > 0) {
-                    const statementIds = Array.from(new Set(statementTopics.map(st => st.statement_id).filter(id => !!id)));
+                    // Get all statements for this topic first
+                    const statementIds = validStatementTopics.map(st => st.statement_id).filter(Boolean);
 
                     if (statementIds.length > 0) {
                         // Fetch the actual statements
@@ -234,7 +235,17 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
         let sources: any[] = [];
         let inlineCitations: any[] = [];
         try {
-            // Fetch topic-level sources (bibliography)
+            console.log(`Attempting to fetch sources for topic ${topic.id} with Directus URL: ${process.env.DIRECTUS_URL}`);
+            
+            // First, test if we can access the source_links table at all
+            const testResponse = await directus.request(readItems('source_links' as any, {
+                limit: 1,
+                fields: ['id']
+            })) as any[];
+            
+            console.log(`Source_links table accessible, found ${testResponse.length} test records`);
+            
+            // Fetch topic-level sources (bibliography) - SIMPLIFIED QUERY
             const topicSources = await directus.request(readItems('source_links' as any, {
                 filter: {
                     _and: [
@@ -248,119 +259,82 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                     'page_number',
                     'verse_reference',
                     'section_reference',
-                    'authority_level',
                     'notes',
-                    {
-                        source_id: [
-                            'id',
-                            'title',
-                            'publication_year',
-                            'external_url',
-                            'external_system',
-                            'citation_text',
-                            {
-                                author_id: ['id', 'canonical_name', 'birth_year', 'death_year']
-                            }
-                        ]
-                    }
+                    'source_id'
+                ] as any,
+                sort: ['id'] as any
+            })) as any[];
+            
+            console.log(`Found ${topicSources.length} topic-level sources for topic ${topic.id}`);
+            
+            // Fetch statement-level citations (inline citations) - SIMPLIFIED
+            const statementCitations = await directus.request(readItems('source_links' as any, {
+                filter: {
+                    _and: [
+                        { topic_id: { _eq: topic.id } },
+                        { statement_id: { _not_null: true } }
+                    ]
+                } as any,
+                fields: [
+                    'id',
+                    'relationship_type',
+                    'page_number',
+                    'verse_reference',
+                    'section_reference',
+                    'notes',
+                    'source_id',
+                    'statement_id'
                 ] as any,
                 sort: ['id'] as any
             })) as any[];
 
-            console.log(`Found ${topicSources.length} topic-level sources for topic ${topic.id}`);
+            console.log(`Found ${statementCitations.length} statement-level citations for topic ${topic.id}`);
 
-            // Transform to a cleaner format
-            sources = topicSources.map(ts => ({
-                id: ts.source_id?.id,
-                title: ts.source_id?.title,
-                author_id: ts.source_id?.author_id?.id,
-                author: ts.source_id?.author_id?.canonical_name,
-                publication_year: ts.source_id?.publication_year,
-                external_url: ts.source_id?.external_url,
-                external_system: ts.source_id?.external_system,
-                citation_text: ts.source_id?.citation_text,
+            // Transform to a cleaner format - SIMPLIFIED
+            inlineCitations = statementCitations.map(cl => ({
+                id: cl.source_id,
+                title: `Source ${cl.source_id}`, // Simplified for now
                 // Link metadata
-                link_id: ts.id,
-                relationship_type: ts.relationship_type,
-                page_number: ts.page_number,
-                verse_reference: ts.verse_reference,
-                section_reference: ts.section_reference,
-                authority_level: ts.authority_level,
-                notes: ts.notes,
-                is_primary: ts.notes?.includes('Primary') || ts.authority_level === 'primary', // Infer from notes or use explicit field
-                // Keep relationships array for backward compatibility
-                relationships: [{
-                    relationship_type: ts.relationship_type,
-                    page_number: ts.page_number,
-                    verse_reference: ts.verse_reference
-                }]
-            })).filter(s => s.id); // Filter out any with missing source data
-
-            // Fetch statement-level citations (inline citations)
-            // Get all statements for this topic first
-            const statementIds = validStatementTopics.map(st => st.statement_id).filter(Boolean);
-
-            if (statementIds.length > 0) {
-                const citationLinks = await directus.request(readItems('source_links' as any, {
-                    filter: {
-                        statement_id: { _in: statementIds }
-                    } as any,
-                    fields: [
-                        'id',
-                        'statement_id',
-                        'relationship_type',
-                        'page_number',
-                        'verse_reference',
-                        'section_reference',
-                        'notes',
-                        {
-                            source_id: [
-                                'id',
-                                'title',
-                                'publication_year',
-                                'external_url',
-                                'external_system',
-                                {
-                                    author_id: ['id', 'canonical_name', 'birth_year', 'death_year']
-                                }
-                            ]
-                        }
-                    ] as any
-                })) as any[];
-
-                console.log(`Found ${citationLinks.length} inline citations for topic ${topic.id}`);
-
-                inlineCitations = citationLinks.map(cl => ({
-                    id: cl.source_id?.id,
-                    title: cl.source_id?.title,
-                    author_id: cl.source_id?.author_id?.id,
-                    author: cl.source_id?.author_id?.canonical_name,
-                    publication_year: cl.source_id?.publication_year,
-                    external_url: cl.source_id?.external_url,
-                    external_system: cl.source_id?.external_system,
-                    // Citation metadata
-                    link_id: cl.id,
-                    statement_id: cl.statement_id,
-                    relationship_type: cl.relationship_type,
-                    page_number: cl.page_number,
-                    verse_reference: cl.verse_reference,
-                    section_reference: cl.section_reference,
-                    notes: cl.notes
-                })).filter(c => c.id);
-            }
+                link_id: cl.id,
+                relationship_type: cl.relationship_type,
+                page_number: cl.page_number,
+                verse_reference: cl.verse_reference,
+                section_reference: cl.section_reference,
+                authority_level: cl.authority_level,
+                notes: cl.notes,
+                is_primary: cl.notes?.includes('Primary') || cl.authority_level === 'primary' // Infer from notes or use explicit field
+            })).filter(c => c.id);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             const errorStack = error instanceof Error ? error.stack : undefined;
+            const errorKeys = error ? Object.keys(error) : [];
+            
             console.warn('Could not fetch sources/citations (likely permissions):', {
                 message: errorMessage,
                 stack: errorStack,
                 error: String(error),
                 type: typeof error,
-                keys: error ? Object.keys(error) : [],
+                keys: errorKeys,
+                // Try to get more details from the error object
+                errorDetails: errorKeys.reduce((acc: Record<string, any>, key) => {
+                    acc[key] = (error as any)[key];
+                    return acc;
+                }, {}),
                 // Check if it's a Directus SDK error
                 directusError: (error as any)?.code || (error as any)?.status,
                 // Check if it's a network/fetch error
-                networkError: (error as any)?.cause || (error as any)?.errno
+                networkError: (error as any)?.cause || (error as any)?.errno,
+                // Check Directus client configuration
+                directusUrl: process.env.DIRECTUS_URL,
+                hasStaticToken: !!process.env.DIRECTUS_STATIC_TOKEN,
+                // Log the actual error object for debugging
+                fullError: error,
+                // Log the error response if available
+                errorResponse: (error as any)?.response ? {
+                    status: (error as any).response.status,
+                    statusText: (error as any).response.statusText,
+                    url: (error as any).response.url
+                } : null
             });
             // Continue without sources - this is not critical
         }
@@ -387,7 +361,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             is_machine_translated: translation?.is_machine_translated,
             conceptual_variants: translation?.conceptual_variants || topic.conceptual_variants,
             terminology_notes: translation?.terminology_notes || topic.terminology_notes,
-            contentBlocks // **[CHANGED]** from paragraphs
+            contentBlocks, // **[CHANGED]** from paragraphs
         };
 
         // Extract citation references from content fields
@@ -450,7 +424,7 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
             inlineCitations
         };
     } catch (error) {
-        console.error('Topic fetch error:', error);
+        console.error('Topic metadata fetch error:', error);
         throw error;
     }
 }

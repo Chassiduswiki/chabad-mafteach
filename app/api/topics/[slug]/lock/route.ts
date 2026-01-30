@@ -14,9 +14,10 @@ const directus = createClient();
  * 3. DELETE: Release lock
  */
 
-export const GET = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: { slug: string } }) => {
+export const GET = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: Promise<{ slug: string }> }) => {
   try {
-    const slug = params.slug;
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug;
     
     // Fetch topic to check current metadata
     const topic = await directus.request(readItems('topics', {
@@ -47,9 +48,10 @@ export const GET = requireEditor(async (request: NextRequest, context: { userId:
   }
 });
 
-export const POST = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: { slug: string } }) => {
+export const POST = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: Promise<{ slug: string }> }) => {
   try {
-    const slug = params.slug;
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug;
     const lockDuration = 5 * 60 * 1000; // 5 minutes
     const expiresAt = new Date(Date.now() + lockDuration).toISOString();
 
@@ -93,9 +95,10 @@ export const POST = requireEditor(async (request: NextRequest, context: { userId
   }
 });
 
-export const DELETE = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: { slug: string } }) => {
+export const DELETE = requireEditor(async (request: NextRequest, context: { userId: string; role: string }, { params }: { params: Promise<{ slug: string }> }) => {
   try {
-    const slug = params.slug;
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug;
 
     const topic = await directus.request(readItems('topics', {
       filter: { slug: { _eq: slug } },

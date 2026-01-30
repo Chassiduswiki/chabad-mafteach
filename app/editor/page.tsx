@@ -61,19 +61,19 @@ const HeroAction = () => (
       <div className="flex-1">
         <div className="flex items-center gap-4 mb-2">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg ring-1 ring-primary/30">
-            <Edit3 className="h-5 w-5" />
+            <Search className="h-5 w-5" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground">Write & Learn</h2>
+          <h2 className="text-xl font-semibold text-foreground">Research Topics</h2>
         </div>
         <p className="text-muted-foreground max-w-lg">
-          Create articles, explanations, and personal insights with AI assistance. Access the rich editor, Hebrew OCR, smart citations, and AI processing tools.
+          Explore and refine Chabad concepts, improve topic boundaries, and enhance explanations with AI assistance. Build the comprehensive knowledge base.
         </p>
       </div>
       <Link
-        href="/editor/write"
+        href="/editor/topics"
         className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <span>Start Writing</span>
+        <span>Explore Topics</span>
         <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
@@ -177,8 +177,8 @@ export default function EditorPage() {
           <section className="space-y-6">
             <HeroAction />
             <div className="grid gap-6 md:grid-cols-2">
-              <DashboardCard href="/editor/topics" icon={Search} title="Research Topics" iconClassName="bg-green-500/10 text-green-600" className="">
-                Explore and improve topic definitions, boundaries, and explanations.
+              <DashboardCard href="/editor/topics/new" icon={Edit3} title="Create Topic" iconClassName="bg-blue-500/10 text-blue-600" className="">
+                Add new Chabad concepts and build the knowledge base.
               </DashboardCard>
               <DashboardCard href="/editor/import" icon={Upload} title="Import Content" iconClassName="bg-orange-500/10 text-orange-600" className="">
                 Add seforim from Sefaria, upload PDFs, or import text files.

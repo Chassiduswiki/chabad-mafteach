@@ -155,7 +155,7 @@ export default async function RootLayout({
   const userIsAdmin = await isAdmin();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Performance Optimization: Preload critical assets for LCP */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
