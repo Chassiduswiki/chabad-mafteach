@@ -91,7 +91,10 @@ export async function PATCH(request: NextRequest) {
             );
         }
 
-        const { topicId, language, field, value } = await request.json();
+        const body = await request.json();
+        console.log('Translation PATCH request received:', body);
+
+        const { topicId, language, field, value } = body;
 
         if (!topicId || !language || !field) {
             return NextResponse.json(
@@ -111,21 +114,32 @@ export async function PATCH(request: NextRequest) {
             })
         );
 
+        console.log('Existing translation:', existing);
+
         let result;
         if (existing && existing.length > 0) {
             // Update existing translation
             const translationId = existing[0].id;
+            console.log('Updating existing translation:', translationId, { [field]: value });
             result = await directus.request(
                 updateItem('topic_translations' as any, translationId, { [field]: value })
             );
         } else {
-            // Create new translation
+            // Create new translation - ensure title is provided
+            const createData: any = {
+                topic_id: topicId,
+                language_code: language,
+                [field]: value,
+            };
+            
+            // If we're not setting the title field, we need to provide a default title
+            if (field !== 'title') {
+                createData.title = `Translation ${topicId} - ${language}`;
+            }
+            
+            console.log('Creating new translation with data:', createData);
             result = await directus.request(
-                createItem('topic_translations' as any, {
-                    topic_id: topicId,
-                    language_code: language,
-                    [field]: value,
-                })
+                createItem('topic_translations' as any, createData)
             );
         }
 
