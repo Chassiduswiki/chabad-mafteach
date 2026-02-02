@@ -68,6 +68,9 @@
 - [ ] **Testing Suite Enhancement** - Comprehensive test coverage and E2E testing
 - [ ] **Security & Access Control** - Enhanced authentication and authorization
 - [ ] **Backup & Recovery Systems** - Automated backup procedures and disaster recovery
+- [ ] **Debug & Monitoring Infrastructure** - Debug APIs and performance monitoring tools
+- [ ] **Logging System Enhancement** - Structured logging and audit trails
+- [ ] **Error Handling & Reporting** - Comprehensive error tracking and alerting
 
 ### 🚨 Critical Issues - Immediate Attention Required
 
@@ -327,6 +330,61 @@ source_book_chapters:
 - **Phase 1**: Citation count badge, sidebar, hover tooltips, quick-edit
 - **Phase 2**: Auto-detection, templates, validation
 - **Phase 3**: Relationships, history, bibliography generation
+
+#### Debug & Monitoring Infrastructure
+**Status:** Partially Implemented - Debug APIs and monitoring scripts exist  
+**Last Updated:** February 2, 2026  
+**Impact:** System observability, debugging capabilities, and performance tracking
+
+**Existing Infrastructure:**
+- ✅ **Debug API Endpoints** - `app/api/debug/` with auth, config, and audit endpoints
+- ✅ **Performance Monitoring Script** - `scripts/performance-monitor.js` for bundle analysis
+- ✅ **Structured Logging System** - `lib/logger.ts` with proper log levels and context
+- ✅ **Performance Analysis Tools** - `scripts/analyze-performance.ts` for API query monitoring
+
+**Missing from Task List:**
+- [ ] **Production Debug Tools** - Secure debug endpoints for production troubleshooting
+- [ ] **Real-time Monitoring Dashboard** - Live system metrics and alerts
+- [ ] **Error Tracking Integration** - Sentry or similar error monitoring service
+- [ ] **Performance Metrics Collection** - Ongoing performance data gathering
+- [ ] **Health Check Endpoints** - System health monitoring and reporting
+- [ ] **Debug Logging Enhancement** - Structured debug logs with correlation IDs
+
+#### Logging & Audit Systems
+**Status:** Basic Implementation - Logger exists, needs enhancement  
+**Last Updated:** February 2, 2026  
+**Impact:** Debugging, audit trails, and system observability
+
+**Existing Logging:**
+- ✅ **Structured Logger** - `lib/logger.ts` with log levels and context
+- ✅ **Log Entry Interface** - Standardized log format with timestamps
+- ✅ **Error Logging** - Structured error information capture
+
+**Missing Logging Tasks:**
+- [ ] **Production Logging Strategy** - Log levels, rotation, and retention policies
+- [ ] **Audit Trail System** - Track all user actions and data changes
+- [ ] **Centralized Logging** - Log aggregation and search capabilities
+- [ ] **Performance Logging** - Request timing and database query logging
+- [ ] **Security Event Logging** - Authentication failures and security incidents
+- [ ] **Log Analysis Tools** - Automated log analysis and alerting
+
+#### Error Handling & Reporting
+**Status:** Basic Implementation - Needs comprehensive enhancement  
+**Last Updated:** February 2, 2026  
+**Impact:** User experience, system reliability, and debugging efficiency
+
+**Current Error Handling:**
+- ✅ **Basic Error Boundaries** - React error boundaries in components
+- ✅ **API Error Handling** - Try-catch blocks in API routes
+- ✅ **Structured Error Objects** - Consistent error format
+
+**Missing Error Handling Tasks:**
+- [ ] **Comprehensive Error Boundaries** - Full application error coverage
+- [ ] **Error Reporting Service** - Automated error collection and reporting
+- [ ] **User-Friendly Error Messages** - Contextual error messages for users
+- [ ] **Error Recovery Mechanisms** - Automatic retry and recovery options
+- [ ] **Error Analytics Dashboard** - Error tracking and analysis
+- [ ] **Incident Response Procedures** - Systematic error response protocols
 
 ### 📋 Planned (Future Phases)
 
