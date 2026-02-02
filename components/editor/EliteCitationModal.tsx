@@ -515,12 +515,12 @@ export function EliteCitationModal({
 
       {/* Search Results Dropdown */}
       {searchResults.length > 0 && !resolvedSource && !selectedSource && (
-        <div className="absolute z-20 w-full mt-1 bg-background border border-border rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute z-[90] w-full mt-1 bg-background border border-border rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
           {searchResults.map((source, index) => (
             <button
               key={source.id}
               onClick={() => selectSource(source)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${
                 index === focusedIndex
                   ? 'bg-primary/10'
                   : 'hover:bg-muted'
@@ -780,12 +780,12 @@ export function EliteCitationModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-start justify-center bg-black/50 backdrop-blur-sm px-4 pt-[10vh]"
+      className="fixed inset-0 z-[80] flex items-start justify-center bg-black/50 backdrop-blur-sm px-4 pt-[10vh] sm:pt-[15vh]"
       onClick={onClose}
     >
       <div
         ref={modalRef}
-        className="w-full max-w-xl bg-background rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200"
+        className="w-full max-w-xl bg-background rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200 max-h-[90vh] flex flex-col sm:max-w-2xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -817,7 +817,7 @@ export function EliteCitationModal({
         </div>
 
         {/* Content */}
-        <div className="p-5">
+        <div className="p-5 flex-1 overflow-y-auto">
           {selectedSource ? (
             renderSelectedSource()
           ) : showBrowser ? (

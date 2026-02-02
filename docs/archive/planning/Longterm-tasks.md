@@ -55,6 +55,48 @@
 ### ⏳ In Progress
 - [ ] **Advanced Search & Discovery** - Enhancing semantic search capabilities
 - [ ] **Inline Citation Enhancement** - Improving citation management workflows
+- [ ] **Citation Modal UI Fixes** - Critical UX issues with citation insertion modal
+
+### 🚨 Critical Issues - Immediate Attention Required
+
+#### Citation Modal System - Multiple Broken Components
+**Status:** High Priority - User Experience Blocker  
+**Last Updated:** February 2, 2026  
+**Impact:** Users cannot effectively insert citations into content
+
+**Issues Identified:**
+- [ ] **Dropdown Visibility Problem** - Search results dropdown is completely invisible
+- [ ] **Search Functionality** - Multi-term search was broken (recently fixed)
+- [ ] **Modal Layout** - Layout breaks on smaller screens
+- [ ] **Keyboard Navigation** - Arrow keys and Enter not working properly
+- [ ] ** Citation Persistence** - Selected citations not persisting in modal state
+- [ ] **Source Linking** - Integration with Directus source_links table needs verification
+
+**Root Causes:**
+- CSS z-index conflicts causing dropdown to render behind other elements
+- Missing CSS classes for dropdown visibility
+- Event handling conflicts between modal and dropdown
+- Inconsistent state management in citation flow
+
+**Technical Details:**
+```typescript
+// EliteCitationModal.tsx - Issues found:
+// Line 517-558: Search results dropdown missing proper z-index
+// Line 447-470: Smart input component has focus conflicts
+// Line 396-411: handleInsert function not updating state correctly
+```
+
+**Fix Priority:**
+1. **P0 - Dropdown Visibility** - Make search results visible
+2. **P1 - Search Functionality** - Ensure search works for all query types  
+3. **P2 - Keyboard Navigation** - Restore arrow key and Enter functionality
+4. **P3 - Modal Layout** - Fix responsive design issues
+
+**Related Components:**
+- `components/editor/EliteCitationModal.tsx` - Main modal component
+- `components/editor/CitationInsertModal.tsx` - Alternative modal
+- `components/editor/HierarchicalCitationModal.tsx` - Browse functionality
+- `app/api/sources/search/route.ts` - Search API endpoint
 
 ### 📋 Planned (Future Phases)
 
