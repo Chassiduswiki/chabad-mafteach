@@ -43,11 +43,17 @@ export function extractCitationReferences(htmlContent: string): CitationReferenc
     const dom = new JSDOM(htmlContent);
     const document = dom.window.document;
 
+    console.log('Extracting citations from HTML:', htmlContent.substring(0, 300));
+
     // Find all citation reference spans (from TipTap editor)
     const citationSpans = document.querySelectorAll('span.citation-ref, span[data-citation-id], span[data-type="citation"]');
     const citations: CitationReference[] = [];
 
-    citationSpans.forEach((span: Element) => {
+    console.log('Found citation spans:', citationSpans.length);
+
+    citationSpans.forEach((span: Element, index: number) => {
+      console.log(`Processing span ${index}:`, span.outerHTML);
+      
       const citation: CitationReference = {
         id: span.getAttribute('data-citation-id') || generateCitationId(),
         sourceId: span.getAttribute('data-source-id') || '',
@@ -65,6 +71,7 @@ export function extractCitationReferences(htmlContent: string): CitationReferenc
         customReference: span.getAttribute('data-custom-reference') || undefined,
       };
 
+      console.log(`Extracted citation ${index}:`, citation);
       citations.push(citation);
     });
 

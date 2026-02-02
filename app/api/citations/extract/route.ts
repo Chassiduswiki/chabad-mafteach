@@ -18,8 +18,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log('Citation extraction called with:', { 
+      contentLength: content?.length, 
+      topicId,
+      contentPreview: content?.substring(0, 200) 
+    });
+
     // Extract citation references from content
     const citations = extractCitationReferences(content);
+    
+    console.log('Extracted citations:', citations.length, citations);
     
     if (citations.length === 0) {
       return NextResponse.json(
@@ -35,9 +43,21 @@ export async function POST(req: NextRequest) {
     // Process citations in sequence to avoid race conditions
     for (const citation of citations) {
       try {
+        console.log('Processing citation:', citation);
+        
         // Check if the source exists
         if (!citation.sourceId) {
           console.warn(`Citation ${citation.id} has no source ID, skipping`);
+          continue;
+        }
+
+        // Convert sourceId to number if needed
+        const sourceIdNum = typeof citation.sourceId === 'string' 
+          ? parseInt(citation.sourceId, 10) 
+          : citation.sourceId;
+          
+        if (isNaN(sourceIdNum)) {
+          console.warn(`Citation ${citation.id} has invalid source ID: ${citation.sourceId}, skipping`);
           continue;
         }
 
@@ -51,7 +71,7 @@ export async function POST(req: NextRequest) {
         ) as { id: number }[];
 
         const sourceLinkData = {
-          source_id: citation.sourceId,
+          source_id: sourceIdNum,
           topic_id: topicId || null,
           statement_id: null,
           relationship_type: 'references', 
@@ -62,14 +82,16 @@ export async function POST(req: NextRequest) {
           notes: `Updated from citation reference ${citation.id}`
         };
 
+        console.log('Creating source link:', sourceLinkData);
+
         let result: any;
         if (existingLinks && existingLinks.length > 0) {
-          // Update existing
+          console.log('Updating existing source link:', existingLinks[0].id);
           result = await directus.request(
             updateItem('source_links', existingLinks[0].id, sourceLinkData)
           );
         } else {
-          // Create new
+          console.log('Creating new source link');
           result = await directus.request(
             createItem('source_links', sourceLinkData)
           );
@@ -80,6 +102,8 @@ export async function POST(req: NextRequest) {
           sourceLinkId: result.id,
           wasUpdated: !!(existingLinks && existingLinks.length > 0)
         });
+        
+        console.log('Saved citation link:', result.id);
       } catch (citationError) {
         console.error(`Error saving citation ${citation.id}:`, citationError);
       }
