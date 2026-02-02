@@ -16,39 +16,57 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const sources = await directus.request(
-      readItems('sources', {
-        fields: [
-          'id',
-          'title',
-          'original_lang',
-          'publication_year',
-          'publisher',
-          'external_system',
-          'external_url',
-          'citation_text',
-          'author_id',
-          'parent_id',
-          'page_number',
-          'page_count',
-          'parsha',
-          'metadata',
-        ] as any,
-        filter: {
-          _or: [
-            { title: { _icontains: query } },
-            { citation_text: { _icontains: query } },
-            { publisher: { _icontains: query } },
-            { parsha: { _icontains: query } },
-          ],
-        },
-        limit,
-        sort: ['title'],
-      } as any)
-    );
+    // Clean the query and split into individual terms
+    const cleanQuery = query.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const searchTerms = cleanQuery.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+    
+    let allSources: any[] = [];
+    const seenIds = new Set();
+    
+    // Search for each term separately and combine results
+    for (const term of searchTerms) {
+      const sources = await directus.request(
+        readItems('sources', {
+          fields: [
+            'id',
+            'title',
+            'original_lang',
+            'publication_year',
+            'publisher',
+            'external_system',
+            'external_url',
+            'citation_text',
+            'author_id',
+            'parent_id',
+            'page_number',
+            'page_count',
+            'parsha',
+            'metadata',
+          ] as any,
+          filter: {
+            _or: [
+              { title: { _icontains: term } },
+              { citation_text: { _icontains: term } },
+              { publisher: { _icontains: term } },
+              { parsha: { _icontains: term } },
+            ],
+          },
+          limit,
+          sort: ['title'],
+        } as any)
+      );
+      
+      // Add new sources to our combined results
+      for (const source of sources) {
+        if (!seenIds.has(source.id)) {
+          allSources.push(source);
+          seenIds.add(source.id);
+        }
+      }
+    }
 
     // Transform to include formatted title
-    const transformedSources = (sources as any[]).map((source) => {
+    const transformedSources = (allSources as any[]).map((source) => {
       // Generate formatted citation title
       const formattedTitle = formatCitationString({
         id: source.id,
