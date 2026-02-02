@@ -284,7 +284,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         setShowCitationModal(false);
         setFeedback({
           type: "success",
-          message: `Citation added: ${citation.sourceTitle} ${citation.reference ? '— ' + citation.reference : ''}`
+          message: `Citation added: ${citation.sourceTitle}`
         });
       } else {
         console.error('insertCitation command failed');

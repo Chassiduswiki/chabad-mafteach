@@ -11,6 +11,7 @@ function SignInContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState<number | null>(null);
@@ -43,10 +44,12 @@ function SignInContent() {
         setSuccess(true);
         setError('');
         setIsLocked(false);
+        setUserRole(data.user?.role || 'editor');
 
-        // Redirect to editor after a short delay
+        // Redirect based on role after a short delay
         setTimeout(() => {
-          router.push('/editor');
+          const redirectPath = data.user?.role === 'admin' ? '/admin' : '/editor';
+          router.push(redirectPath);
         }, 1500);
       } else {
         // Handle different error types
@@ -65,6 +68,7 @@ function SignInContent() {
   };
 
   if (success) {
+    const destination = userRole === 'admin' ? 'admin dashboard' : 'editor';
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
@@ -73,7 +77,7 @@ function SignInContent() {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back!</h1>
           <p className="text-muted-foreground mb-6">
-            Authentication successful. Redirecting to editor...
+            Authentication successful. Redirecting to {destination}...
           </p>
           <div className="animate-spin rounded-full h-6 w-6 border border-primary border-t-transparent mx-auto"></div>
         </div>

@@ -234,7 +234,7 @@ export function AdminDashboardV2() {
   const isMaintenanceActive = maintenance?.isMaintenance || false;
 
   return (
-    <div className="space-y-12 pb-20 max-w-[1600px] mx-auto">
+    <div className="space-y-8 pb-12 max-w-[1600px] mx-auto px-6">
       {/* 1. Critical Overview Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
@@ -264,7 +264,7 @@ export function AdminDashboardV2() {
       </div>
 
       {/* 2. Content & Review Hub */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm flex flex-col">
           <ReviewQueueV2
             data={reviewQueue}
@@ -274,7 +274,7 @@ export function AdminDashboardV2() {
           />
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-8">
           <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-serif italic flex items-center gap-3">

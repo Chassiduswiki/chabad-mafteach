@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, User, Settings, UserPlus, ChevronDown, HelpCircle } from 'lucide-react';
+import { LogOut, User, UserPlus, ChevronDown, HelpCircle, Edit3, LayoutDashboard } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getAssetUrl } from '@/lib/directus';
@@ -21,6 +22,9 @@ export function CompactUserMenu() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isInAdminSection = pathname?.startsWith('/admin');
 
   useEffect(() => {
     checkAuthStatus();
@@ -152,6 +156,32 @@ export function CompactUserMenu() {
                     </p>
                   </div>
 
+                  {/* Section Navigation */}
+                  {userProfile.role === 'admin' && (
+                    <>
+                      {isInAdminSection ? (
+                        <Link
+                          href="/editor"
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          Editor Station
+                        </Link>
+                      ) : (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      <div className="border-t border-border my-1" />
+                    </>
+                  )}
+
                   {/* Menu Items */}
                   <Link
                     href="/profile"
@@ -161,17 +191,6 @@ export function CompactUserMenu() {
                     <User className="w-4 h-4" />
                     Profile
                   </Link>
-
-                  {userProfile.role === 'admin' && (
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Settings className="w-4 h-4" />
-                      Admin Settings
-                    </Link>
-                  )}
 
                   <button
                     onClick={handleLogout}

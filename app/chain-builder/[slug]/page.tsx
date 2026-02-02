@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ArrowLeft, Save, Loader2, Plus, Trash2, GripVertical,
-    ChevronDown, ChevronUp, ExternalLink, Settings, Eye
+    ArrowLeft, Save, Loader2, Plus, Settings, Eye, EyeOff,
+    CheckCircle2, AlertCircle, Keyboard
 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { NodeEditModal } from '@/components/chain-builder/NodeEditModal';
 import { ChainPreview } from '@/components/chain-builder/ChainPreview';
-import type { IdeaChainFull, IdeaNodeWithSource, ContributionType } from '@/lib/idea-chains/types';
-import { CONTRIBUTION_TYPE_CONFIG } from '@/lib/idea-chains/types';
+import { NodeCard, NodeConnector } from '@/components/chain-builder/NodeCard';
+import type { IdeaChainFull, IdeaNodeWithSource } from '@/lib/idea-chains/types';
 
-const STATUS_COLORS = {
-    draft: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-    review: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-    published: 'bg-green-500/10 text-green-600 border-green-500/20',
+const STATUS_CONFIG = {
+    draft: { bg: 'bg-yellow-500/10', text: 'text-yellow-600', border: 'border-yellow-500/20', label: 'Draft' },
+    review: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20', label: 'In Review' },
+    published: { bg: 'bg-green-500/10', text: 'text-green-600', border: 'border-green-500/20', label: 'Published' },
 };
 
 export default function ChainEditorPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -29,12 +29,14 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
     const [error, setError] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [showMetadata, setShowMetadata] = useState(false);
+    const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     // Node editing state
     const [editingNode, setEditingNode] = useState<IdeaNodeWithSource | null>(null);
     const [isCreatingNode, setIsCreatingNode] = useState(false);
 
-    // Metadata form state
+    // Metadata form state with dirty tracking
     const [metadataForm, setMetadataForm] = useState({
         title: '',
         title_hebrew: '',
@@ -42,10 +44,81 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
         status: 'draft' as 'draft' | 'review' | 'published',
         is_featured: false,
     });
+    const [isMetadataDirty, setIsMetadataDirty] = useState(false);
+    const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         fetchChain();
     }, [slug]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if typing in an input
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            // Cmd/Ctrl + N: New node
+            if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+                e.preventDefault();
+                if (!showPreview) setIsCreatingNode(true);
+            }
+            // Cmd/Ctrl + P: Toggle preview
+            if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+                e.preventDefault();
+                setShowPreview(prev => !prev);
+            }
+            // Cmd/Ctrl + ,: Toggle settings
+            if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+                e.preventDefault();
+                setShowMetadata(prev => !prev);
+            }
+            // Escape: Close modals
+            if (e.key === 'Escape') {
+                if (editingNode || isCreatingNode) {
+                    setEditingNode(null);
+                    setIsCreatingNode(false);
+                } else if (showKeyboardHelp) {
+                    setShowKeyboardHelp(false);
+                }
+            }
+            // ?: Show keyboard help
+            if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+                setShowKeyboardHelp(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showPreview, editingNode, isCreatingNode, showKeyboardHelp]);
+
+    // Autosave metadata when dirty
+    useEffect(() => {
+        if (!isMetadataDirty || !chain) return;
+
+        // Clear existing timer
+        if (autosaveTimerRef.current) {
+            clearTimeout(autosaveTimerRef.current);
+        }
+
+        // Set new timer for 2 seconds
+        autosaveTimerRef.current = setTimeout(() => {
+            saveMetadata(true);
+        }, 2000);
+
+        return () => {
+            if (autosaveTimerRef.current) {
+                clearTimeout(autosaveTimerRef.current);
+            }
+        };
+    }, [metadataForm, isMetadataDirty]);
+
+    // Mark metadata as dirty when form changes
+    const updateMetadataForm = useCallback((updates: Partial<typeof metadataForm>) => {
+        setMetadataForm(prev => ({ ...prev, ...updates }));
+        setIsMetadataDirty(true);
+    }, []);
 
     const fetchChain = async () => {
         setIsLoading(true);
@@ -79,10 +152,11 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
         }
     };
 
-    const saveMetadata = async () => {
+    const saveMetadata = async (isAutosave = false) => {
         if (!chain) return;
 
-        setIsSaving(true);
+        if (!isAutosave) setIsSaving(true);
+        setSaveStatus('saving');
         setError(null);
 
         try {
@@ -102,11 +176,18 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
 
             const updated = await response.json();
             setChain(prev => prev ? { ...prev, ...updated } : null);
-            setShowMetadata(false);
+            setIsMetadataDirty(false);
+            setSaveStatus('saved');
+
+            // Reset save status after 2 seconds
+            setTimeout(() => setSaveStatus('idle'), 2000);
+
+            if (!isAutosave) setShowMetadata(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save');
+            setSaveStatus('error');
         } finally {
-            setIsSaving(false);
+            if (!isAutosave) setIsSaving(false);
         }
     };
 
@@ -213,6 +294,8 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
         return 0;
     });
 
+    const statusConfig = STATUS_CONFIG[chain.status];
+
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
@@ -225,24 +308,67 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                                 className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <ArrowLeft className="h-4 w-4" />
-                                Back
+                                <span className="hidden sm:inline">Back</span>
                             </button>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <h1 className="text-xl font-semibold text-foreground">{chain.title}</h1>
+                                    <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">
+                                        {chain.title}
+                                    </h1>
                                     <Badge
                                         variant="outline"
-                                        className={`capitalize text-xs ${STATUS_COLORS[chain.status]}`}
+                                        className={`text-xs ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
                                     >
-                                        {chain.status}
+                                        {statusConfig.label}
                                     </Badge>
+                                    {/* Save status indicator */}
+                                    <AnimatePresence mode="wait">
+                                        {saveStatus === 'saving' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                            >
+                                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                            </motion.div>
+                                        )}
+                                        {saveStatus === 'saved' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                className="text-green-500"
+                                            >
+                                                <CheckCircle2 className="h-4 w-4" />
+                                            </motion.div>
+                                        )}
+                                        {saveStatus === 'error' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                className="text-red-500"
+                                            >
+                                                <AlertCircle className="h-4 w-4" />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                                 {chain.title_hebrew && (
-                                    <p className="text-sm text-muted-foreground" dir="rtl">{chain.title_hebrew}</p>
+                                    <p className="text-sm text-muted-foreground hidden sm:block" dir="rtl">{chain.title_hebrew}</p>
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            {/* Keyboard help */}
+                            <button
+                                onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+                                className="hidden sm:flex p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                title="Keyboard shortcuts (?)"
+                            >
+                                <Keyboard className="h-4 w-4" />
+                            </button>
+                            {/* Preview toggle */}
                             <button
                                 onClick={() => setShowPreview(!showPreview)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
@@ -250,16 +376,23 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                                         ? 'bg-primary text-primary-foreground'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                 }`}
+                                title="Toggle preview (⌘P)"
                             >
-                                <Eye className="h-4 w-4" />
-                                Preview
+                                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                <span className="hidden sm:inline">{showPreview ? 'Edit' : 'Preview'}</span>
                             </button>
+                            {/* Settings */}
                             <button
                                 onClick={() => setShowMetadata(!showMetadata)}
-                                className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                                    showMetadata
+                                        ? 'bg-muted text-foreground'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                }`}
+                                title="Settings (⌘,)"
                             >
                                 <Settings className="h-4 w-4" />
-                                Settings
+                                <span className="hidden sm:inline">Settings</span>
                             </button>
                         </div>
                     </div>
@@ -275,78 +408,133 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                 </div>
             )}
 
-            {/* Metadata Panel */}
-            {showMetadata && (
-                <div className="border-b border-border bg-muted/30">
-                    <div className="max-w-5xl mx-auto px-4 py-6">
-                        <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-                            <h3 className="font-semibold text-foreground">Chain Settings</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">Title</label>
-                                    <input
-                                        type="text"
-                                        value={metadataForm.title}
-                                        onChange={(e) => setMetadataForm(prev => ({ ...prev, title: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">Title (Hebrew)</label>
-                                    <input
-                                        type="text"
-                                        value={metadataForm.title_hebrew}
-                                        onChange={(e) => setMetadataForm(prev => ({ ...prev, title_hebrew: e.target.value }))}
-                                        dir="rtl"
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-                                    <textarea
-                                        value={metadataForm.description}
-                                        onChange={(e) => setMetadataForm(prev => ({ ...prev, description: e.target.value }))}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">Status</label>
-                                    <select
-                                        value={metadataForm.status}
-                                        onChange={(e) => setMetadataForm(prev => ({ ...prev, status: e.target.value as typeof metadataForm.status }))}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-background"
-                                    >
-                                        <option value="draft">Draft</option>
-                                        <option value="review">Review</option>
-                                        <option value="published">Published</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="is_featured"
-                                        checked={metadataForm.is_featured}
-                                        onChange={(e) => setMetadataForm(prev => ({ ...prev, is_featured: e.target.checked }))}
-                                        className="h-4 w-4 mr-2"
-                                    />
-                                    <label htmlFor="is_featured" className="text-sm">Featured chain</label>
-                                </div>
-                            </div>
-                            <div className="flex justify-end">
+            {/* Keyboard Shortcuts Help */}
+            <AnimatePresence>
+                {showKeyboardHelp && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-b border-border bg-muted/50 overflow-hidden"
+                    >
+                        <div className="max-w-5xl mx-auto px-4 py-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                                    <Keyboard className="h-4 w-4" />
+                                    Keyboard Shortcuts
+                                </h3>
                                 <button
-                                    onClick={saveMetadata}
-                                    disabled={isSaving}
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                                    onClick={() => setShowKeyboardHelp(false)}
+                                    className="text-xs text-muted-foreground hover:text-foreground"
                                 >
-                                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    Save Settings
+                                    Press ? to toggle
                                 </button>
                             </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div><kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">⌘N</kbd> <span className="text-muted-foreground ml-2">New node</span></div>
+                                <div><kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">⌘P</kbd> <span className="text-muted-foreground ml-2">Toggle preview</span></div>
+                                <div><kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">⌘,</kbd> <span className="text-muted-foreground ml-2">Settings</span></div>
+                                <div><kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">Esc</kbd> <span className="text-muted-foreground ml-2">Close modal</span></div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Metadata Panel */}
+            <AnimatePresence>
+                {showMetadata && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-b border-border bg-muted/30 overflow-hidden"
+                    >
+                        <div className="max-w-5xl mx-auto px-4 py-6">
+                            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold text-foreground">Chain Settings</h3>
+                                    {isMetadataDirty && (
+                                        <span className="text-xs text-muted-foreground">Autosave enabled</span>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-1">Title</label>
+                                        <input
+                                            type="text"
+                                            value={metadataForm.title}
+                                            onChange={(e) => updateMetadataForm({ title: e.target.value })}
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-1">Title (Hebrew)</label>
+                                        <input
+                                            type="text"
+                                            value={metadataForm.title_hebrew}
+                                            onChange={(e) => updateMetadataForm({ title_hebrew: e.target.value })}
+                                            dir="rtl"
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                                        <textarea
+                                            value={metadataForm.description}
+                                            onChange={(e) => updateMetadataForm({ description: e.target.value })}
+                                            rows={3}
+                                            placeholder="Describe what this chain traces and why it matters..."
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+                                        <select
+                                            value={metadataForm.status}
+                                            onChange={(e) => updateMetadataForm({ status: e.target.value as typeof metadataForm.status })}
+                                            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                                        >
+                                            <option value="draft">Draft - Work in progress</option>
+                                            <option value="review">Review - Ready for feedback</option>
+                                            <option value="published">Published - Visible to all</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="is_featured"
+                                            checked={metadataForm.is_featured}
+                                            onChange={(e) => updateMetadataForm({ is_featured: e.target.checked })}
+                                            className="h-4 w-4 mr-2 rounded border-border"
+                                        />
+                                        <label htmlFor="is_featured" className="text-sm">
+                                            Featured chain
+                                            <span className="text-xs text-muted-foreground ml-1">(Highlighted on homepage)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        onClick={() => setShowMetadata(false)}
+                                        className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                    <button
+                                        onClick={() => saveMetadata(false)}
+                                        disabled={isSaving || !isMetadataDirty}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                                    >
+                                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                        Save Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Main Content */}
             <main className="max-w-5xl mx-auto px-4 py-8">
@@ -354,14 +542,19 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                     <ChainPreview chain={chain} nodes={sortedNodes} />
                 ) : (
                     <div className="space-y-6">
-                        {/* Nodes Section */}
+                        {/* Nodes Section Header */}
                         <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Chain Nodes ({sortedNodes.length})
-                            </h2>
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-lg font-semibold text-foreground">
+                                    Chain Nodes
+                                </h2>
+                                <span className="px-2 py-0.5 text-sm bg-muted text-muted-foreground rounded-full">
+                                    {sortedNodes.length}
+                                </span>
+                            </div>
                             <button
                                 onClick={() => setIsCreatingNode(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                             >
                                 <Plus className="h-4 w-4" />
                                 Add Node
@@ -369,29 +562,38 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                         </div>
 
                         {sortedNodes.length === 0 ? (
-                            <Card className="p-8 text-center">
-                                <p className="text-muted-foreground mb-4">
-                                    No nodes yet. Add your first node to start building the chain.
-                                </p>
+                            /* Empty State - minimal */
+                            <div className="py-16 text-center text-muted-foreground border border-dashed border-border rounded-lg">
+                                <p>No nodes yet</p>
                                 <button
                                     onClick={() => setIsCreatingNode(true)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                                    className="mt-4 text-primary hover:underline"
                                 >
-                                    <Plus className="h-4 w-4" />
-                                    Add First Node
+                                    Add first node
                                 </button>
-                            </Card>
+                            </div>
                         ) : (
-                            <div className="space-y-4">
-                                {sortedNodes.map((node, index) => (
-                                    <NodeCard
-                                        key={node.id}
-                                        node={node}
-                                        index={index}
-                                        onEdit={() => setEditingNode(node)}
-                                        onDelete={() => handleNodeDelete(node.id)}
-                                    />
-                                ))}
+                            /* Node List */
+                            <div className="space-y-0">
+                                <AnimatePresence mode="popLayout">
+                                    {sortedNodes.map((node, index) => (
+                                        <React.Fragment key={node.id}>
+                                            <NodeCard
+                                                node={node}
+                                                index={index}
+                                                totalNodes={sortedNodes.length}
+                                                onEdit={() => setEditingNode(node)}
+                                                onDelete={() => handleNodeDelete(node.id)}
+                                                parentNodes={chain.links
+                                                    ?.filter(l => l.child_node_id === node.id)
+                                                    .map(l => sortedNodes.find(n => n.id === l.parent_node_id))
+                                                    .filter(Boolean) as IdeaNodeWithSource[]
+                                                }
+                                            />
+                                            {index < sortedNodes.length - 1 && <NodeConnector />}
+                                        </React.Fragment>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>
@@ -412,129 +614,5 @@ export default function ChainEditorPage({ params }: { params: Promise<{ slug: st
                 />
             )}
         </div>
-    );
-}
-
-// Node Card Component
-function NodeCard({
-    node,
-    index,
-    onEdit,
-    onDelete,
-}: {
-    node: IdeaNodeWithSource;
-    index: number;
-    onEdit: () => void;
-    onDelete: () => void;
-}) {
-    const [expanded, setExpanded] = useState(false);
-    const config = CONTRIBUTION_TYPE_CONFIG[node.contribution_type];
-
-    return (
-        <Card className="overflow-hidden">
-            <div className="p-4">
-                <div className="flex items-start gap-4">
-                    {/* Order indicator */}
-                    <div className="flex flex-col items-center text-muted-foreground">
-                        <GripVertical className="h-4 w-4 mb-1" />
-                        <span className="text-xs font-medium">{index + 1}</span>
-                    </div>
-
-                    {/* Main content */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-medium text-foreground">
-                                        {node.source?.title || 'Unknown Source'}
-                                    </span>
-                                    {node.approximate_year && (
-                                        <span className="text-xs text-muted-foreground">
-                                            ({node.approximate_year > 0 ? node.approximate_year : `${Math.abs(node.approximate_year)} BCE`})
-                                        </span>
-                                    )}
-                                    {node.is_origin && (
-                                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
-                                            Origin
-                                        </Badge>
-                                    )}
-                                </div>
-                                {node.citation_reference && (
-                                    <p className="text-sm text-muted-foreground mb-2">
-                                        {node.citation_reference}
-                                    </p>
-                                )}
-                                <Badge
-                                    variant="outline"
-                                    className={`text-xs bg-${config.color}-500/10 text-${config.color}-600 border-${config.color}-500/20`}
-                                >
-                                    {config.label}
-                                </Badge>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={onEdit}
-                                    className="px-3 py-1 text-sm text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={onDelete}
-                                    className="p-1 text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={() => setExpanded(!expanded)}
-                                    className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <p className="text-sm text-foreground mt-2">
-                            {node.contribution_summary}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Expanded content */}
-                {expanded && (
-                    <div className="mt-4 pt-4 border-t border-border space-y-4">
-                        {node.quote_hebrew && (
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground">Hebrew Quote</label>
-                                <p className="text-sm text-foreground mt-1" dir="rtl">{node.quote_hebrew}</p>
-                            </div>
-                        )}
-                        {node.quote_translated && (
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground">Translation</label>
-                                <p className="text-sm text-foreground mt-1">{node.quote_translated}</p>
-                            </div>
-                        )}
-                        {node.base_idea_summary && (
-                            <div>
-                                <label className="text-xs font-medium text-muted-foreground">Base Idea</label>
-                                <p className="text-sm text-foreground mt-1">{node.base_idea_summary}</p>
-                            </div>
-                        )}
-                        {node.external_url && (
-                            <a
-                                href={node.external_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                            >
-                                <ExternalLink className="h-3 w-3" />
-                                View Source
-                            </a>
-                        )}
-                    </div>
-                )}
-            </div>
-        </Card>
     );
 }

@@ -41,7 +41,7 @@ const sectionConfig: Record<string, SectionConfig> = {
 
 interface ArticleSectionProps {
     type: string;
-    content: string;
+    content: string | React.ReactNode;
 }
 
 interface ArticleSectionContentProps {
@@ -51,14 +51,21 @@ interface ArticleSectionContentProps {
 }
 
 export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSectionContentProps) => {
+    // If content is not a string (null, undefined, or React node), handle appropriately
+    if (!section.content || typeof section.content !== 'string') {
+        return <>{section.content || null}</>;
+    }
+
+    // At this point, TypeScript knows section.content is a string
+    const content = section.content;
 
     const glossaryItems = useMemo(() => {
         if (['definition', 'mashal', 'personal_nimshal', 'global_nimshal'].includes(section.type)) {
-            const textContent = section.content.replace(/<[^>]*>/g, ' ');
+            const textContent = content.replace(/<[^>]*>/g, ' ');
             return parseGlossaryContent(textContent, topic.canonical_title, topic.name_hebrew);
         }
         return null;
-    }, [section.type, section.content, topic.canonical_title, topic.name_hebrew]);
+    }, [section.type, content, topic.canonical_title, topic.name_hebrew]);
 
     // Detect if content is markdown (contains markdown bullets, tables, or headers)
     const isMarkdown = useMemo(() => {
@@ -69,22 +76,22 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
             /^\s*\|.*\|.*\|/m,           // Tables
             /^\s*[-]{3,}/m               // Horizontal rules
         ];
-        return markdownPatterns.some(pattern => pattern.test(section.content));
-    }, [section.content]);
+        return markdownPatterns.some(pattern => pattern.test(content));
+    }, [content]);
 
     const isGlossary = glossaryItems && glossaryItems.length > 0;
-    const isSoulLevelContent = section.content.includes('Nefesh') && section.content.includes('Yechidah');
-    const isTabularData = section.content.includes('Reference Chart') || (section.content.includes('\t') && section.content.split('\n').length > 5);
+    const isSoulLevelContent = content.includes('Nefesh') && content.includes('Yechidah');
+    const isTabularData = content.includes('Reference Chart') || (content.includes('\t') && content.split('\n').length > 5);
     const config = sectionConfig[section.type];
     const Icon = config?.icon;
 
     // Custom renderer for specific content
     if (isSoulLevelContent) {
-        return <SoulLevelsDisplay content={section.content} />;
+        return <SoulLevelsDisplay content={content} />;
     }
     
     if (isTabularData) {
-        return <TabularDataDisplay content={section.content} />;
+        return <TabularDataDisplay content={content} />;
     }
 
     // Special case: Sefiros Chart for the Sefiros topic
@@ -120,7 +127,7 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
             ) : isMarkdown ? (
                 <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline prose-ul:list-disc prose-ul:space-y-2 prose-ol:list-decimal prose-ol:space-y-2 prose-li:ml-4 prose-li:leading-relaxed prose-table:w-full prose-table:border-collapse prose-table:shadow-sm prose-table:rounded-lg prose-table:overflow-hidden prose-thead:bg-gradient-to-r prose-thead:from-muted/80 prose-thead:to-muted/60 prose-th:text-left prose-th:font-semibold prose-th:text-sm prose-th:uppercase prose-th:tracking-wide prose-th:px-6 prose-th:py-4 prose-th:border-b-2 prose-th:border-border/50 prose-td:px-6 prose-td:py-4 prose-td:border-b prose-td:border-border/30 prose-tr:transition-colors hover:prose-tr:bg-muted/20 prose-tbody:divide-y prose-tbody:divide-border/20">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {section.content}
+                        {content}
                     </ReactMarkdown>
                 </div>
             ) : (
@@ -132,7 +139,7 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
                         // Regex to match plain text citations like [section 1], [ch. 5], [p. 23], etc.
                         const plainCitationRegex = /\[([^\]]+)\]/g;
                         
-                        return parse(DOMPurify.sanitize(section.content, {
+                        return parse(DOMPurify.sanitize(content, {
                             ADD_TAGS: ['span'],
                             ADD_ATTR: ['class', 'data-citation-id', 'data-source-id', 'data-source-title', 'data-reference', 'data-quote', 'data-note', 'data-url']
                         }), {

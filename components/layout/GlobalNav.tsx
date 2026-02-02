@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { BookOpen, Search, ArrowLeft, Home } from 'lucide-react';
 import { useSearch } from '@/lib/search-context';
 import { ThemeToggleCompact } from '@/components/layout/ThemeToggle';
+import { LanguageToggleCompact } from '@/components/layout/LanguageToggle';
 import { CompactUserMenu } from '@/components/auth/CompactUserMenu';
 import { cn } from '@/lib/utils';
 
@@ -120,6 +121,7 @@ export function GlobalNav({
                             ⌘K
                         </kbd>
                     </button>
+                    <LanguageToggleCompact />
                     <ThemeToggleCompact />
                     <CompactUserMenu />
                 </div>

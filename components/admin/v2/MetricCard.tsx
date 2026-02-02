@@ -35,15 +35,15 @@ export function MetricCard({
 
   return (
     <div className={cn(
-      "p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300",
-      "hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer"
+      "p-6 rounded-2xl border border-border bg-card transition-all duration-300",
+      "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10 group cursor-pointer"
     )}>
       <div className="flex items-start justify-between mb-4">
         <div className={cn(
           "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
-          "bg-primary/5"
+          "bg-primary/10"
         )}>
-          <Icon className={cn("w-5 h-5", "text-primary/70")} />
+          <Icon className={cn("w-5 h-5", "text-primary")} />
         </div>
         {change !== undefined && trend && (
           <div className={cn(

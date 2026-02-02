@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
+import { formatCitationString } from '@/lib/citations/citationFormatter';
 
 const directus = createClient();
 
@@ -27,12 +28,18 @@ export async function GET(request: NextRequest) {
           'external_url',
           'citation_text',
           'author_id',
+          'parent_id',
+          'page_number',
+          'page_count',
+          'parsha',
+          'metadata',
         ] as any,
         filter: {
           _or: [
             { title: { _icontains: query } },
             { citation_text: { _icontains: query } },
             { publisher: { _icontains: query } },
+            { parsha: { _icontains: query } },
           ],
         },
         limit,
@@ -40,17 +47,35 @@ export async function GET(request: NextRequest) {
       } as any)
     );
 
-    // Transform to include author info (author_id is not expanded, just the raw ID)
-    const transformedSources = (sources as any[]).map((source) => ({
-      id: source.id,
-      title: source.title,
-      author_id: source.author_id || null,
-      publication_year: source.publication_year,
-      publisher: source.publisher,
-      external_system: source.external_system,
-      external_url: source.external_url,
-      citation_text: source.citation_text,
-    }));
+    // Transform to include formatted title
+    const transformedSources = (sources as any[]).map((source) => {
+      // Generate formatted citation title
+      const formattedTitle = formatCitationString({
+        id: source.id,
+        title: source.title,
+        page_number: source.page_number,
+        page_count: source.page_count,
+        parsha: source.parsha,
+        metadata: source.metadata,
+        rootSourceId: source.metadata?.type === 'sicha' ? 256 : undefined,
+      });
+
+      return {
+        id: source.id,
+        title: source.title,
+        formatted_title: formattedTitle,
+        author_id: source.author_id || null,
+        publication_year: source.publication_year,
+        publisher: source.publisher,
+        external_system: source.external_system,
+        external_url: source.external_url,
+        citation_text: source.citation_text,
+        parent_id: source.parent_id,
+        page_number: source.page_number,
+        page_count: source.page_count,
+        parsha: source.parsha,
+      };
+    });
 
     return NextResponse.json({ data: transformedSources });
   } catch (error) {

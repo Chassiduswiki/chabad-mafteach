@@ -37,11 +37,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protected routes
-  const isEditorRoute = pathname.startsWith('/editor');
-  const isAdminRoute = pathname.startsWith('/admin');
+  // Protected routes by access level
+  const isEditorRoute = pathname.startsWith('/editor') ||
+                        pathname.startsWith('/chain-builder') ||
+                        pathname === '/collections/new';
+  const isAdminRoute = pathname.startsWith('/admin') ||
+                       pathname.startsWith('/analytics');
+  const isAuthenticatedRoute = pathname === '/profile';
 
-  if (!isEditorRoute && !isAdminRoute) {
+  if (!isEditorRoute && !isAdminRoute && !isAuthenticatedRoute) {
     return NextResponse.next();
   }
 
@@ -73,6 +77,8 @@ export async function middleware(request: NextRequest) {
       // Redirect non-editors/non-admins away from editor pages
       return NextResponse.redirect(new URL('/topics', request.url));
     }
+
+    // Authenticated routes just need a valid token (already verified above)
 
     // Add user info to request headers for use in API routes
     const requestHeaders = new Headers(request.headers);

@@ -76,7 +76,8 @@ import { ArticleSectionContent } from '@/components/topics/ArticleSectionContent
 import { AnnotationHighlight } from '@/components/topics/annotations/AnnotationHighlight';
 import { SerendipityCard } from '@/components/features/SerendipityCard';
 import { GlobalNav } from '@/components/layout/GlobalNav';
-import { LanguageSelector } from '@/components/LanguageSelector';
+import { useLanguageSafe } from '@/components/providers/LanguageProvider';
+import { TranslationStatusBanner } from '@/components/topics/TranslationStatusBanner';
 import { TopicAnnotations } from '@/components/annotations/TopicAnnotations';
 import { MobileFeedbackButton } from '@/components/feedback/MobileFeedbackButton';
 import { TranslationFeedback } from '@/components/feedback/TranslationFeedback';
@@ -183,26 +184,6 @@ function linkifyTopicReferences(text: string, availableTopics: Array<{ name?: st
     }
 
     return parts.length > 0 ? <>{parts}</> : text;
-}
-
-// Language Selector Wrapper Component
-function LanguageSelectorWrapper({ topicSlug }: { topicSlug: string }) {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const currentLang = searchParams.get('lang') || 'en';
-
-    const handleLanguageChange = (newLang: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('lang', newLang);
-        router.push(`/topics/${topicSlug}?${params.toString()}`);
-    };
-
-    return (
-        <LanguageSelector
-            value={currentLang}
-            onChange={handleLanguageChange}
-        />
-    );
 }
 
 // Config
@@ -313,12 +294,16 @@ interface GraphEdge {
 }
 
 export function TopicExperienceV2({ topic, relatedTopics, sources, citations, inlineCitations }: TopicExperienceProps) {
+    const { language: currentLanguage } = useLanguageSafe();
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
     const [isLoading, setIsLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(false);
     const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
     const [hasTranslations, setHasTranslations] = useState(false);
     const [showStickyTitle, setShowStickyTitle] = useState(false);
+    const [isFallbackLanguage, setIsFallbackLanguage] = useState(false);
+    const [translationQuality, setTranslationQuality] = useState<string | undefined>();
+    const [isMachineTranslated, setIsMachineTranslated] = useState(false);
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
     const [isDeepDiveOpen, setIsDeepDiveOpen] = useState(false);
     const [isTranslationFeedbackOpen, setIsTranslationFeedbackOpen] = useState(false);
@@ -429,37 +414,48 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
         }
     }, [topic.id]);
 
-    // Fetch conceptual variants for current language
+    // Fetch conceptual variants and translation status for current language
     useEffect(() => {
-        async function fetchConceptualVariants() {
+        async function fetchTranslationData() {
             try {
-                const searchParams = new URLSearchParams(window.location.search);
-                const currentLang = searchParams.get('lang') || 'en';
-
-                const res = await fetch(`/api/topics/translations?topic_id=${topic.id}&language=${currentLang}`);
+                const res = await fetch(`/api/topics/translations?topic_id=${topic.id}&language=${currentLanguage}`);
                 if (res.ok) {
                     const translations = await res.json();
                     if (Array.isArray(translations) && translations.length > 0) {
                         const translation = translations[0];
+                        // Set conceptual variants
                         if (translation.conceptual_variants && Array.isArray(translation.conceptual_variants)) {
                             setConceptualVariants(translation.conceptual_variants);
                         } else {
                             setConceptualVariants([]);
                         }
+                        // Set translation status
+                        setTranslationQuality(translation.translation_quality);
+                        setIsMachineTranslated(translation.is_machine_translated || false);
+                        // Check if we're showing fallback content
+                        const topicCurrentLang = (topic as any).current_language;
+                        setIsFallbackLanguage(
+                            currentLanguage !== 'en' &&
+                            (!translation.description || topicCurrentLang !== currentLanguage)
+                        );
                     } else {
                         setConceptualVariants([]);
+                        // No translation found for this language - fallback
+                        setIsFallbackLanguage(currentLanguage !== 'en');
+                        setTranslationQuality(undefined);
+                        setIsMachineTranslated(false);
                     }
                 }
             } catch (e) {
-                console.error('Failed to fetch conceptual variants:', e);
+                console.error('Failed to fetch translation data:', e);
                 setConceptualVariants([]);
             }
         }
 
         if (topic.id && typeof window !== 'undefined') {
-            fetchConceptualVariants();
+            fetchTranslationData();
         }
-    }, [topic.id]);
+    }, [topic.id, currentLanguage, topic]);
 
     const sectionRefs = useRef<Record<SectionType, HTMLElement | null>>({
         definition: null,
@@ -828,19 +824,16 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
                                 </span>
                                 <h2 className="font-semibold text-foreground truncate">{topic.canonical_title}</h2>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {isAuthorized && (
-                                    <Link
-                                        href={`/editor/topics/${topic.slug}`}
-                                        className="p-1.5 rounded-lg hover:bg-primary/5 text-primary transition-colors flex items-center gap-1.5"
-                                        title="Edit Topic"
-                                    >
-                                        <Edit3 className="w-4 h-4" />
-                                        <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>
-                                    </Link>
-                                )}
-                                <LanguageSelectorWrapper topicSlug={topic.slug} />
-                            </div>
+                            {isAuthorized && (
+                                <Link
+                                    href={`/editor/topics/${topic.slug}`}
+                                    className="p-1.5 rounded-lg hover:bg-primary/5 text-primary transition-colors flex items-center gap-1.5"
+                                    title="Edit Topic"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Edit</span>
+                                </Link>
+                            )}
                         </div>
                     </div>
 
@@ -917,6 +910,15 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
 
                 {/* Main Content */}
                 <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 pb-48">
+                    {/* Translation Status Banner */}
+                    <TranslationStatusBanner
+                        currentLanguage={(topic as any).current_language || 'en'}
+                        requestedLanguage={currentLanguage}
+                        isFallback={isFallbackLanguage}
+                        translationQuality={translationQuality}
+                        isMachineTranslated={isMachineTranslated}
+                    />
+
                     {/* Article Sections */}
                     {sections.map((section) => {
                         const config = sectionConfig[section.type];
