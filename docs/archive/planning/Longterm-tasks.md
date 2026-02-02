@@ -65,7 +65,7 @@
 **Impact:** Users cannot effectively insert citations into content
 
 **Issues Identified:**
-- [ ] **Dropdown Visibility Problem** - Search results dropdown is completely invisible
+- [x] **Dropdown Visibility Problem** - Search results dropdown is completely invisible ✅ FIXED
 - [ ] **Search Functionality** - Multi-term search was broken (recently fixed)
 - [ ] **Modal Layout** - Layout breaks on smaller screens
 - [ ] **Keyboard Navigation** - Arrow keys and Enter not working properly
@@ -73,10 +73,16 @@
 - [ ] **Source Linking** - Integration with Directus source_links table needs verification
 
 **Root Causes:**
-- CSS z-index conflicts causing dropdown to render behind other elements
-- Missing CSS classes for dropdown visibility
-- Event handling conflicts between modal and dropdown
-- Inconsistent state management in citation flow
+- [x] CSS z-index conflicts causing dropdown to render behind other elements ✅ FIXED
+- [ ] Missing CSS classes for dropdown visibility
+- [ ] Event handling conflicts between modal and dropdown
+- [ ] Inconsistent state management in citation flow
+
+**Fixes Applied:**
+- ✅ **P0 - Dropdown Visibility** - Fixed z-index from z-20 to z-[90]
+- ✅ **Dropdown Scrolling** - Added max-h-64 and overflow-y-auto for long lists
+- ✅ **Modal Responsiveness** - Added flex layout and mobile breakpoints
+- ✅ **Visual Improvements** - Added separators and better styling
 
 **Technical Details:**
 ```typescript
