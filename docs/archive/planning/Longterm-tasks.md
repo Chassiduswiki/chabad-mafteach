@@ -55,7 +55,8 @@
 ### ⏳ In Progress
 - [ ] **Advanced Search & Discovery** - Enhancing semantic search capabilities
 - [ ] **Inline Citation Enhancement** - Improving citation management workflows
-- [ ] **Citation Modal UI Fixes** - Critical UX issues with citation insertion modal
+- [ ] **Citation Modal UI Fixes** - Critical UX issues with citation insertion modal ✅ FIXED
+- [ ] **Source Linking System Development** - Multi-platform source reference integration
 
 ### 🚨 Critical Issues - Immediate Attention Required
 
@@ -98,11 +99,142 @@
 3. **P2 - Keyboard Navigation** - Restore arrow key and Enter functionality
 4. **P3 - Modal Layout** - Fix responsive design issues
 
-**Related Components:**
-- `components/editor/EliteCitationModal.tsx` - Main modal component
-- `components/editor/CitationInsertModal.tsx` - Alternative modal
-- `components/editor/HierarchicalCitationModal.tsx` - Browse functionality
-- `app/api/sources/search/route.ts` - Search API endpoint
+#### Source Linking System - Multi-Platform Integration
+**Status:** In Progress - Foundation Complete  
+**Last Updated:** February 2, 2026  
+**Impact:** Enables rich, cross-referenced source linking across multiple platforms
+
+### 🏗️ What We Built
+
+#### Collections Created
+```
+┌──────────────────────┬──────────────────────────────────────────────┐
+│      Collection      │                   Purpose                    │
+├──────────────────────┼──────────────────────────────────────────────┤
+│ source_books         │ Book registry with platform IDs              │
+├──────────────────────┼──────────────────────────────────────────────┤
+│ source_book_chapters │ Chapters with page boundaries + platform IDs │
+└──────────────────────┴──────────────────────────────────────────────┘
+```
+
+#### Files Created
+```
+┌────────────────────────────────────────────┬───────────────────────────────────────────┐
+│                    File                    │                  Purpose                  │
+├────────────────────────────────────────────┼───────────────────────────────────────────┤
+│ scripts/create-source-books-collections.ts │ Directus schema migration                 │
+├────────────────────────────────────────────┼───────────────────────────────────────────┤
+│ scripts/add-derech-mitzvosecha.ts          │ Test data + Chabad.org sync               │
+├────────────────────────────────────────────┼───────────────────────────────────────────┤
+│ lib/source-links/index.ts                  │ URL generation + API sync utilities       │
+├────────────────────────────────────────────┼───────────────────────────────────────────┤
+│ lib/types/index.ts                         │ Added SourceBook, SourceBookChapter types │
+└────────────────────────────────────────────┴───────────────────────────────────────────┘
+```
+
+#### 🎯 Test Implementation: Derech Mitzvosecha
+- **Book ID**: `d7bf9b4e-50e5-41c2-8b11-a1100b8dee1e`
+- **Chapters**: 75 (auto-synced from Chabad.org)
+- **HebrewBooks ID**: 16082 (offset: 10)
+- **Chabad.org root**: 5580713
+- **Sefaria slug**: Derekh_Mitzvotekha
+- **ChabadLibrary**: 2900000000
+
+#### ✨ The Magic
+**Scholar inputs:**
+- HebrewBooks ID: 16082
+- Offset: 10
+- Chabad.org root ID: 5580713
+
+**System auto-fetches 75 chapter names + article IDs from Chabad.org API.**
+
+**Now you can generate links like:**
+```typescript
+hebrewBooksPageUrl(book, 5)  → hebrewbooks.org/pdfpager.aspx?req=16082&pgnum=15
+chabadOrgChapterUrl(chapter) → chabad.org/torah-texts/5878273
+```
+
+### 📋 Next Steps
+
+#### Phase 1: API Development (Immediate)
+- [ ] **Build API endpoint for link resolution**
+  - Create `/api/sources/resolve` endpoint
+  - Handle page-to-chapter mapping
+  - Return platform-specific URLs
+  - Support multiple source types
+
+#### Phase 2: Data Enhancement (Manual Work Required)
+- [ ] **Add page boundaries to chapters**
+  - Manual process for each book
+  - Define chapter start/end pages
+  - Validate page ranges
+  - Create UI for boundary management
+
+#### Phase 3: Catalog Expansion
+- [ ] **Add more books to the catalog**
+  - Prioritize commonly cited works
+  - Batch import from HebrewBooks
+  - Auto-sync from Chabad.org
+  - Expand to other platforms (Sefaria, Otzar)
+
+#### Phase 4: Integration
+- [ ] **Integrate with citation system**
+  - Auto-generate links from citations
+  - Display platform options in citation modal
+  - Add link preview functionality
+  - Track link usage analytics
+
+### 🔧 Technical Architecture
+
+#### URL Generation System
+```typescript
+// Platform-specific URL generators
+hebrewBooksPageUrl(book, page)     → HebrewBooks PDF
+chabadOrgChapterUrl(chapter)       → Chabad.org article  
+lahakChapterUrl(chapter)          → Lahak.org content
+sefariaRefUrl(ref)                → Sefaria text
+```
+
+#### Data Flow
+```
+1. Scholar inputs platform IDs
+2. System fetches chapter data from APIs
+3. Page boundaries defined manually
+4. Link resolution API generates URLs
+5. Citation system displays links
+```
+
+#### Database Schema
+```sql
+source_books:
+  - id, title, hebrewbooks_id, chabad_org_root_id
+  - sefaria_slug, chabad_library_id
+  - hebrewbooks_offset
+
+source_book_chapters:
+  - id, book_id, chapter_number, title
+  - hebrewbooks_start_page, hebrewbooks_end_page
+  - chabad_org_article_id, lahak_content_id
+```
+
+### 🎯 Success Metrics
+
+**Foundation Complete:**
+- ✅ Database schema created
+- ✅ Auto-sync from Chabad.org working
+- ✅ URL generation utilities built
+- ✅ Test data successfully loaded
+
+**Next Phase Goals:**
+- 🎯 API endpoint for link resolution
+- 🎯 Manual page boundary completion
+- 🎯 10+ additional books in catalog
+- 🎯 Integration with citation modal
+
+### 📚 Related Documentation
+- **[SOURCE_LINKING_BRAINSTORM.md](../docs/SOURCE_LINKING_BRAINSTORM.md)** - Initial planning and ideas
+- **[scripts/create-source-books-collections.ts](../../scripts/create-source-books-collections.ts)** - Schema migration script
+- **[lib/source-links/index.ts](../../lib/source-links/index.ts)** - URL generation utilities
 
 ### 📋 Planned (Future Phases)
 
