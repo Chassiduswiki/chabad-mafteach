@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 import { readUsers, updateUsers, readRoles } from '@directus/sdk';
 
-export const POST = requireAuth(async (req: NextRequest, context) => {
-    try {
-        if (context.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+export const POST = requirePermission('canManageUsers', withAudit('update', 'admin.users', async (req: NextRequest, _context, params?: { params?: { userId?: string } }) => {
+    const rateLimited = enforceRateLimit(req, adminWriteRateLimit);
+    if (rateLimited) return rateLimited;
 
-        const { userId } = context;
+    try {
+        const targetUserId = params?.params?.userId;
         const { role } = await req.json();
+
+        if (!targetUserId) {
+            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+        }
 
         if (!role || !['user', 'editor'].includes(role)) {
             return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
@@ -21,7 +26,7 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
         // Get the target user
         const users = await directus.request(
             readUsers({
-                filter: { id: { _eq: userId } },
+                filter: { id: { _eq: targetUserId } },
                 limit: 1
             })
         );
@@ -53,7 +58,7 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
 
         // Update user's role
         await directus.request(
-            updateUsers([userId], {
+            updateUsers([targetUserId], {
                 role: targetRoleId
             })
         );
@@ -67,4 +72,4 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
         console.error('Role promotion error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-});
+}));

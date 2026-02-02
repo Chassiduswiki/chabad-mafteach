@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { updateItem } from '@directus/sdk';
-import { verifyAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * PATCH /api/admin/content/bulk
@@ -9,17 +11,20 @@ import { verifyAuth } from '@/lib/auth';
  * Generic bulk update for any collection (topics, statements, etc.)
  * Restricted to admins and editors.
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = verifyAuth(request);
-    if (!auth || !['admin', 'editor'].includes(auth.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+export const PATCH = requirePermission('canEditTopics', withAudit('update', 'admin.content.bulk', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
 
+  try {
     const { type, ids, updates } = await request.json();
 
     if (!type || !ids || !Array.isArray(ids) || ids.length === 0 || !updates) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const allowedTypes = new Set(['topics', 'statements']);
+    if (!allowedTypes.has(type)) {
+      return NextResponse.json({ error: 'Invalid content type' }, { status: 400 });
     }
 
     const directus = createClient();
@@ -49,4 +54,4 @@ export async function PATCH(request: NextRequest) {
     console.error('Bulk update route error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}));

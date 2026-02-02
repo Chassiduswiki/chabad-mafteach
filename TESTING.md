@@ -14,7 +14,7 @@ This project includes a comprehensive testing suite covering unit tests, integra
 - **User Journey Tests**: Test complete user workflows from start to finish
 - **Cross-browser Tests**: Ensure compatibility across different browsers
 - **Responsive Tests**: Verify mobile and desktop experiences
-- **Accessibility Tests**: Check for proper ARIA labels and keyboard navigation
+- **Accessibility Tests**: Automated axe-core checks for serious/critical violations
 
 ## Running Tests
 
@@ -46,6 +46,15 @@ npm run test:e2e:headed
 
 # Debug E2E tests
 npm run test:e2e:debug
+```
+
+### Load & Performance Tests
+```bash
+# Run lightweight load test against key API endpoints
+npm run load-test
+
+# Optional tuning
+# LOAD_TEST_ITERATIONS=50 LOAD_TEST_CONCURRENCY=10 npm run load-test
 ```
 
 ## Test Coverage Goals
@@ -114,6 +123,7 @@ Tests run automatically on:
 - Component render time benchmarks
 - API response time validation
 - Bundle size monitoring
+- Lightweight load test for key endpoints
 
 ## Database Testing
 

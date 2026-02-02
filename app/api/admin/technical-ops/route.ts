@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/directus';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { semanticCache } from '@/lib/cache-optimization';
+import { getBaseUrl } from '@/lib/utils/base-url';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/admin/technical-ops
  * Returns the status of various technical operations
  */
-export const GET = requireAuth(async (req: NextRequest, context) => {
-  try {
-    if (context.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+export const GET = requireAdmin(withAudit('read', 'admin.technical-ops', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
 
+  try {
     // Real status checks would go here
     return NextResponse.json({
       cache: { 
@@ -34,18 +36,17 @@ export const GET = requireAuth(async (req: NextRequest, context) => {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-});
+}));
 
 /**
  * POST /api/admin/technical-ops
  * Triggers specific technical operations
  */
-export const POST = requireAuth(async (req: NextRequest, context) => {
-  try {
-    if (context.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+export const POST = requireAdmin(withAudit('update', 'admin.technical-ops', async (req: NextRequest, context) => {
+  const rateLimited = enforceRateLimit(req, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
 
+  try {
     const { action } = await req.json();
     console.log(`[Tech Ops] Action triggered by ${context.userId}: ${action}`);
 
@@ -66,6 +67,15 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
           message: 'Database optimization tasks (ANALYZE, index maintenance) queued.' 
         });
       
+      case 'warm-cache': {
+        const baseUrl = getBaseUrl();
+        await semanticCache.warmPopularQueries({ baseUrl });
+        return NextResponse.json({
+          success: true,
+          message: 'Cache warming complete. Popular queries have been preloaded.'
+        });
+      }
+
       case 'purge-storage':
         // Logic to clean up temp files or orphaned records
         return NextResponse.json({ 
@@ -80,4 +90,4 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
     console.error('Technical Ops error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-});
+}));

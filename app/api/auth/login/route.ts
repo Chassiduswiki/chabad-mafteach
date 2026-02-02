@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
 import { SECURITY } from '@/lib/constants';
 import { setAuthCookie, setAuthStatusCookie } from '@/lib/cookie-utils';
+import { recordAuditEvent } from '@/lib/security/audit';
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -107,6 +108,16 @@ export async function POST(request: NextRequest) {
         recordFailedLogin(email);
         const errorData = await loginResponse.json().catch(() => ({}));
         console.error('Directus login failed:', errorData);
+        void recordAuditEvent({
+          userId: email || 'unknown',
+          action: 'login',
+          resource: 'auth.login',
+          timestamp: new Date().toISOString(),
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          success: false,
+          metadata: { reason: `directus_${loginResponse.status}` }
+        });
         
         // Provide more specific error messages
         if (loginResponse.status === 401) {
@@ -132,6 +143,16 @@ export async function POST(request: NextRequest) {
 
       if (!directusAccessToken) {
         console.error('No access token in Directus response');
+        void recordAuditEvent({
+          userId: email || 'unknown',
+          action: 'login',
+          resource: 'auth.login',
+          timestamp: new Date().toISOString(),
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          success: false,
+          metadata: { reason: 'missing_directus_token' }
+        });
         return NextResponse.json(
           { error: 'Authentication failed' },
           { status: 401 }
@@ -145,6 +166,16 @@ export async function POST(request: NextRequest) {
 
       if (!userDetailsResponse.ok) {
         console.error('Failed to fetch user details');
+        void recordAuditEvent({
+          userId: email || 'unknown',
+          action: 'login',
+          resource: 'auth.login',
+          timestamp: new Date().toISOString(),
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          success: false,
+          metadata: { reason: 'user_details_failed' }
+        });
         return NextResponse.json(
           { error: 'Failed to retrieve user information' },
           { status: 401 }
@@ -164,6 +195,16 @@ export async function POST(request: NextRequest) {
 
       // Record successful login (resets lockout counter)
       recordSuccessfulLogin(email);
+      void recordAuditEvent({
+        userId: directusUser.id,
+        action: 'login',
+        resource: 'auth.login',
+        timestamp: new Date().toISOString(),
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        success: true,
+        metadata: { role }
+      });
 
       // Create our App JWT tokens
       const accessToken = createAuthToken(directusUser.id, role);
@@ -192,6 +233,16 @@ export async function POST(request: NextRequest) {
     } catch (directusError) {
       console.error('Directus auth error:', directusError);
       recordFailedLogin(email);
+      void recordAuditEvent({
+        userId: email || 'unknown',
+        action: 'login',
+        resource: 'auth.login',
+        timestamp: new Date().toISOString(),
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        success: false,
+        metadata: { reason: 'directus_error' }
+      });
       return NextResponse.json(
         { error: 'Authentication failed' },
         { status: 401 }
@@ -200,6 +251,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
+    void recordAuditEvent({
+      userId: 'unknown',
+      action: 'login',
+      resource: 'auth.login',
+      timestamp: new Date().toISOString(),
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') || 'unknown',
+      success: false,
+      metadata: { reason: 'server_error' }
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

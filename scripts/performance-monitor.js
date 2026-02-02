@@ -79,6 +79,50 @@ function analyzeBundleSize() {
   console.log(`🎯 Total static assets: ${formatBytes(staticSize)}`);
 }
 
+function getBundleStats() {
+  if (!fs.existsSync(BUILD_DIR)) {
+    return {
+      available: false,
+      reason: 'Build directory not found',
+      chunks: [],
+      chunkCount: 0,
+      totalChunkSize: 0,
+      averageChunkSize: 0,
+      staticSize: 0,
+    };
+  }
+
+  const chunksDir = path.join(STATIC_DIR, 'chunks');
+  let chunkFiles = [];
+  let totalChunkSize = 0;
+  const largeChunks = [];
+
+  if (fs.existsSync(chunksDir)) {
+    chunkFiles = fs.readdirSync(chunksDir).filter(f => f.endsWith('.js'));
+    chunkFiles.forEach(file => {
+      const filePath = path.join(chunksDir, file);
+      const size = fs.statSync(filePath).size;
+      totalChunkSize += size;
+
+      if (size > 500 * 1024) {
+        largeChunks.push({ file, size });
+      }
+    });
+  }
+
+  const staticSize = getDirectorySize(STATIC_DIR);
+  const averageChunkSize = chunkFiles.length ? totalChunkSize / chunkFiles.length : 0;
+
+  return {
+    available: true,
+    chunks: largeChunks,
+    chunkCount: chunkFiles.length,
+    totalChunkSize,
+    averageChunkSize,
+    staticSize,
+  };
+}
+
 function checkBuildArtifacts() {
   console.log('\n🔍 Build Artifacts Check');
   console.log('='.repeat(50));
@@ -133,4 +177,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { analyzeBundleSize, checkBuildArtifacts, performanceRecommendations };
+module.exports = { analyzeBundleSize, checkBuildArtifacts, performanceRecommendations, getBundleStats, formatBytes };

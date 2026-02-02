@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readSingleton, updateSingleton } from '@directus/sdk';
-import { verifyAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -124,7 +126,10 @@ async function writeToDirectus(settings: StyleSettings): Promise<boolean> {
  * GET /api/admin/branding/style
  * Returns current branding settings with intelligent fallback
  */
-export async function GET(req: NextRequest) {
+export const GET = requireAdmin(withAudit('read', 'admin.branding.style', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
+
   try {
     // Check cache first for performance
     const now = Date.now();
@@ -169,26 +174,17 @@ export async function GET(req: NextRequest) {
       source: 'error-fallback'
     });
   }
-}
+}));
 
 /**
  * POST /api/admin/branding/style
  * Saves branding settings with multi-layer persistence
  */
-export async function POST(req: NextRequest) {
+export const POST = requireAdmin(withAudit('update', 'admin.branding.style', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
+
   try {
-    // Verify admin authentication
-    const auth = verifyAuth(req);
-    const isDev = process.env.NODE_ENV === 'development';
-
-    if (!auth && !isDev) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (auth && auth.role !== 'admin' && !isDev) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
     const { settings } = await req.json();
 
     if (!settings) {
@@ -246,4 +242,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+}));

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "npm run performance",
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
@@ -18,7 +19,8 @@
     "test:e2e:debug": "playwright test --debug",
     "performance": "node scripts/performance-monitor.js",
     "db:optimize": "node scripts/database-optimization.js",
-    "db:cleanup": "node scripts/cleanup-data-integrity.js"
+    "db:cleanup": "node scripts/cleanup-data-integrity.js",
+    "load-test": "node scripts/load-test.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -102,6 +104,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@axe-core/playwright": "^4.10.2",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.90.20",
     "@testing-library/jest-dom": "^6.9.1",

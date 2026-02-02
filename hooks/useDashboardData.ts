@@ -5,7 +5,8 @@ import {
   fetchUserAnalytics,
   fetchReviewQueue,
   fetchActivityLog,
-  fetchMaintenanceStatus
+  fetchMaintenanceStatus,
+  fetchPerformanceMetrics
 } from "@/lib/api/dashboard";
 
 export function useDashboardData() {
@@ -46,6 +47,13 @@ export function useDashboardData() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const performanceQuery = useQuery({
+    queryKey: ["performance-metrics"],
+    queryFn: fetchPerformanceMetrics,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
   return {
     dashboard: dashboardQuery.data,
     realTime: realTimeQuery.data,
@@ -53,8 +61,10 @@ export function useDashboardData() {
     reviewQueue: reviewQueueQuery.data,
     activityLog: activityLogQuery.data,
     maintenance: maintenanceQuery.data,
+    performance: performanceQuery.data,
     isLoading: dashboardQuery.isLoading || realTimeQuery.isLoading || userAnalyticsQuery.isLoading,
     isError: dashboardQuery.isError || realTimeQuery.isError || userAnalyticsQuery.isError,
+    isPerformanceLoading: performanceQuery.isLoading,
     refetch: () => {
       dashboardQuery.refetch();
       realTimeQuery.refetch();
@@ -62,6 +72,7 @@ export function useDashboardData() {
       reviewQueueQuery.refetch();
       activityLogQuery.refetch();
       maintenanceQuery.refetch();
+      performanceQuery.refetch();
     }
   };
 }

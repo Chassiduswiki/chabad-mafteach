@@ -457,8 +457,11 @@ export interface SourceBookChapter {
     chapter_number?: number;
     chapter_name?: string;
     chapter_name_english?: string;
-    start_page?: number;
-    end_page?: number;
+    start_page?: number | null;
+    end_page?: number | null;
+    hebrewbooks_start_page?: number | null;
+    hebrewbooks_end_page?: number | null;
+    page_validation_status?: string | null;
     // Platform-specific IDs
     chabad_org_article_id?: number;
     lahak_content_id?: string;

@@ -153,6 +153,11 @@ export function EliteCitationModal({
     }
   }, [open]);
 
+  // Reset focused index when lists change
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [showBrowser, sources, searchResults, selectedSource, resolvedSource]);
+
   // Focus input on open
   useEffect(() => {
     if (open) {
@@ -411,6 +416,18 @@ export function EliteCitationModal({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement | null;
+    const isFormField = target
+      ? ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      : false;
+    const isSmartInput = target === inputRef.current;
+    const activeList = showBrowser ? sources : searchResults;
+    const canNavigateList =
+      !selectedSource &&
+      !resolvedSource &&
+      activeList.length > 0 &&
+      (showBrowser || searchResults.length > 0);
+
     if (e.key === 'Escape') {
       if (showBrowser) {
         setShowBrowser(false);
@@ -420,20 +437,28 @@ export function EliteCitationModal({
         onClose();
       }
     } else if (e.key === 'Enter') {
+      if (isFormField && !isSmartInput) return;
       if (resolvedSource && !selectedSource) {
         e.preventDefault();
         selectResolvedSource();
       } else if (selectedSource) {
         e.preventDefault();
         handleInsert();
-      } else if (focusedIndex >= 0 && searchResults[focusedIndex]) {
+      } else if (showBrowser && focusedIndex >= 0 && sources[focusedIndex]) {
+        e.preventDefault();
+        navigateInto(sources[focusedIndex]);
+      } else if (!showBrowser && focusedIndex >= 0 && searchResults[focusedIndex]) {
         e.preventDefault();
         selectSource(searchResults[focusedIndex]);
       }
     } else if (e.key === 'ArrowDown') {
+      if (isFormField && !isSmartInput) return;
+      if (!canNavigateList) return;
       e.preventDefault();
-      setFocusedIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
+      setFocusedIndex((prev) => Math.min(prev + 1, activeList.length - 1));
     } else if (e.key === 'ArrowUp') {
+      if (isFormField && !isSmartInput) return;
+      if (!canNavigateList) return;
       e.preventDefault();
       setFocusedIndex((prev) => Math.max(prev - 1, -1));
     }
@@ -520,6 +545,7 @@ export function EliteCitationModal({
             <button
               key={source.id}
               onClick={() => selectSource(source)}
+              onMouseEnter={() => setFocusedIndex(index)}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${
                 index === focusedIndex
                   ? 'bg-primary/10'
@@ -694,11 +720,14 @@ export function EliteCitationModal({
           <div className="text-center py-12 text-muted-foreground">No sources found</div>
         ) : (
           <div className="divide-y divide-border">
-            {sources.map((source) => (
+            {sources.map((source, index) => (
               <button
                 key={source.id}
                 onClick={() => navigateInto(source)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                onMouseEnter={() => setFocusedIndex(index)}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                  index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
+                }`}
               >
                 {source.is_browsable ? (
                   <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />

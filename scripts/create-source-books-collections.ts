@@ -462,6 +462,39 @@ const collections: CollectionDefinition[] = [
                     note: 'Last printed page of this chapter',
                 },
             },
+            {
+                field: 'hebrewbooks_start_page',
+                type: 'integer',
+                schema: { is_nullable: true },
+                meta: {
+                    field: 'hebrewbooks_start_page',
+                    interface: 'input',
+                    width: 'half',
+                    note: 'HebrewBooks start page for this chapter',
+                },
+            },
+            {
+                field: 'hebrewbooks_end_page',
+                type: 'integer',
+                schema: { is_nullable: true },
+                meta: {
+                    field: 'hebrewbooks_end_page',
+                    interface: 'input',
+                    width: 'half',
+                    note: 'HebrewBooks end page for this chapter',
+                },
+            },
+            {
+                field: 'page_validation_status',
+                type: 'string',
+                schema: { max_length: 20, is_nullable: true, default_value: 'pending' },
+                meta: {
+                    field: 'page_validation_status',
+                    interface: 'input',
+                    width: 'half',
+                    note: 'Validation status for page boundaries',
+                },
+            },
             // Platform-specific IDs
             {
                 field: 'chabad_org_article_id',

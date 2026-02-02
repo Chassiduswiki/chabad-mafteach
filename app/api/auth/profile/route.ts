@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readUsers, updateUsers } from '@directus/sdk';
 import { requireAuth } from '@/lib/auth';
+import { getPermissionsForRole } from '@/lib/security/permissions';
 import { validateText, createValidationError } from '@/lib/input-validation';
 
 export async function GET(request: NextRequest) {
@@ -33,12 +34,15 @@ export async function GET(request: NextRequest) {
       
       console.log('Profile API - Directus role:', directusRole, '-> Mapped role:', role);
 
+      const permissions = getPermissionsForRole(role);
+
       return NextResponse.json({
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         role: role, // Already mapped to 'admin' or 'editor'
+        permissions,
         avatar: user.avatar,
         description: user.description
       });

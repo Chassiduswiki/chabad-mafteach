@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
 import { handleApiError } from '@/lib/utils/api-errors';
-import { cache } from '@/lib/cache';
+import { semanticCache } from '@/lib/cache-optimization';
 import { isHebrew } from '@/lib/utils/search';
 import { generateEmbedding } from '@/lib/vector/embedding-service';
 import { searchTopicsByVector, searchStatementsByVector } from '@/lib/vector/pgvector-client';
@@ -45,11 +45,6 @@ function checkSearchRateLimit(ip: string): { allowed: boolean; remaining: number
     return { allowed: true, remaining: maxRequests - record.count, resetTime: record.resetTime };
 }
 
-// Cache key for search results
-const getSearchCacheKey = (query: string, mode?: string, weight?: number) => {
-    const base = query.toLowerCase().trim();
-    return `search:results:${base}:${mode || 'keyword'}:${weight || 0.6}`;
-};
 
 export async function GET(request: Request) {
     try {
@@ -103,13 +98,13 @@ export async function GET(request: Request) {
         console.log(`Smart search: query="${query}" -> mode="${mode}" (${smartConfig.reasoning})`);
 
         // Check cache first (with timeout protection)
-        const cacheKey = getSearchCacheKey(query, mode, semanticWeight);
+        const normalizedQuery = query.toLowerCase().trim();
         let cached = null;
         try {
             // Add timeout to prevent hanging on cache operations
             const cachePromise = new Promise((resolve) => {
                 setTimeout(() => resolve(null), 1000); // 1 second timeout
-                const result = cache.get(cacheKey);
+                const result = semanticCache.getCachedSearchResults(normalizedQuery, mode, semanticWeight);
                 resolve(result);
             });
             cached = await Promise.race([cachePromise]);
@@ -156,7 +151,7 @@ export async function GET(request: Request) {
         }
 
         // Cache results
-        cache.set(cacheKey, results, 5 * 60 * 1000);
+        semanticCache.cacheSearchResults(normalizedQuery, mode, semanticWeight, results, 5 * 60 * 1000);
 
         return NextResponse.json({
             ...results,

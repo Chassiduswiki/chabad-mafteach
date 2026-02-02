@@ -87,13 +87,25 @@ export function sefariaBookUrl(book: SourceBook): string | null {
 /**
  * Find which chapter contains a given page number
  */
+export function getChapterPageRange(
+    chapter: SourceBookChapter
+): { start: number; end: number } | null {
+    const start = chapter.hebrewbooks_start_page ?? chapter.start_page;
+    const end = chapter.hebrewbooks_end_page ?? chapter.end_page;
+    if (!start || !end) return null;
+    if (start <= 0 || end <= 0) return null;
+    if (start > end) return null;
+    return { start, end };
+}
+
 export function getChapterForPage(
     chapters: SourceBookChapter[],
     page: number
 ): SourceBookChapter | null {
-    return chapters.find(
-        ch => ch.start_page && ch.end_page && page >= ch.start_page && page <= ch.end_page
-    ) || null;
+    return chapters.find(ch => {
+        const range = getChapterPageRange(ch);
+        return range ? page >= range.start && page <= range.end : false;
+    }) || null;
 }
 
 /**
@@ -102,8 +114,7 @@ export function getChapterForPage(
 export function getPagesForChapter(
     chapter: SourceBookChapter
 ): { start: number; end: number } | null {
-    if (!chapter.start_page || !chapter.end_page) return null;
-    return { start: chapter.start_page, end: chapter.end_page };
+    return getChapterPageRange(chapter);
 }
 
 /**
@@ -129,9 +140,10 @@ export function getLinksForChapter(
     book: SourceBook,
     chapter: SourceBookChapter
 ): PlatformLinks {
+    const range = getChapterPageRange(chapter);
     return {
-        hebrewbooks: chapter.start_page
-            ? hebrewBooksPageUrl(book, chapter.start_page) || undefined
+        hebrewbooks: range?.start
+            ? hebrewBooksPageUrl(book, range.start) || undefined
             : hebrewBooksBookUrl(book) || undefined,
         chabad_org: chabadOrgChapterUrl(chapter) || undefined,
         lahak: lahakChapterUrl(chapter) || undefined,
@@ -151,6 +163,78 @@ export function getLinksForBook(book: SourceBook): PlatformLinks {
         chabadlibrary: chabadLibraryBookUrl(book) || undefined,
         sefaria: sefariaBookUrl(book) || undefined,
     };
+}
+
+// ============ Page Boundary Validation ============
+
+export type PageBoundaryStatus = 'pending' | 'valid' | 'overlap' | 'missing' | 'invalid';
+
+export interface PageBoundaryOverlap {
+    current: SourceBookChapter;
+    next: SourceBookChapter;
+    currentRange: { start: number; end: number };
+    nextRange: { start: number; end: number };
+}
+
+const chapterSortValue = (chapter: SourceBookChapter) => {
+    if (typeof chapter.sort === 'number') return chapter.sort;
+    if (typeof chapter.chapter_number === 'number') return chapter.chapter_number;
+    return Number.MAX_SAFE_INTEGER;
+};
+
+export function validatePageBoundaries(chapters: SourceBookChapter[]): {
+    overlaps: PageBoundaryOverlap[];
+    statusById: Record<string, PageBoundaryStatus>;
+} {
+    const statusById: Record<string, PageBoundaryStatus> = {};
+    const overlaps: PageBoundaryOverlap[] = [];
+
+    chapters.forEach(chapter => {
+        statusById[chapter.id] = 'pending';
+    });
+
+    const withRanges = chapters.map(chapter => {
+        const range = getChapterPageRange(chapter);
+        if (!range) {
+            const start = chapter.hebrewbooks_start_page ?? chapter.start_page;
+            const end = chapter.hebrewbooks_end_page ?? chapter.end_page;
+            if (start && end && start > end) {
+                statusById[chapter.id] = 'invalid';
+            } else {
+                statusById[chapter.id] = 'missing';
+            }
+        } else {
+            statusById[chapter.id] = 'valid';
+        }
+        return {
+            chapter,
+            range,
+            sortKey: range?.start ?? chapterSortValue(chapter),
+        };
+    });
+
+    const ordered = [...withRanges].sort((a, b) => {
+        if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+        return chapterSortValue(a.chapter) - chapterSortValue(b.chapter);
+    });
+
+    for (let i = 0; i < ordered.length - 1; i += 1) {
+        const current = ordered[i];
+        const next = ordered[i + 1];
+        if (!current.range || !next.range) continue;
+        if (current.range.end >= next.range.start) {
+            overlaps.push({
+                current: current.chapter,
+                next: next.chapter,
+                currentRange: current.range,
+                nextRange: next.range,
+            });
+            statusById[current.chapter.id] = 'overlap';
+            statusById[next.chapter.id] = 'overlap';
+        }
+    }
+
+    return { overlaps, statusById };
 }
 
 // ============ Chabad.org API Sync =============

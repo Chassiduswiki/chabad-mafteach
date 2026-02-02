@@ -96,9 +96,9 @@ export function createAuthToken(userId: string, role: string = 'user'): string {
  * Requires authentication for sensitive operations
  */
 export function requireAuth(
-  handler: (request: NextRequest, context: { userId: string; role: string }) => Promise<NextResponse>
+  handler: (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const auth = verifyAuth(request);
 
     if (!auth) {
@@ -118,7 +118,7 @@ export function requireAuth(
       }
     }
 
-    return handler(request, auth as { userId: string; role: string });
+    return handler(request, auth as { userId: string; role: string }, ...args);
   };
 }
 
@@ -142,6 +142,33 @@ export function requireEditor(
     if (!auth.role || !['editor', 'admin'].includes(auth.role)) {
       return NextResponse.json(
         { error: 'Editor permissions required' },
+        { status: 403 }
+      );
+    }
+
+    return handler(request, auth as { userId: string; role: string }, ...args);
+  };
+}
+
+/**
+ * Middleware for admin-only operations
+ */
+export function requireAdmin(
+  handler: (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => Promise<NextResponse>
+) {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+    const auth = verifyAuth(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!auth.role || auth.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Admin permissions required' },
         { status: 403 }
       );
     }

@@ -1,20 +1,8 @@
-const { createDirectus, rest, staticToken } = require('@directus/sdk');
 const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
-
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
-const directusToken = process.env.NEXT_PUBLIC_DIRECTUS_TOKEN || process.env.DIRECTUS_STATIC_TOKEN;
-
-if (!directusUrl || !directusToken) {
-    throw new Error('DIRECTUS_URL or DIRECTUS_STATIC_TOKEN environment variable is not set.');
-}
-
-const directus = createDirectus(directusUrl)
-    .with(staticToken(directusToken))
-    .with(rest());
 
 /**
  * Database Optimization Script

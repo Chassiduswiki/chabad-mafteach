@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 import { readItems } from '@directus/sdk';
 
-export const GET = requireAuth(async (req: NextRequest, context) => {
-    try {
-        if (context.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+export const GET = requirePermission('canManageUsers', withAudit('read', 'admin.users', async (req: NextRequest) => {
+    const rateLimited = enforceRateLimit(req, adminReadRateLimit);
+    if (rateLimited) return rateLimited;
 
+    try {
         const directus = createClient();
 
         // Fetch users from directus_users system collection
@@ -26,4 +27,4 @@ export const GET = requireAuth(async (req: NextRequest, context) => {
         console.error('Fetch users error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-});
+}));

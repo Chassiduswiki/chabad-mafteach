@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 import { log } from '@/lib/logger';
 import { cache } from '@/lib/cache';
+import { getBaseUrl } from '@/lib/utils/base-url';
 
 // Cache key patterns
 export const cacheKeys = {
@@ -268,7 +269,10 @@ export class SemanticCacheManager {
   /**
    * Warm cache with popular queries
    */
-  async warmPopularQueries(): Promise<void> {
+  async warmPopularQueries(options?: { baseUrl?: string; delayMs?: number }): Promise<void> {
+    const baseUrl = options?.baseUrl ?? getBaseUrl();
+    const delayMs = options?.delayMs ?? 100;
+
     const popularQueries = [
       'bitul', 'emunah', 'ratzon', 'taanug', // Hebrew concepts
       'humility', 'faith', 'will', 'pleasure', // English translations
@@ -280,7 +284,7 @@ export class SemanticCacheManager {
         // Warm semantic search cache
         for (const mode of ['semantic', 'hybrid']) {
           const weight = mode === 'hybrid' ? 0.6 : 1.0;
-          const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&mode=${mode}&semantic_weight=${weight}`);
+          const response = await fetch(`${baseUrl}/api/search?q=${encodeURIComponent(query)}&mode=${mode}&semantic_weight=${weight}`);
           if (response.ok) {
             const data = await response.json();
             this.cacheSearchResults(query, mode, weight, data);
@@ -288,7 +292,7 @@ export class SemanticCacheManager {
         }
         
         // Add small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       } catch (error) {
         console.warn(`Failed to warm cache for query: ${query}`, error);
       }

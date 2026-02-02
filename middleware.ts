@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { hasPermission, type PermissionKey } from '@/lib/security/permissions';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -72,16 +73,29 @@ export async function middleware(request: NextRequest) {
 
     console.log('Middleware - Token verified successfully:', { userId: payload.userId, role: payload.role, pathname });
 
-    // Check role-based access
-    if (isAdminRoute && payload.role !== 'admin') {
-      console.log('Middleware - Admin access denied:', { pathname, userRole: payload.role, requiredRole: 'admin' });
-      // Redirect non-admins away from admin pages
+    const adminRoutePermissions: Array<{ match: (path: string) => boolean; permission: PermissionKey }> = [
+      { match: (path) => path.startsWith('/admin/users'), permission: 'canManageUsers' },
+      { match: (path) => path.startsWith('/admin/source-books') || path.startsWith('/admin/books'), permission: 'canManageSourceBooks' },
+      { match: (path) => path.startsWith('/admin/topics') || path.startsWith('/admin/content') || path.startsWith('/admin/review-queue'), permission: 'canEditTopics' },
+      { match: (path) => path.startsWith('/admin/performance') || path.startsWith('/admin/audit-log'), permission: 'canViewPerformanceMetrics' },
+      { match: (path) => path.startsWith('/analytics'), permission: 'canAccessAnalytics' }
+    ];
+
+    const requiredPermission = adminRoutePermissions.find(entry => entry.match(pathname))?.permission;
+
+    if (requiredPermission && !hasPermission(payload.role, requiredPermission)) {
+      console.log('Middleware - Permission access denied:', { pathname, userRole: payload.role, requiredPermission });
       return NextResponse.redirect(new URL('/editor', request.url));
     }
 
-    if (isEditorRoute && !['admin', 'editor'].includes(payload.role)) {
-      console.log('Middleware - Editor access denied:', { pathname, userRole: payload.role, requiredRoles: ['admin', 'editor'] });
-      // Redirect non-editors/non-admins away from editor pages
+    // Fallback: non-mapped admin routes still require admin role
+    if (isAdminRoute && !requiredPermission && payload.role !== 'admin') {
+      console.log('Middleware - Admin access denied:', { pathname, userRole: payload.role, requiredRole: 'admin' });
+      return NextResponse.redirect(new URL('/editor', request.url));
+    }
+
+    if (isEditorRoute && !hasPermission(payload.role, 'canEditTopics')) {
+      console.log('Middleware - Editor access denied:', { pathname, userRole: payload.role, requiredPermission: 'canEditTopics' });
       return NextResponse.redirect(new URL('/topics', request.url));
     }
 

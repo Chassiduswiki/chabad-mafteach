@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems, updateItem } from '@directus/sdk';
-import { requireEditor } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 const directus = createClient();
 
-export const POST = requireEditor(async (request: NextRequest, context: { userId: string; role: string }) => {
+export const POST = requirePermission('canEditTopics', withAudit('update', 'admin.clear-locks', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
+
   try {
     console.log('Clearing expired topic locks...');
     
@@ -53,4 +58,4 @@ export const POST = requireEditor(async (request: NextRequest, context: { userId
     console.error('Failed to clear expired locks:', error);
     return NextResponse.json({ error: 'Failed to clear expired locks' }, { status: 500 });
   }
-});
+}));

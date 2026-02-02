@@ -1,8 +1,23 @@
 // app/api/ai/translate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import OpenRouterClient, { AISettings } from '@/lib/ai/openrouter-client';
+import OpenRouterClient from '@/lib/ai/openrouter-client';
 import { getDirectus, Topic } from '@/lib/directus';
 import { createItem, readItems, readSingleton, updateItem } from '@directus/sdk';
+import { getCachedAIResult, setCachedAIResult } from '@/lib/ai/cache';
+import { createHash } from 'crypto';
+
+const TRANSLATABLE_FIELDS = new Set([
+  'canonical_title',
+  'description',
+  'definition_positive',
+  'definition_negative',
+  'overview',
+  'article',
+  'practical_takeaways',
+  'historical_context',
+  'mashal',
+  'global_nimshal',
+]);
 
 async function getTopicField(topicId: string, field: string): Promise<string> {
   const directus = getDirectus();
@@ -63,13 +78,53 @@ async function updateTopicTranslation(topicId: string, language: string, field: 
   }
 }
 
+function buildCacheKey(params: {
+  text: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  field: string;
+  context?: string;
+}) {
+  const hash = createHash('sha256')
+    .update(params.text)
+    .update('|')
+    .update(params.sourceLanguage)
+    .update('|')
+    .update(params.targetLanguage)
+    .update('|')
+    .update(params.field)
+    .update('|')
+    .update(params.context || '')
+    .digest('hex');
+  return `translate:v2:${hash}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { topic_id, target_language, source_language, field, context } = body;
+    let body: any = null;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
 
-    if (!topic_id || !target_language || !source_language || !field) {
+    const { topic_id, target_language, source_language, field, context, content } = body || {};
+
+    if (!target_language || !source_language || !field) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    }
+
+    const normalizedTopicId = topic_id ? String(topic_id) : null;
+    const parsedTopicId = normalizedTopicId ? parseInt(normalizedTopicId, 10) : null;
+    if (normalizedTopicId && (parsedTopicId === null || Number.isNaN(parsedTopicId))) {
+      return NextResponse.json({ error: 'Invalid topic_id' }, { status: 400 });
+    }
+    if (!normalizedTopicId && !content) {
+      return NextResponse.json({ error: 'topic_id or content is required' }, { status: 400 });
+    }
+
+    if (!TRANSLATABLE_FIELDS.has(field) && !content) {
+      return NextResponse.json({ error: 'Unsupported field for translation' }, { status: 400 });
     }
 
     const directus = getDirectus();
@@ -78,44 +133,77 @@ export async function POST(req: NextRequest) {
     const settings = await directus.request(readSingleton('ai_settings'));
     const openRouterClient = new OpenRouterClient(settings);
 
-    // 2. Fetch content from Directus
-    const contentToTranslate = await getTopicField(topic_id, field);
+    // 2. Fetch content from Directus (if content not supplied)
+    let contentToTranslate: string | null = typeof content === 'string' ? content : null;
+    if (!contentToTranslate && normalizedTopicId) {
+      contentToTranslate = await getTopicField(normalizedTopicId, field);
+    }
 
     if (!contentToTranslate) {
       return NextResponse.json({ error: 'Content not found' }, { status: 404 });
     }
 
-    // 2. Get translation from AI
-    const result = await openRouterClient.translate(contentToTranslate, source_language, target_language, context);
-
-    // 3. Save to translation history
-    await saveTranslationHistory({
-      topic_id,
-      source_language,
-      target_language,
+    const cacheKey = buildCacheKey({
+      text: contentToTranslate,
+      sourceLanguage: source_language,
+      targetLanguage: target_language,
       field,
-      ...result,
+      context,
     });
+    const cached = getCachedAIResult(cacheKey, 1000 * 60 * 60 * 12);
+    if (cached) {
+      return NextResponse.json({ ...cached, cached: true });
+    }
 
-    // 4. Quality validation and auto-approval
-    const qualityThreshold = 0.8;
-    const autoApprovalThreshold = 0.95;
+    // 3. Get translation from AI
+    const result = await openRouterClient.translate(contentToTranslate, source_language, target_language, context);
+    if (!result?.translation) {
+      return NextResponse.json({ error: 'Translation failed' }, { status: 502 });
+    }
+
+    if (normalizedTopicId) {
+      // 4. Save to translation history
+      await saveTranslationHistory({
+        topic_id: normalizedTopicId,
+        source_language,
+        target_language,
+        field,
+        ...result,
+      });
+    }
+
+    // 5. Quality validation and auto-approval
+    const qualityThreshold = settings?.quality_threshold ?? 0.8;
+    const autoApprovalThreshold = settings?.auto_approval_threshold ?? 0.95;
+    const responsePayload = {
+      translation: result.translation,
+      quality: result.quality,
+      model: result.model,
+      isFallback: result.isFallback,
+      cached: false,
+    };
 
     if (result.quality.score >= qualityThreshold) {
       // Update the topic_translations table in Directus
-      await updateTopicTranslation(topic_id, target_language, field, result.translation);
+      if (normalizedTopicId) {
+        await updateTopicTranslation(normalizedTopicId, target_language, field, result.translation);
+      }
 
       const isAutoApproved = result.quality.score >= autoApprovalThreshold;
-      return NextResponse.json({ 
+      const payload = {
         message: 'Translation successful and saved.',
         auto_approved: isAutoApproved,
-        ...result 
-      });
+        ...responsePayload,
+      };
+      setCachedAIResult(cacheKey, payload);
+      return NextResponse.json(payload);
     } else {
-      return NextResponse.json({ 
+      const payload = {
         message: 'Translation quality below threshold. Not saved.',
-        ...result 
-      }, { status: 200 });
+        ...responsePayload,
+      };
+      setCachedAIResult(cacheKey, payload);
+      return NextResponse.json(payload, { status: 200 });
     }
 
   } catch (error) {

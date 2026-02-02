@@ -1,18 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { requireAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
+import { validateEmail } from '@/lib/input-validation';
 import { inviteUser } from '@directus/sdk';
 
-export const POST = requireAuth(async (req: NextRequest, context) => {
-    try {
-        if (context.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+export const POST = requirePermission('canManageUsers', withAudit('invite', 'admin.users', async (req: NextRequest) => {
+    const rateLimited = enforceRateLimit(req, adminWriteRateLimit);
+    if (rateLimited) return rateLimited;
 
+    try {
         const { email, role } = await req.json();
 
         if (!email) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        }
+
+        const emailResult = validateEmail(email);
+        if (!emailResult.isValid) {
+            return NextResponse.json({ error: emailResult.error }, { status: 400 });
+        }
+
+        if (role && !['admin', 'editor', 'reviewer'].includes(role)) {
+            return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
         }
 
         const directus = createClient();
@@ -60,7 +71,7 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
         // inviteUser(email, role, invite_url)
         const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/accept-invite`; // The page where they set password
 
-        await directus.request(inviteUser(email, roleId, inviteUrl));
+        await directus.request(inviteUser(emailResult.sanitized || email, roleId, inviteUrl));
 
         return NextResponse.json({ success: true, message: 'Invitation sent' });
 
@@ -72,4 +83,4 @@ export const POST = requireAuth(async (req: NextRequest, context) => {
         }
         return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
     }
-});
+}));

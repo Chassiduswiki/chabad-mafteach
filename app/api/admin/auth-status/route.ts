@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
 import { createClient } from '@/lib/directus';
 import { readUsers, readRoles } from '@directus/sdk';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
-export async function GET(request: NextRequest) {
+export const GET = requirePermission('canManageUsers', withAudit('read', 'admin.auth-status', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
+
   try {
-    // 1. Verify admin access
-    const auth = verifyAuth(request);
-    if (!auth || auth.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
-        { status: 403 }
-      );
-    }
-
     const directus = createClient();
 
     // 2. Fetch Directus Roles
@@ -85,4 +81,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}));
