@@ -60,7 +60,7 @@ function SignInContent() {
         setError(data.error || 'Login failed');
         setSuccess(false);
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
@@ -220,7 +220,7 @@ function SignInContent() {
         {/* Sign Up Link */}
         <div className="mt-6 text-center">
           <span className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a
               href="/auth/signup"
               className="text-sm text-primary hover:underline"

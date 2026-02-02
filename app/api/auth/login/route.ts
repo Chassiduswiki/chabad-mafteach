@@ -154,8 +154,13 @@ export async function POST(request: NextRequest) {
       const userDetails = await userDetailsResponse.json();
       const directusUser = userDetails.data;
 
+      console.log('Directus user details:', directusUser);
+      console.log('Directus role:', directusUser.role);
+
       // Map Directus roles to app roles
       const role = directusUser.role?.name?.toLowerCase().includes('admin') ? 'admin' : 'editor';
+      
+      console.log('Mapped role:', role);
 
       // Record successful login (resets lockout counter)
       recordSuccessfulLogin(email);

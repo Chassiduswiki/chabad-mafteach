@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ChevronRight, Star, Clock, FileText, Loader2 } from 'lucide-react';
+import { Plus, ChevronRight, Star, Clock, FileText, Loader2, ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { IdeaChainListItem } from '@/lib/idea-chains/types';
@@ -57,11 +57,20 @@ export default function ChainBuilderListPage() {
             <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border">
                 <div className="max-w-5xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold text-foreground">Idea Chain Builder</h1>
-                            <p className="text-sm text-muted-foreground">
-                                Trace intellectual genealogy through Chassidic literature
-                            </p>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => router.push('/editor')}
+                                className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back to Editor
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-semibold text-foreground">Idea Chain Builder</h1>
+                                <p className="text-sm text-muted-foreground">
+                                    Trace intellectual genealogy through Chassidic literature
+                                </p>
+                            </div>
                         </div>
                         <button
                             onClick={() => router.push('/chain-builder/new')}

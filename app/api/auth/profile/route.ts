@@ -26,14 +26,19 @@ export async function GET(request: NextRequest) {
       }
 
       const user = users[0];
-      const role = user.role?.name || 'user';
+      const directusRole = user.role?.name || 'user';
+      
+      // Map Directus roles to app roles (same logic as login)
+      const role = directusRole.toLowerCase().includes('admin') ? 'admin' : 'editor';
+      
+      console.log('Profile API - Directus role:', directusRole, '-> Mapped role:', role);
 
       return NextResponse.json({
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
-        role: role.toLowerCase(),
+        role: role, // Already mapped to 'admin' or 'editor'
         avatar: user.avatar,
         description: user.description
       });

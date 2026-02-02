@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
+import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production');
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -45,7 +45,10 @@ export async function middleware(request: NextRequest) {
                        pathname.startsWith('/analytics');
   const isAuthenticatedRoute = pathname === '/profile';
 
+  console.log('Middleware - Route check:', { pathname, isEditorRoute, isAdminRoute, isAuthenticatedRoute });
+
   if (!isEditorRoute && !isAdminRoute && !isAuthenticatedRoute) {
+    console.log('Middleware - Public route, allowing access');
     return NextResponse.next();
   }
 
@@ -64,19 +67,25 @@ export async function middleware(request: NextRequest) {
 
   try {
     // Verify JWT token
-    const verified = await jwtVerify(finalToken, JWT_SECRET);
-    const payload = verified.payload as { userId: string; role: string };
+    const decoded = jwt.verify(finalToken, JWT_SECRET) as jwt.JwtPayload & { userId: string; role: string };
+    const payload = decoded;
+
+    console.log('Middleware - Token verified successfully:', { userId: payload.userId, role: payload.role, pathname });
 
     // Check role-based access
     if (isAdminRoute && payload.role !== 'admin') {
+      console.log('Middleware - Admin access denied:', { pathname, userRole: payload.role, requiredRole: 'admin' });
       // Redirect non-admins away from admin pages
       return NextResponse.redirect(new URL('/editor', request.url));
     }
 
     if (isEditorRoute && !['admin', 'editor'].includes(payload.role)) {
+      console.log('Middleware - Editor access denied:', { pathname, userRole: payload.role, requiredRoles: ['admin', 'editor'] });
       // Redirect non-editors/non-admins away from editor pages
       return NextResponse.redirect(new URL('/topics', request.url));
     }
+
+    console.log('Middleware - Access granted for:', { pathname, userRole: payload.role });
 
     // Authenticated routes just need a valid token (already verified above)
 
@@ -91,7 +100,8 @@ export async function middleware(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('Middleware - Token verification failed:', error);
+    console.log('Middleware - Redirecting to signin');
     // Invalid token - redirect to signin
     return NextResponse.redirect(new URL('/auth/signin', request.url));
   }

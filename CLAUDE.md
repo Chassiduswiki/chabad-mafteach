@@ -76,6 +76,47 @@ idea_chain_topics    - Junction for embedding in topics
 
 ---
 
+## Current Work: Source Linking System
+
+**Status**: Brainstorming phase
+**Spec location**: `/docs/SOURCE_LINKING_BRAINSTORM.md`
+
+### The Problem
+
+Jewish texts exist across multiple platforms (HebrewBooks, Sefaria, Chabad.org, ChabadLibrary), each with different:
+- URL structures and deep-linking capabilities
+- Reference systems (page numbers, folios, chapters, sections)
+- Content formats (PDF scans vs structured text)
+- Strengths (HebrewBooks for authority, Sefaria for API/structure, ChabadLibrary for traditional pagination)
+
+### The Goal
+
+Build a **linking layer** (not scraping) that resolves canonical references to platform-specific URLs. Example:
+- Input: "Derech Mitzvosecha, Chapter 1"
+- Output: Links to same content on HebrewBooks, Sefaria, Chabad.org, ChabadLibrary
+
+### Key Challenges
+
+1. **Page offset problem**: HebrewBooks PDF page 11 = printed page 1
+2. **Reference style mismatch**: Sefaria uses sections, traditional citations use pages
+3. **No standard APIs**: Most platforms don't expose programmatic access
+4. **Edition variations**: Different printings have different pagination
+
+### Architectural Direction (TBD)
+
+Likely hybrid approach:
+1. **Book catalog**: Map major books to platform identifiers
+2. **Link templates**: URL patterns per platform
+3. **Scholar contributions**: Users add/verify links organically
+
+### Related Features
+
+- Idea Chain nodes need source links
+- Citation system could use this resolver
+- General "view source" functionality
+
+---
+
 ## User Preferences
 
 - **Progressive disclosure** - Don't overwhelm with information
@@ -99,6 +140,7 @@ idea_chain_topics    - Junction for embedding in topics
 | Idea Chain types | `/lib/idea-chains/types.ts` |
 | Idea Chain API | `/lib/api/idea-chains.ts` |
 | Idea Chain routes | `/app/api/idea-chains/` |
+| Source Linking brainstorm | `/docs/SOURCE_LINKING_BRAINSTORM.md` |
 
 ---
 
@@ -116,4 +158,4 @@ Directus MCP is configured in `.mcp.json`. Start Claude Code from this project d
 
 ---
 
-*Last updated: January 2026*
+*Last updated: February 2026*
