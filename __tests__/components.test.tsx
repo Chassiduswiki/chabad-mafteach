@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import ArticleTab from '@/components/topics/ArticleTab';
@@ -127,10 +127,33 @@ describe('ArticleTab Integration', () => {
 
 // Performance tests
 describe('Performance', () => {
-  it('ExploreCategories renders within performance budget', () => {
+  beforeEach(() => {
+    // Mock fetch for ExploreCategories
+    global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('ExploreCategories renders within performance budget', async () => {
+    // Mock the API response
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      json: () => Promise.resolve({
+        topics: { concept: 10, person: 5 },
+        documents: { book: 20, article: 15 },
+        docTypes: { pdf: 8, html: 12 }
+      }),
+      ok: true
+    });
+
     const startTime = performance.now();
 
-    render(<ExploreCategories />);
+    await act(async () => {
+      render(<ExploreCategories />);
+      // Wait for the component to finish loading
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
 
     const endTime = performance.now();
     const renderTime = endTime - startTime;

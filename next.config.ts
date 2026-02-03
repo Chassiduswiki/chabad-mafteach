@@ -5,7 +5,7 @@ import path from 'path';
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  output: 'standalone',
+  // output: 'standalone', // Commented out - use next start instead
   webpack: (config: any, { isServer, dev }: { isServer: boolean; dev: boolean }) => {
     // Fix for fast-equals HMR issue with TipTap
     if (dev) {
