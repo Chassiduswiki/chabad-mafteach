@@ -7,8 +7,6 @@ export async function GET(
   context: { params: Promise<{ slug: string[] }> }
 ) {
   const { params } = await context;
-  console.log('=== CATCH-ALL ROUTE CALLED ===');
-  console.log('Full URL:', request.url);
 
   try {
     const directusUrl = process.env.DIRECTUS_URL;
@@ -18,32 +16,25 @@ export async function GET(
     }
 
     // Reconstruct the path from the slug array
-    console.log('Received params:', params);
     const resolvedParams = await params;
     const slugArray = resolvedParams.slug || [];
-    console.log('Slug array:', slugArray);
     const slugPath = slugArray.join('/');
     const path = slugPath ? `/${slugPath}` : '';
     const queryString = request.url.split('?')[1] ? '?' + request.url.split('?')[1] : '';
 
     const fullUrl = `${directusUrl}${path}${queryString}`;
 
-    console.log('Proxying GET to Directus URL:', fullUrl);
-
     const directusResponse = await fetch(fullUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
+        'Authorization': process.env.DIRECTUS_STATIC_TOKEN || '',
         'Content-Type': 'application/json',
       },
     });
 
-    console.log('Directus response status:', directusResponse.status);
 
     if (!directusResponse.ok) {
-      console.error('Directus request failed with status:', directusResponse.status);
       const errorText = await directusResponse.text();
-      console.error('Directus error response:', errorText);
       return NextResponse.json({
         error: 'Directus API request failed',
         status: directusResponse.status,
@@ -54,18 +45,15 @@ export async function GET(
 
     // Handle the response - it might not be JSON
     const contentType = directusResponse.headers.get('content-type');
-    console.log('Directus response content-type:', contentType);
 
     let data;
     if (contentType && contentType.includes('application/json')) {
       data = await directusResponse.json();
     } else {
       const text = await directusResponse.text();
-      console.log('Directus response text (first 200 chars):', text.substring(0, 200));
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error('Failed to parse response as JSON:', e);
         return NextResponse.json({
           error: 'Invalid response from Directus',
           contentType,
@@ -104,21 +92,17 @@ export async function POST(
     // Get request body
     const body = await request.json();
 
-    console.log('Proxying POST to Directus URL:', fullUrl);
-
     const directusResponse = await fetch(fullUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
+        'Authorization': process.env.DIRECTUS_STATIC_TOKEN || '',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
     });
 
     if (!directusResponse.ok) {
-      console.error('Directus POST request failed with status:', directusResponse.status);
       const errorText = await directusResponse.text();
-      console.error('Directus error response:', errorText);
       return NextResponse.json({
         error: 'Directus API request failed',
         status: directusResponse.status,
