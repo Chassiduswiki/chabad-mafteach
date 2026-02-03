@@ -56,7 +56,14 @@ const mockAuth = {
 jest.mock('next/server', () => ({
   NextRequest: jest.fn(),
   NextResponse: {
-    json: jest.fn((data, options) => ({ data, options })),
+    json: jest.fn((data, options) => ({ 
+      data, 
+      options,
+      headers: {
+        set: jest.fn(),
+        append: jest.fn()
+      }
+    })),
   },
 }));
 
@@ -189,7 +196,7 @@ describe('API Endpoints', () => {
         const authResponse = {
           ok: true,
           json: jest.fn().mockResolvedValue({
-            data: { data: { access_token: 'directus-access-token' } }
+            data: { access_token: 'directus-access-token' }
           })
         };
         const userResponse = {
@@ -221,12 +228,6 @@ describe('API Endpoints', () => {
         });
 
         const response = await POST(mockRequest);
-        
-        // Debug: check if there was an error
-        if (response.options?.status !== 200) {
-          console.log('Login test failed with status:', response.options?.status);
-          console.log('Login test response:', response.data);
-        }
         
         expect(response.data.success).toBe(true);
         expect(response.data.user.email).toBe('editor@chabad.org');

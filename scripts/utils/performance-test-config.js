@@ -35,7 +35,7 @@ const tests = {
             data: {
                 name: 'Test <script>alert("xss")</script>',
                 slug: 'special-chars-test',
-                definition_short: ''; DROP TABLE topics; --'
+                definition_short: "'; DROP TABLE topics; --"
       }
     },
     {
@@ -44,17 +44,17 @@ const tests = {
             name: 'Bad Markdown',
             slug: 'bad-markdown',
             article: '### Unclosed header\n```\nUnclosed code block\n**Unclosed bold'
-      }
+        }
     }
   ],
 
 performanceThresholds: {
     pageLoad: 3000, // 3 seconds max
-        apiResponse: 200, // 200ms max
-            fcp: 1800, // First Contentful Paint
-                lcp: 2500, // Largest Contentful Paint
-                    cls: 0.1, // Cumulative Layout Shift
-  },
+    apiResponse: 200, // 200ms max
+    fcp: 1800, // First Contentful Paint
+    lcp: 2500, // Largest Contentful Paint
+    cls: 0.1 // Cumulative Layout Shift
+},
 
 loadLevels: [
     { topics: 10, expected: 'fast' },
