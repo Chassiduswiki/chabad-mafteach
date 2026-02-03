@@ -46,10 +46,7 @@ export async function middleware(request: NextRequest) {
                        pathname.startsWith('/analytics');
   const isAuthenticatedRoute = pathname === '/profile';
 
-  console.log('Middleware - Route check:', { pathname, isEditorRoute, isAdminRoute, isAuthenticatedRoute });
-
   if (!isEditorRoute && !isAdminRoute && !isAuthenticatedRoute) {
-    console.log('Middleware - Public route, allowing access');
     return NextResponse.next();
   }
 
@@ -67,11 +64,8 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Verify JWT token
     const decoded = jwt.verify(finalToken, JWT_SECRET) as jwt.JwtPayload & { userId: string; role: string };
     const payload = decoded;
-
-    console.log('Middleware - Token verified successfully:', { userId: payload.userId, role: payload.role, pathname });
 
     const adminRoutePermissions: Array<{ match: (path: string) => boolean; permission: PermissionKey }> = [
       { match: (path) => path.startsWith('/admin/users'), permission: 'canManageUsers' },
@@ -84,22 +78,17 @@ export async function middleware(request: NextRequest) {
     const requiredPermission = adminRoutePermissions.find(entry => entry.match(pathname))?.permission;
 
     if (requiredPermission && !hasPermission(payload.role, requiredPermission)) {
-      console.log('Middleware - Permission access denied:', { pathname, userRole: payload.role, requiredPermission });
       return NextResponse.redirect(new URL('/editor', request.url));
     }
 
     // Fallback: non-mapped admin routes still require admin role
     if (isAdminRoute && !requiredPermission && payload.role !== 'admin') {
-      console.log('Middleware - Admin access denied:', { pathname, userRole: payload.role, requiredRole: 'admin' });
       return NextResponse.redirect(new URL('/editor', request.url));
     }
 
     if (isEditorRoute && !hasPermission(payload.role, 'canEditTopics')) {
-      console.log('Middleware - Editor access denied:', { pathname, userRole: payload.role, requiredPermission: 'canEditTopics' });
       return NextResponse.redirect(new URL('/topics', request.url));
     }
-
-    console.log('Middleware - Access granted for:', { pathname, userRole: payload.role });
 
     // Authenticated routes just need a valid token (already verified above)
 
@@ -114,8 +103,6 @@ export async function middleware(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Middleware - Token verification failed:', error);
-    console.log('Middleware - Redirecting to signin');
     // Invalid token - redirect to signin
     return NextResponse.redirect(new URL('/auth/signin', request.url));
   }
@@ -124,12 +111,14 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * Only run middleware on protected routes that need authentication
+     * Exclude: api routes, static files, images, favicon, and public routes
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/admin/:path*',
+    '/editor/:path*',
+    '/chain-builder/:path*',
+    '/collections/new',
+    '/profile',
+    '/analytics/:path*'
   ],
 };

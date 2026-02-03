@@ -31,11 +31,17 @@ const inter = Inter({
 });
 
 async function getBrandingSettings() {
+  const cacheKey = 'branding-settings';
+  const cacheTime = 5 * 60 * 1000; // 5 minutes
+  
   try {
+    // In production, you could use Redis or another cache
+    // For now, we'll optimize by making the call more efficient
     const directus = createClient();
     const settings = await directus.request(readItems('topics', {
       filter: { slug: { _eq: 'site-branding-settings' } },
-      limit: 1
+      limit: 1,
+      fields: ['metadata.branding']
     } as any));
     return (settings as any[])[0]?.metadata?.branding || {};
   } catch (error) {
@@ -58,7 +64,7 @@ async function getMaintenanceStatus() {
     const directus = createClient();
     const topics = await directus.request(readItems('topics', {
       filter: { slug: { _eq: 'system-maintenance' } },
-      fields: ['metadata'],
+      fields: ['metadata.is_maintenance'],
       limit: 1
     } as any));
     return (topics as any[])[0]?.metadata?.is_maintenance || false;
@@ -150,10 +156,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const branding = await getBrandingSettings();
-  const siteSettings = await getSiteSettings();
-  const isMaintenanceActive = await getMaintenanceStatus();
-  const userIsAdmin = await isAdmin();
+  // Run all API calls in parallel for better performance
+  const [branding, siteSettings, isMaintenanceActive, userIsAdmin] = await Promise.all([
+    getBrandingSettings(),
+    getSiteSettings(),
+    getMaintenanceStatus(),
+    isAdmin()
+  ]);
 
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
