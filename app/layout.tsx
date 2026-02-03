@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Link from "next/link";
+import { Hydrate } from '@/components/Hydrate';
+import { BrandingProvider } from '@/contexts/BrandingContext';
+import { UmamiTracker } from '@/components/analytics/UmamiTracker';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { AnalyticsTracker } from '@/lib/analytics-tracker';
+import '@/lib/auth'; // Initialize authentication validation
 import { Settings } from "lucide-react";
 import "./globals.css";
 import { PopupProvider } from "@/lib/popup-context";
@@ -10,7 +15,6 @@ import { CommandMenu } from "@/components/features/search/CommandMenu";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { AnalyticsTrackerComp } from "@/lib/analytics-tracker";
-import { UmamiTracker } from "@/components/analytics/UmamiTracker";
 
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
