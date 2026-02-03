@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { verifyAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/admin/content/list
  * 
  * Lists content (topics or statements) with filtering and pagination for the Content Manager.
  */
-export async function GET(req: NextRequest) {
-  try {
-    const auth = verifyAuth(req);
-    if (!auth || !['admin', 'editor'].includes(auth.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+export const GET = requirePermission('canEditTopics', withAudit('read', 'admin.content.list', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
 
+  try {
     const searchParams = req.nextUrl.searchParams;
     const type = searchParams.get('type') || 'topics';
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -70,4 +70,4 @@ export async function GET(req: NextRequest) {
     console.error('Content list error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}));

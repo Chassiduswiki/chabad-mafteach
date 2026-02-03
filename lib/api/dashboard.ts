@@ -1,3 +1,5 @@
+import { getBaseUrl } from '@/lib/utils/base-url';
+
 // Dashboard API types and fetching functions
 
 export interface DashboardStats {
@@ -75,14 +77,90 @@ export interface ActivityItem {
   };
 }
 
-// Helper for absolute URLs during SSR
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') return ''; // Browser should use relative
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  // Use port 3000 as default, or PORT env var if set
-  const port = process.env.PORT || '3000';
-  return `http://localhost:${port}`; 
-};
+export interface PerformanceMetrics {
+  generatedAt: string;
+  api: {
+    searchTime: number;
+    topicsTime: number;
+    docsTime: number;
+    averageTime: number;
+    recommendations: string[];
+  };
+  cache: {
+    memory: { entries: number; size: string };
+    semantic: {
+      hits: number;
+      misses: number;
+      evictions: number;
+      currentSize: number;
+      hitRate: number;
+      memoryUsage: string;
+    };
+  };
+  bundle: {
+    available: boolean;
+    chunkCount: number;
+    totalChunkSize: number;
+    averageChunkSize: number;
+    staticSize: number;
+    largeChunks: Array<{ file: string; size: number }>;
+    reason?: string;
+  };
+  database: {
+    recommendedIndexes: Array<{ table: string; index: string; columns: string[]; reason: string; type?: string }>;
+    slowQueries: Array<{ query: string; avgTime: string; callCount: number; recommendation: string }>;
+    sqlIndexCount: number;
+  };
+  alerts: Array<{ type: 'warning' | 'critical'; message: string }>;
+}
+
+export interface MonitoringPayload {
+  metrics: {
+    generatedAt: string;
+    cpu: {
+      cores: number;
+      loadAvg1m: number;
+      loadAvg5m: number;
+      loadAvg15m: number;
+      loadPercent: number;
+    };
+    memory: {
+      totalBytes: number;
+      usedBytes: number;
+      freeBytes: number;
+      usagePercent: number;
+    };
+    disk: {
+      path: string;
+      totalBytes: number | null;
+      usedBytes: number | null;
+      freeBytes: number | null;
+      usagePercent: number | null;
+    };
+    app: {
+      uptimeSec: number;
+      nodeVersion: string;
+      pid: number;
+    };
+    realtime: {
+      activeUsers: number | null;
+    };
+    errors: {
+      windowMinutes: number;
+      total: number;
+      fatal: number;
+      error: number;
+    };
+  };
+  checks: {
+    directus: {
+      status: 'ok' | 'failed';
+      error?: string;
+    };
+  };
+  alerts: Array<{ type: 'warning' | 'critical'; message: string }>;
+}
+
 
 // Fetching functions
 export async function fetchDashboardData() {
@@ -124,5 +202,17 @@ export async function fetchMaintenanceStatus() {
 export async function fetchContentStats() {
   const res = await fetch(`${getBaseUrl()}/api/admin/content/stats`);
   if (!res.ok) throw new Error('Failed to fetch content stats');
+  return res.json();
+}
+
+export async function fetchPerformanceMetrics(): Promise<PerformanceMetrics> {
+  const res = await fetch(`${getBaseUrl()}/api/admin/performance`);
+  if (!res.ok) throw new Error('Failed to fetch performance metrics');
+  return res.json();
+}
+
+export async function fetchMonitoringMetrics(): Promise<MonitoringPayload> {
+  const res = await fetch(`${getBaseUrl()}/api/admin/monitoring`);
+  if (!res.ok) throw new Error('Failed to fetch monitoring metrics');
   return res.json();
 }

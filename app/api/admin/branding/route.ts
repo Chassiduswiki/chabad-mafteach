@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems, updateItem, createItem } from '@directus/sdk';
-import { requireAuth } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 const directus = createClient();
 
@@ -12,10 +14,9 @@ const directus = createClient();
  * stored in a singleton-like topic or a dedicated settings collection.
  */
 
-export const GET = requireAuth(async (request: NextRequest, context: { userId: string; role: string }) => {
-  if (context.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+export const GET = requireAdmin(withAudit('read', 'admin.branding', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
 
   try {
     const settings = await directus.request(readItems('topics', {
@@ -30,12 +31,11 @@ export const GET = requireAuth(async (request: NextRequest, context: { userId: s
     console.error('Branding fetch failed:', error);
     return NextResponse.json({ error: 'Failed to fetch branding' }, { status: 500 });
   }
-});
+}));
 
-export const POST = requireAuth(async (request: NextRequest, context: { userId: string; role: string }) => {
-  if (context.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+export const POST = requireAdmin(withAudit('update', 'admin.branding', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
 
   try {
     const body = await request.json();
@@ -68,4 +68,4 @@ export const POST = requireAuth(async (request: NextRequest, context: { userId: 
     console.error('Branding update failed:', error);
     return NextResponse.json({ error: 'Failed to update branding' }, { status: 500 });
   }
-});
+}));

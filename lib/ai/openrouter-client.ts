@@ -43,6 +43,18 @@ class OpenRouterClient {
       2. Maintain the scholarly tone appropriate for Torah study.
       3. Preserve any HTML tags or Markdown formatting exactly.
       4. If the source contains Hebrew terms transliterated into English, ensure they are translated accurately into the target language's equivalent scholarly term or kept if it's a standard term.
+      5. Use the glossary below to keep Chassidic terms consistent.
+
+      GLOSSARY (keep consistent):
+      - Achdus Hashem = Divine Unity
+      - Bittul = Self-nullification
+      - Sovev Kol Almin = Encompassing Worlds
+      - Memale Kol Almin = Filling Worlds
+      - Atzilus = Emanation
+      - Tzimtzum = Contraction
+      - Or Ein Sof = Infinite Light
+      - Neshama = Soul
+      - Giluy = Revelation
       
       ${context ? `ADDITIONAL CONTEXT: ${context}` : ''}
 
@@ -104,21 +116,38 @@ class OpenRouterClient {
     }
 
     const data = await response.json();
-    let content;
-    try {
-      content = JSON.parse(data.choices[0].message.content);
-    } catch (e) {
-      // Handle cases where the model might return a string that is not valid JSON
-      console.error('Failed to parse AI response as JSON:', data.choices[0].message.content);
+    const rawContent = data?.choices?.[0]?.message?.content;
+    const content = this.safeParseJson(rawContent);
+    if (!content || typeof content.translation !== 'string' || !content.quality) {
+      console.error('AI response missing translation fields:', rawContent);
       throw new Error('AI returned an invalid response format.');
     }
 
     return {
       translation: content.translation,
-      quality: content.quality,
+      quality: {
+        score: Number(content.quality.score) || 0,
+        explanation: content.quality.explanation || 'No explanation provided.',
+      },
       model: model,
       isFallback: false,
     };
+  }
+
+  private safeParseJson(input: unknown): any | null {
+    if (typeof input !== 'string') return null;
+    try {
+      return JSON.parse(input);
+    } catch {
+      // Try to extract JSON object from text
+      const match = input.match(/\{[\s\S]*\}/);
+      if (!match) return null;
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
   }
 }
 

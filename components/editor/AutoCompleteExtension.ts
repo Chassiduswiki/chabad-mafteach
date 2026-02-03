@@ -199,26 +199,31 @@ export const AutoCompleteExtension = Extension.create<AutoCompleteOptions, AutoC
         key: new PluginKey('autoComplete'),
         props: {
           handleKeyDown: (view, event) => {
+            // Only handle keys if suggestions are actually visible
+            if (!this.storage.isVisible) {
+              return false;
+            }
+
             if (event.key === 'Escape') {
               this.storage.hideSuggestions();
               return true;
             }
-            
+
             if (event.key === 'ArrowUp') {
               this.storage.navigateSuggestions('up');
               return true;
             }
-            
+
             if (event.key === 'ArrowDown') {
               this.storage.navigateSuggestions('down');
               return true;
             }
-            
+
             if (event.key === 'Enter' || event.key === 'Tab') {
               this.storage.selectSuggestion();
               return true;
             }
-            
+
             return false;
           },
         },

@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateItem } from '@directus/sdk';
 import { createClient } from '@/lib/directus';
-import { verifyAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * POST /api/admin/review-queue/action
  * 
  * Performs an action (approve/reject) on a review queue item.
  */
-export async function POST(req: NextRequest) {
-  try {
-    const auth = verifyAuth(req);
-    if (!auth || !['admin', 'editor'].includes(auth.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+export const POST = requirePermission('canEditTopics', withAudit('update', 'admin.review-queue.action', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminWriteRateLimit);
+  if (rateLimited) return rateLimited;
 
+  try {
     const { type, id, action } = await req.json();
     
     if (!type || !id || !action) {
@@ -39,4 +39,4 @@ export async function POST(req: NextRequest) {
     console.error('Review action error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}));

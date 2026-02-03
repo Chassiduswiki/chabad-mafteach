@@ -1,14 +1,19 @@
 /**
  * Citation Serialization System
- * 
+ *
  * This module provides bidirectional conversion between:
  * 1. Editor citation nodes (TipTap/ProseMirror format)
  * 2. Database records (Directus source_links format)
  * 3. Frontend display format (HTML with data attributes)
  */
 
-import { CitationAttrs } from '@/components/editor/plugins/citations/comprehensiveCitationPlugin';
-import { CitationData } from '@/components/editor/extensions/AdvancedCitation';
+import {
+  UnifiedCitation,
+  CitationAttrs,
+  CitationData,
+  toUnified,
+  unifiedToAttrs
+} from './types';
 
 // Database interfaces matching Directus schema
 export interface SourceLink {
@@ -37,67 +42,21 @@ export interface Source {
   author_id?: number | null;
 }
 
-// Create unified type for citation data that combines both formats
-export type UnifiedCitation = {
-  sourceId: number | string | null;
-  sourceTitle: string;
-  reference?: string | null;
-  pageNumber?: string | null;
-  verseNumber?: string | null;
-  quote?: string | null;
-  note?: string | null;
-  url?: string | null;
-  customReference?: string | null;
-};
-
 /**
- * Normalize citation data from either format to unified format
+ * Normalize citation data to unified format
+ * Uses the new type system from lib/citations/types.ts
  */
-function normalizeCitation(citation: CitationAttrs | CitationData): UnifiedCitation {
-  // Type guard for CitationData
-  const isCitationData = (c: any): c is CitationData => {
-    return 'sourceId' in c && 'sourceTitle' in c;
-  };
-
-  // Type guard for CitationAttrs
-  const isCitationAttrs = (c: any): c is CitationAttrs => {
-    return 'source_id' in c && 'source_title' in c;
-  };
-
-  if (isCitationData(citation)) {
-    // It's CitationData format
-    return {
-      sourceId: citation.sourceId || null,
-      sourceTitle: citation.sourceTitle,
-      reference: citation.reference || null,
-      pageNumber: citation.page ? citation.page.toString() : null,
-      verseNumber: citation.verse || null,
-      url: citation.url || null
-    };
-  } else if (isCitationAttrs(citation)) {
-    // It's CitationAttrs format
-    return {
-      sourceId: citation.source_id ?? null,
-      sourceTitle: citation.source_title || 'Unknown Source',
-      reference: citation.reference || null,
-      pageNumber: citation.page_number || null,
-      verseNumber: citation.verse_number || null,
-      quote: citation.quote || null,
-      note: citation.note || null,
-      url: citation.url || null,
-      customReference: citation.custom_reference || null
-    };
-  } else {
-    // Fallback for unexpected format
-    throw new Error('Invalid citation format');
-  }
+function normalizeCitation(
+  citation: CitationAttrs | CitationData | UnifiedCitation
+): UnifiedCitation {
+  return toUnified(citation);
 }
 
 /**
  * Converts editor citation data to database source_link format
  */
 export function editorCitationToSourceLink(
-  citation: CitationAttrs | CitationData,
+  citation: CitationAttrs | CitationData | UnifiedCitation,
   statementId?: number | null,
   topicId?: number | null
 ): SourceLink {
@@ -130,15 +89,31 @@ export function editorCitationToSourceLink(
 
 /**
  * Converts database source_link to editor citation format
+ * FIXED: No longer derives citation_type from relationship_type
+ * Citation type should be stored separately in the database or inferred from reference fields
  */
 export function sourceLinkToEditorCitation(
-  sourceLink: SourceLink, 
-  source: Source
+  sourceLink: SourceLink,
+  source: Source,
+  citationType?: string
 ): CitationAttrs {
+  // Infer citation type from available reference fields if not provided
+  let inferredType = citationType || 'reference';
+
+  if (!citationType) {
+    if (sourceLink.verse_reference) {
+      inferredType = 'verse';
+    } else if (sourceLink.page_number) {
+      inferredType = 'page';
+    } else if (sourceLink.section_reference) {
+      inferredType = 'section';
+    }
+  }
+
   return {
     source_id: sourceLink.source_id,
     source_title: source.title,
-    citation_type: sourceLink.relationship_type === 'quotes' ? 'quote' : 'reference',
+    citation_type: inferredType,
     page_number: sourceLink.page_number ?? undefined,
     reference: sourceLink.section_reference || '',
     verse_number: sourceLink.verse_reference ?? undefined,
@@ -149,22 +124,31 @@ export function sourceLinkToEditorCitation(
 
 /**
  * Serializes citation to HTML format with data attributes
+ * FIXED: Now includes data-citation-type to preserve citation type
  */
-export function serializeCitationToHtml(citation: CitationAttrs | CitationData): string {
+export function serializeCitationToHtml(
+  citation: CitationAttrs | CitationData | UnifiedCitation
+): string {
   const normalized = normalizeCitation(citation);
-  const citationId = `cite_${Math.random().toString(36).substring(2, 12)}`;
-  const displayText = normalized.reference || 
+  const citationId = normalized.id || `cite_${Math.random().toString(36).substring(2, 12)}`;
+  const displayText = normalized.reference ||
     (normalized.sourceTitle ? normalized.sourceTitle.slice(0, 15) : '†');
 
-  return `<span 
-    class="citation-ref" 
+  return `<span
+    class="citation-ref"
     data-type="citation"
     data-citation-id="${citationId}"
+    data-citation-type="${normalized.citationType || 'reference'}"
     data-source-id="${normalized.sourceId || ''}"
     data-source-title="${normalized.sourceTitle || ''}"
     data-reference="${normalized.reference || ''}"
     ${normalized.pageNumber ? `data-page-number="${normalized.pageNumber}"` : ''}
+    ${normalized.chapterNumber ? `data-chapter-number="${normalized.chapterNumber}"` : ''}
+    ${normalized.sectionNumber ? `data-section-number="${normalized.sectionNumber}"` : ''}
     ${normalized.verseNumber ? `data-verse-number="${normalized.verseNumber}"` : ''}
+    ${normalized.dafNumber ? `data-daf-number="${normalized.dafNumber}"` : ''}
+    ${normalized.halachaNumber ? `data-halacha-number="${normalized.halachaNumber}"` : ''}
+    ${normalized.customReference ? `data-custom-reference="${normalized.customReference}"` : ''}
     ${normalized.url ? `data-url="${normalized.url}"` : ''}
     ${normalized.quote ? `data-quote="${normalized.quote}"` : ''}
     ${normalized.note ? `data-note="${normalized.note}"` : ''}
@@ -173,26 +157,38 @@ export function serializeCitationToHtml(citation: CitationAttrs | CitationData):
 
 /**
  * Deserializes HTML citation to citation data object
+ * FIXED: Now reads data-citation-type instead of hardcoding to 'reference'
  */
 export function deserializeHtmlToCitation(html: string): CitationAttrs | null {
   if (typeof window === 'undefined') {
     console.warn('deserializeHtmlToCitation called in server context');
     return null;
   }
-  
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const citationEl = doc.querySelector('[data-type="citation"]');
-  
+
   if (!citationEl) return null;
-  
+
   return {
     source_id: citationEl.getAttribute('data-source-id') || '',
     source_title: citationEl.getAttribute('data-source-title') || '',
-    citation_type: 'reference',
+    citation_type: citationEl.getAttribute('data-citation-type') || 'reference',
     reference: citationEl.getAttribute('data-reference') || '',
     page_number: citationEl.getAttribute('data-page-number') || '',
+    chapter_number: citationEl.getAttribute('data-chapter-number')
+      ? parseInt(citationEl.getAttribute('data-chapter-number')!)
+      : null,
+    section_number: citationEl.getAttribute('data-section-number')
+      ? parseInt(citationEl.getAttribute('data-section-number')!)
+      : null,
     verse_number: citationEl.getAttribute('data-verse-number') || '',
+    daf_number: citationEl.getAttribute('data-daf-number') || '',
+    halacha_number: citationEl.getAttribute('data-halacha-number')
+      ? parseInt(citationEl.getAttribute('data-halacha-number')!)
+      : null,
+    custom_reference: citationEl.getAttribute('data-custom-reference') || '',
     url: citationEl.getAttribute('data-url') || '',
     quote: citationEl.getAttribute('data-quote') || '',
     note: citationEl.getAttribute('data-note') || '',
@@ -228,6 +224,7 @@ export function enrichHtmlWithCitations(
 
 /**
  * Extracts citation data from HTML content
+ * FIXED: Now reads data-citation-type instead of hardcoding to 'reference'
  */
 export function extractCitationsFromHtml(html: string): CitationAttrs[] {
   // Use a safer approach for browser vs server environments
@@ -237,18 +234,29 @@ export function extractCitationsFromHtml(html: string): CitationAttrs[] {
     console.warn('extractCitationsFromHtml called in server context');
     return [];
   }
-  
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const citationEls = doc.querySelectorAll('[data-type="citation"]');
-  
+
   return Array.from(citationEls).map(el => ({
     source_id: el.getAttribute('data-source-id') || '',
     source_title: el.getAttribute('data-source-title') || '',
-    citation_type: 'reference',
+    citation_type: el.getAttribute('data-citation-type') || 'reference',
     reference: el.getAttribute('data-reference') || '',
     page_number: el.getAttribute('data-page-number') || '',
+    chapter_number: el.getAttribute('data-chapter-number')
+      ? parseInt(el.getAttribute('data-chapter-number')!)
+      : null,
+    section_number: el.getAttribute('data-section-number')
+      ? parseInt(el.getAttribute('data-section-number')!)
+      : null,
     verse_number: el.getAttribute('data-verse-number') || '',
+    daf_number: el.getAttribute('data-daf-number') || '',
+    halacha_number: el.getAttribute('data-halacha-number')
+      ? parseInt(el.getAttribute('data-halacha-number')!)
+      : null,
+    custom_reference: el.getAttribute('data-custom-reference') || '',
     url: el.getAttribute('data-url') || '',
     quote: el.getAttribute('data-quote') || '',
     note: el.getAttribute('data-note') || '',

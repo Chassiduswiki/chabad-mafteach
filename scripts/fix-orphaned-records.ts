@@ -11,15 +11,20 @@ import { readItems } from '@directus/sdk';
 
 const directus = createClient();
 
+// Helper function to bypass strict typing for collection operations
+async function readCollection(collection: string, options?: any) {
+  return directus.request(readItems(collection as any, options));
+}
+
 export async function fixOrphanedStatementTopics() {
     console.log('🔍 Checking for orphaned statement_topics records...');
 
     try {
         // First, identify orphaned records
-        const orphanedRecords = await directus.request(readItems('statement_topics', {
+        const orphanedRecords = await readCollection('statement_topics', {
             fields: ['id', 'statement_id', 'topic_id'],
             // We can't do LEFT JOIN in Directus SDK, so we'll check each record
-        }));
+        });
 
         console.log(`📊 Found ${orphanedRecords.length} statement_topics records to check`);
 
@@ -28,11 +33,11 @@ export async function fixOrphanedStatementTopics() {
         // Check each record to see if the referenced statement exists
         for (const record of orphanedRecords) {
             try {
-                const statement = await directus.request(readItems('statements', {
+                const statement = await readCollection('statements', {
                     filter: { id: { _eq: record.statement_id } },
                     limit: 1,
                     fields: ['id']
-                }));
+                });
 
                 if (!statement || statement.length === 0) {
                     orphanedIds.push(record.id);

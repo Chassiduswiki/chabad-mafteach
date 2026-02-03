@@ -1,17 +1,29 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BookOpen, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
-export default function SignInPage() {
+function SignInContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState<number | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      setInfoMessage(message);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,22 +41,26 @@ export default function SignInPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Store the token in localStorage
-        localStorage.setItem('auth_token', data.accessToken);
-
-        // Also set as cookie for middleware access
-        document.cookie = `auth_token=${data.accessToken}; path=/; max-age=${24 * 60 * 60}; SameSite=Strict`;
-
         setSuccess(true);
+        setError('');
+        setIsLocked(false);
+        setUserRole(data.user?.role || 'editor');
 
-        // Redirect to editor after a short delay
+        // Redirect based on role after a short delay
         setTimeout(() => {
-          router.push('/editor');
+          const redirectPath = data.user?.role === 'admin' ? '/admin' : '/editor';
+          router.push(redirectPath);
         }, 1500);
       } else {
+        // Handle different error types
+        if (data.isLocked) {
+          setIsLocked(true);
+          setLockoutTime(data.lockoutRemaining || 0);
+        }
         setError(data.error || 'Login failed');
+        setSuccess(false);
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
@@ -52,6 +68,7 @@ export default function SignInPage() {
   };
 
   if (success) {
+    const destination = userRole === 'admin' ? 'admin dashboard' : 'editor';
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
@@ -60,7 +77,7 @@ export default function SignInPage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Welcome back!</h1>
           <p className="text-muted-foreground mb-6">
-            Authentication successful. Redirecting to editor...
+            Authentication successful. Redirecting to {destination}...
           </p>
           <div className="animate-spin rounded-full h-6 w-6 border border-primary border-t-transparent mx-auto"></div>
         </div>
@@ -76,9 +93,9 @@ export default function SignInPage() {
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-4">
             <BookOpen className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Editor Sign In</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Sign In</h1>
           <p className="text-muted-foreground">
-            Access the Chabad Mafteach content editor
+            Access your Chabad Mafteach account
           </p>
         </div>
 
@@ -133,13 +150,32 @@ export default function SignInPage() {
               </div>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {error}
-              </div>
-            )}
+            {/* Info Message */}
+        {infoMessage && (
+          <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-700 text-sm">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            {infoMessage}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className={`flex items-start gap-2 p-3 rounded-md text-sm ${
+            isLocked 
+              ? 'bg-amber-500/10 border border-amber-500/20 text-amber-700' 
+              : 'bg-destructive/10 border border-destructive/20 text-destructive'
+          }`}>
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <div>
+              <p>{error}</p>
+              {isLocked && lockoutTime && (
+                <p className="text-xs mt-1 opacity-80">
+                  Try again in {Math.ceil(lockoutTime / 60)} minute{Math.ceil(lockoutTime / 60) !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
             {/* Submit Button */}
             <button
@@ -155,7 +191,7 @@ export default function SignInPage() {
               ) : (
                 <>
                   <BookOpen className="h-4 w-4" />
-                  Sign In with Directus
+                  Sign In
                 </>
               )}
             </button>
@@ -164,23 +200,52 @@ export default function SignInPage() {
 
         {/* Info Box */}
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Directus Authentication</h3>
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Account Access</h3>
           <p className="text-xs text-muted-foreground">
-            Use your standard Directus admin or editor credentials to sign in. 
+            Use your registered email and password to access your account. 
             This session is valid for 24 hours.
           </p>
         </div>
 
-        {/* Back to Home */}
-        <div className="mt-6 text-center">
+        {/* Forgot Password Link */}
+        <div className="mt-4 text-center">
           <a
-            href="/"
+            href="/auth/forgot-password"
             className="text-sm text-primary hover:underline"
           >
-            ← Back to Chabad Mafteach
+            Forgot your password?
           </a>
+        </div>
+
+        {/* Sign Up Link */}
+        <div className="mt-6 text-center">
+          <span className="text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <a
+              href="/auth/signup"
+              className="text-sm text-primary hover:underline"
+            >
+              Sign Up
+            </a>
+          </span>
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrapper component with Suspense boundary for SSR compatibility
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border border-primary border-t-transparent mx-auto"></div>
+          <p className="text-muted-foreground mt-4">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }

@@ -1,325 +1,186 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { useSefariaText } from "@/lib/hooks/useSefariaText";
-import { CitationAttrs } from "./plugins/citations/comprehensiveCitationPlugin";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Edit2, Save, X, BookOpen, Calendar, User, Hash } from "lucide-react";
+import React from 'react';
+import { X, BookOpen, ExternalLink, Copy, Check } from 'lucide-react';
+
+interface CitationData {
+  source_id: number | string | null;
+  source_title: string | null;
+  reference: string | null;
+  content?: string;
+  quote?: string;
+  note?: string;
+  url?: string;
+}
 
 interface CitationViewerModalProps {
   open: boolean;
-  citation: CitationAttrs | null;
-  citationContent?: string; // HTML content of the citation
+  citation: CitationData | null;
   onClose: () => void;
 }
 
-interface SourceDetails {
-  id: number;
-  title: string;
-  citation_text?: string;
-  metadata?: any;
-  author?: {
-    id: number;
-    canonical_name: string;
-    birth_year?: number;
-    death_year?: number;
-    era?: string;
-    bio_summary?: string;
-  };
-  original_lang?: string;
-  publication_year?: number;
-  publisher?: string;
-  isbn?: string;
-  external_url?: string;
-}
-
-export function CitationViewerModal({ open, citation, citationContent, onClose }: CitationViewerModalProps) {
-  const [sourceDetails, setSourceDetails] = useState<SourceDetails | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<SourceDetails>>({});
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (citation?.source_id && open) {
-      fetchSourceDetails(citation.source_id);
-    }
-  }, [citation?.source_id, open]);
-
-  const fetchSourceDetails = async (sourceId: number | string) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/sources/${sourceId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSourceDetails(data);
-        setEditForm(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch source details:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!sourceDetails) return;
-    
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/sources/${sourceDetails.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      
-      if (response.ok) {
-        const updated = await response.json();
-        setSourceDetails(updated);
-        setIsEditing(false);
-      }
-    } catch (error) {
-      console.error('Failed to save source:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
+export function CitationViewerModal({ open, citation, onClose }: CitationViewerModalProps) {
+  const [copied, setCopied] = React.useState(false);
 
   if (!open || !citation) return null;
 
+  const handleCopy = () => {
+    const citationText = `${citation.source_title}${citation.reference ? ' — ' + citation.reference : ''}`;
+    navigator.clipboard.writeText(citationText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }}
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 px-4"
+      onClick={onClose}
+      onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-background shadow-2xl border border-border overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl rounded-2xl bg-background shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="space-y-1">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Citation</p>
-            <p className="text-lg font-semibold text-foreground">
-              {citation.source_title ?? "Citation"}
-            </p>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Citation Details</h2>
+              <p className="text-xs text-muted-foreground">
+                {citation.source_id ? 'Synced Source' : 'Manual Citation'}
+              </p>
+            </div>
           </div>
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClose();
-            }}
-            className="rounded-full px-3 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close"
           >
-            Close
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {/* Source Title */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+              Source
+            </label>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xl font-semibold text-foreground flex-1">
+                {citation.source_title || 'Unknown Source'}
+              </p>
+              <button
+                onClick={handleCopy}
+                className="p-2 rounded-lg hover:bg-muted transition-colors flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                title="Copy citation"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-green-600">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             </div>
-          ) : sourceDetails ? (
-            <>
-              {/* Source Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {sourceDetails.title}
-                  </h3>
-                  {sourceDetails.author && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <User className="h-4 w-4" />
-                      <span>{sourceDetails.author.canonical_name}</span>
-                      {sourceDetails.author.birth_year && (
-                        <span>({sourceDetails.author.birth_year}{sourceDetails.author.death_year ? `-${sourceDetails.author.death_year}` : ''})</span>
-                      )}
-                      {sourceDetails.author.era && (
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs">
-                          {sourceDetails.author.era}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  {isEditing ? <X className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
-                  {isEditing ? 'Cancel' : 'Edit'}
-                </Button>
-              </div>
+            {citation.source_id && (
+              <span className="inline-block mt-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
+                Source ID: {citation.source_id}
+              </span>
+            )}
+          </div>
 
-              {/* Author Bio */}
-              {sourceDetails.author?.bio_summary && (
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-foreground mb-2">About the Author</p>
-                  <p className="text-sm text-muted-foreground">{sourceDetails.author.bio_summary}</p>
-                </div>
-              )}
+          {/* Reference */}
+          {citation.reference && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Reference
+              </label>
+              <p className="text-base text-foreground bg-muted/30 border border-border rounded-lg px-4 py-2.5">
+                {citation.reference}
+              </p>
+            </div>
+          )}
 
-              {/* Citation Text */}
-              {sourceDetails.citation_text && (
-                <div>
-                  <p className="text-sm uppercase tracking-wide text-muted-foreground mb-2">Citation Format</p>
-                  <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                    <p className="text-sm text-foreground italic">{sourceDetails.citation_text}</p>
-                  </div>
-                </div>
-              )}
+          {/* Quote */}
+          {citation.quote && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Quote
+              </label>
+              <blockquote className="text-sm text-foreground bg-muted/30 border-l-4 border-primary rounded-r-lg px-4 py-3 italic">
+                "{citation.quote}"
+              </blockquote>
+            </div>
+          )}
 
-              {/* Publication Details */}
-              <div className="grid grid-cols-2 gap-4">
-                {sourceDetails.publication_year && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Published: {sourceDetails.publication_year}</span>
-                  </div>
-                )}
-                {sourceDetails.publisher && (
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{sourceDetails.publisher}</span>
-                  </div>
-                )}
-                {sourceDetails.isbn && (
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">ISBN: {sourceDetails.isbn}</span>
-                  </div>
-                )}
-              </div>
+          {/* Note */}
+          {citation.note && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Note
+              </label>
+              <p className="text-sm text-foreground bg-muted/30 border border-border rounded-lg px-4 py-2.5">
+                {citation.note}
+              </p>
+            </div>
+          )}
 
-              {/* External Link */}
-              {sourceDetails.external_url && (
-                <div>
-                  <a
-                    href={sourceDetails.external_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline text-sm"
-                  >
-                    View Source →
-                  </a>
-                </div>
-              )}
+          {/* URL */}
+          {citation.url && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Link
+              </label>
+              <a
+                href={citation.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 bg-muted/30 border border-border rounded-lg px-4 py-2.5 hover:bg-muted/50 transition-colors group"
+              >
+                <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{citation.url}</span>
+              </a>
+            </div>
+          )}
 
-              {/* Citation Content from editor */}
-              {citationContent && (
-                <div>
-                  <p className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Cited Content</p>
-                  <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                    <div
-                      className="text-foreground prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: citationContent }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Current Reference */}
-              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">Citation Reference</p>
-                <p className="text-foreground font-mono text-sm">
-                  {citation.reference || "Not specified"}
-                </p>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Source details not available
+          {/* Full Content (if available) */}
+          {citation.content && citation.content !== `${citation.source_title} - ${citation.reference}` && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Full Citation
+              </label>
+              <p className="text-sm text-foreground bg-muted/30 border border-border rounded-lg px-4 py-2.5">
+                {citation.content}
+              </p>
             </div>
           )}
         </div>
 
-        {/* Edit Dialog */}
-        <Dialog open={isEditing} onOpenChange={setIsEditing}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Source: {sourceDetails?.title}</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={editForm.title || ''}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="citation_text">Citation Format</Label>
-                <Textarea
-                  id="citation_text"
-                  value={editForm.citation_text || ''}
-                  onChange={(e) => setEditForm({ ...editForm, citation_text: e.target.value })}
-                  placeholder="e.g., Tanya, Chapter 32, p. 45"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="publication_year">Publication Year</Label>
-                  <Input
-                    id="publication_year"
-                    type="number"
-                    value={editForm.publication_year || ''}
-                    onChange={(e) => setEditForm({ ...editForm, publication_year: parseInt(e.target.value) || undefined })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="publisher">Publisher</Label>
-                  <Input
-                    id="publisher"
-                    value={editForm.publisher || ''}
-                    onChange={(e) => setEditForm({ ...editForm, publisher: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="isbn">ISBN</Label>
-                <Input
-                  id="isbn"
-                  value={editForm.isbn || ''}
-                  onChange={(e) => setEditForm({ ...editForm, isbn: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="external_url">External URL</Label>
-                <Input
-                  id="external_url"
-                  value={editForm.external_url || ''}
-                  onChange={(e) => setEditForm({ ...editForm, external_url: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );

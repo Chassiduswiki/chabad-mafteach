@@ -5,13 +5,11 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 declare global {
   interface Window {
     Tesseract: any;
-    hebocr: any;
   }
 }
 
 export interface HebrewOCROptions {
   tesseractPath: string;
-  hebocrPath: string;
   onOCRResult?: (text: string) => void;
   onOCRError?: (error: string) => void;
 }
@@ -22,7 +20,6 @@ export const HebrewOCR = Extension.create<HebrewOCROptions>({
   addOptions() {
     return {
       tesseractPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js',
-      hebocrPath: 'https://cdn.jsdelivr.net/npm/hebocr@1.0.0/dist/hebocr.min.js',
       onOCRResult: (text: string) => console.log('OCR Result:', text),
       onOCRError: (error: string) => console.error('OCR Error:', error),
     };
@@ -31,15 +28,7 @@ export const HebrewOCR = Extension.create<HebrewOCROptions>({
   addProseMirrorPlugins() {
     let ocrWorker: Worker | null = null;
 
-    // Load OCR libraries when the plugin is created
-    if (!document.querySelector('script[src*="hebocr"]')) {
-      const hebocrScript = document.createElement('script');
-      hebocrScript.src = this.options.hebocrPath;
-      hebocrScript.onload = () => console.log('hebocr loaded');
-      hebocrScript.onerror = () => console.warn('Failed to load hebocr');
-      document.head.appendChild(hebocrScript);
-    }
-
+    // Load Tesseract.js when the plugin is created
     if (!document.querySelector('script[src*="tesseract"]')) {
       const tesseractScript = document.createElement('script');
       tesseractScript.src = this.options.tesseractPath;
@@ -60,44 +49,11 @@ export const HebrewOCR = Extension.create<HebrewOCROptions>({
         canvas.height = img.height;
         ctx?.drawImage(img, 0, 0);
 
-        // Try Hebrew OCR first, fallback to Tesseract
-        performHebrewOCR(canvas, view)
-          .then(text => {
-            if (text && text.trim()) {
-              this.options.onOCRResult?.(text);
-              // Insert the text directly
-              const { state, dispatch } = view;
-              const textNode = state.schema.text(text);
-              const transaction = state.tr.insert(state.selection.from, textNode);
-              dispatch(transaction);
-            } else {
-              // Fallback to Tesseract
-              performTesseractOCR(canvas, view);
-            }
-          })
-          .catch(error => {
-            console.warn('Hebrew OCR failed, trying Tesseract:', error);
-            performTesseractOCR(canvas, view);
-          });
+        // Use Tesseract.js for Hebrew OCR
+        performTesseractOCR(canvas, view);
       };
 
       img.src = URL.createObjectURL(file);
-    };
-
-    const performHebrewOCR = (canvas: HTMLCanvasElement, view: any): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        if (typeof window.hebocr !== 'undefined') {
-          try {
-            // hebocr API - adjust based on actual library interface
-            const result = window.hebocr.recognize(canvas.toDataURL());
-            resolve(result || '');
-          } catch (error) {
-            reject(error);
-          }
-        } else {
-          reject(new Error('hebocr library not loaded'));
-        }
-      });
     };
 
     const performTesseractOCR = async (canvas: HTMLCanvasElement, view: any) => {

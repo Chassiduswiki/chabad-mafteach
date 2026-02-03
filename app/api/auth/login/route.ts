@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedLogin, recordSuccessfulLogin } from '@/lib/auth';
 import { SECURITY } from '@/lib/constants';
+import { setAuthCookie, setAuthStatusCookie } from '@/lib/cookie-utils';
+import { recordAuditEvent } from '@/lib/security/audit';
+import { logSecurityEvent } from '@/lib/logging/security';
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -43,6 +46,15 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = checkRateLimit(ip);
   if (!rateLimitResult.allowed) {
     const resetInSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+    void logSecurityEvent({
+      userId: 'unknown',
+      action: 'login_rate_limited',
+      resource: 'auth.login',
+      success: false,
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') || 'unknown',
+      reason: 'rate_limit_exceeded'
+    });
     return NextResponse.json(
       {
         error: 'Too many login attempts. Please try again later.',
@@ -72,10 +84,21 @@ export async function POST(request: NextRequest) {
     // Check account lockout status
     const lockoutStatus = checkAccountLockout(email);
     if (lockoutStatus.isLocked) {
+      const waitTime = Math.ceil(lockoutStatus.lockoutRemaining! / 60);
+      void logSecurityEvent({
+        userId: email || 'unknown',
+        action: 'login_locked',
+        resource: 'auth.login',
+        success: false,
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        reason: 'account_lockout'
+      });
       return NextResponse.json(
         {
-          error: `Account is temporarily locked due to too many failed login attempts. Try again in ${Math.ceil(lockoutStatus.lockoutRemaining! / 60)} minutes.`,
-          lockoutRemaining: lockoutStatus.lockoutRemaining
+          error: `Account temporarily locked for security. Please try again in ${waitTime} minute${waitTime !== 1 ? 's' : ''}.`,
+          lockoutRemaining: lockoutStatus.lockoutRemaining,
+          isLocked: true
         },
         { status: 429 }
       );
@@ -104,10 +127,34 @@ export async function POST(request: NextRequest) {
         recordFailedLogin(email);
         const errorData = await loginResponse.json().catch(() => ({}));
         console.error('Directus login failed:', errorData);
-        return NextResponse.json(
-          { error: 'Invalid email or password' },
-          { status: 401 }
-        );
+        void logSecurityEvent({
+          userId: email || 'unknown',
+          action: 'login_failed',
+          resource: 'auth.login',
+          success: false,
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          reason: `directus_${loginResponse.status}`,
+          metadata: { status: loginResponse.status }
+        });
+        
+        // Provide more specific error messages
+        if (loginResponse.status === 401) {
+          return NextResponse.json(
+            { error: 'Invalid email or password. Please check your credentials and try again.' },
+            { status: 401 }
+          );
+        } else if (loginResponse.status === 429) {
+          return NextResponse.json(
+            { error: 'Too many login attempts. Please wait a few minutes before trying again.' },
+            { status: 429 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: 'Login service unavailable. Please try again later.' },
+            { status: 503 }
+          );
+        }
       }
 
       const loginData = await loginResponse.json();
@@ -115,6 +162,15 @@ export async function POST(request: NextRequest) {
 
       if (!directusAccessToken) {
         console.error('No access token in Directus response');
+        void logSecurityEvent({
+          userId: email || 'unknown',
+          action: 'login_failed',
+          resource: 'auth.login',
+          success: false,
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          reason: 'missing_directus_token'
+        });
         return NextResponse.json(
           { error: 'Authentication failed' },
           { status: 401 }
@@ -128,6 +184,15 @@ export async function POST(request: NextRequest) {
 
       if (!userDetailsResponse.ok) {
         console.error('Failed to fetch user details');
+        void logSecurityEvent({
+          userId: email || 'unknown',
+          action: 'login_failed',
+          resource: 'auth.login',
+          success: false,
+          ipAddress: ip,
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          reason: 'user_details_failed'
+        });
         return NextResponse.json(
           { error: 'Failed to retrieve user information' },
           { status: 401 }
@@ -137,21 +202,38 @@ export async function POST(request: NextRequest) {
       const userDetails = await userDetailsResponse.json();
       const directusUser = userDetails.data;
 
+      console.log('Directus user details:', directusUser);
+      console.log('Directus role:', directusUser.role);
+
       // Map Directus roles to app roles
       const role = directusUser.role?.name?.toLowerCase().includes('admin') ? 'admin' : 'editor';
+      
+      console.log('Mapped role:', role);
 
       // Record successful login (resets lockout counter)
       recordSuccessfulLogin(email);
+      void recordAuditEvent({
+        userId: directusUser.id,
+        action: 'login',
+        resource: 'auth.login',
+        timestamp: new Date().toISOString(),
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        success: true,
+        metadata: { role }
+      });
 
       // Create our App JWT tokens
       const accessToken = createAuthToken(directusUser.id, role);
       const refreshToken = createRefreshToken(directusUser.id);
 
-      // Return tokens and user info
-      return NextResponse.json({
+      // Set secure HttpOnly cookie with access token
+      const authCookie = setAuthCookie(accessToken);
+      const statusCookie = setAuthStatusCookie(true);
+
+      // Create response with cookies
+      const response = NextResponse.json({
         success: true,
-        accessToken,
-        refreshToken,
         user: {
           id: directusUser.id,
           email: directusUser.email,
@@ -159,9 +241,25 @@ export async function POST(request: NextRequest) {
           role: role
         }
       });
+
+      // Set cookies
+      response.headers.set('Set-Cookie', authCookie);
+      response.headers.append('Set-Cookie', statusCookie);
+
+      return response;
     } catch (directusError) {
       console.error('Directus auth error:', directusError);
+      console.error('Error details:', (directusError as any)?.stack);
       recordFailedLogin(email);
+      void logSecurityEvent({
+        userId: email || 'unknown',
+        action: 'login_failed',
+        resource: 'auth.login',
+        success: false,
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        reason: 'directus_error'
+      });
       return NextResponse.json(
         { error: 'Authentication failed' },
         { status: 401 }
@@ -170,6 +268,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
+    void logSecurityEvent({
+      userId: 'unknown',
+      action: 'login_failed',
+      resource: 'auth.login',
+      success: false,
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') || 'unknown',
+      reason: 'server_error'
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -5,6 +5,16 @@ import { useEditor, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+import Typography from '@tiptap/extension-typography';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import Focus from '@tiptap/extension-focus';
 import { createTipTapExtensions } from './extensions';
 
 interface CitationData {
@@ -65,17 +75,92 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         heading: {
           levels: [1, 2, 3],
         },
-        blockquote: {},
-        codeBlock: {},
-        bulletList: {},
-        orderedList: {},
+        paragraph: {
+          HTMLAttributes: {
+            class: 'mb-4',
+          },
+        },
+        hardBreak: {
+          // Allow Shift+Enter for hard breaks
+          HTMLAttributes: {
+            class: 'hard-break',
+          },
+        },
+        blockquote: {
+          HTMLAttributes: {
+            class: 'border-l-4 border-primary pl-4 italic',
+          },
+        },
+        codeBlock: {
+          HTMLAttributes: {
+            class: 'bg-muted rounded-lg p-4 font-mono text-sm',
+          },
+        },
+        bulletList: {
+          HTMLAttributes: {
+            class: 'list-disc ml-6',
+          },
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'list-decimal ml-6',
+          },
+        },
+        // Configure Link within StarterKit to avoid duplicates
+        link: {
+          openOnClick: true,
+          HTMLAttributes: {
+            class: 'text-primary underline hover:text-primary/80',
+          },
+        },
       }),
+
+      // Text formatting (StarterKit already includes Underline)
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+      }),
+
+      // Text alignment
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+      }),
+
+      // Typography
+      Typography,
+
+      // Navigation helpers (StarterKit already includes Gapcursor and Dropcursor)
+      // Note: These are already included in StarterKit, so we don't add them separately
+
+      // Tables
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full',
+        },
+      }),
+      TableRow,
+      TableCell,
+      TableHeader,
+
+      // Focus
+      Focus.configure({
+        className: 'has-focus',
+        mode: 'all',
+      }),
+
+      // Character count
       CharacterCount.configure({
         limit: characterLimit,
       }),
+
+      // Placeholder
       Placeholder.configure({
         placeholder,
       }),
+
       // Custom extensions for Hebrew and citations
       ...createTipTapExtensions({
         topicId: docId || undefined,
@@ -90,6 +175,14 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         onCitationEdit: (citation) => {
           console.log('Edit citation:', citation);
           // TODO: Open citation edit dialog
+        },
+        onTrigger: () => {
+          // Open citation modal when @ is typed
+          setShowCitationModal(true);
+        },
+        onDismiss: () => {
+          // Close citation modal on Escape
+          setShowCitationModal(false);
         },
         onOCRResult: (text) => {
           console.log('OCR Result:', text);
@@ -128,10 +221,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       }),
     ],
     content: initialContent,
-    onUpdate: ({ editor }) => {
-      // Handle content changes
+    onBlur: ({ editor }) => {
+      // Handle content changes when editor loses focus
       const html = editor.getHTML();
-      console.log('Content updated:', html);
+      console.log('Content updated on blur:', html);
       if (onUpdate) {
         onUpdate(html);
       }
@@ -170,20 +263,39 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }) => {
     if (!editor) return;
 
-    // Insert citation as a formatted node
-    editor.commands.insertContent({
-      type: 'citation',
-      attrs: {
-        sourceTitle: citation.sourceTitle,
-        reference: citation.reference,
+    console.log('insertCitation called with:', citation);
+
+    try {
+      // Use the dedicated insertCitation command from our extension
+      const success = editor.commands.insertCitation({
+        id: `cite_${Math.random().toString(36).substring(2, 12)}`,
         sourceId: citation.sourceId,
+        sourceTitle: citation.sourceTitle,
+        citationType: 'reference',
+        reference: citation.reference,
         quote: citation.quote,
         note: citation.note,
         url: citation.url,
-      },
-    });
+      });
 
-    setShowCitationModal(false);
+      console.log('insertCitation command result:', success);
+
+      if (success) {
+        setShowCitationModal(false);
+        setFeedback({
+          type: "success",
+          message: `Citation added: ${citation.sourceTitle}`
+        });
+      } else {
+        console.error('insertCitation command failed');
+      }
+    } catch (error) {
+      console.error('insertCitation error:', error);
+      setFeedback({
+        type: "error",
+        message: 'Failed to insert citation. Please try again.'
+      });
+    }
   };
 
   const handleInsertImage = () => {

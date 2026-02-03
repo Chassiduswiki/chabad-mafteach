@@ -65,7 +65,9 @@ export function TopicAnnotations({
 
       const response = await fetch(`/api/topics/${topicId}/annotations?${params}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch annotations');
+        const errorText = await response.text();
+        console.error('Annotations API error:', response.status, errorText);
+        throw new Error(`Failed to fetch annotations: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();

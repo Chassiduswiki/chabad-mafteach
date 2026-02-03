@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Type Check
+      run: npm run type-check
+
+    - name: Run Tests
+      run: npm run test:ci
+
+    - name: Build
+      run: npm run build
+      env:
+        # Mock env vars for build
+        NEXT_PUBLIC_DIRECTUS_URL: "https://mock-directus.railway.app"
+        DIRECTUS_STATIC_TOKEN: "mock-token"
+        NEXTAUTH_SECRET: "mock-secret"
+        NEXTAUTH_URL: "http://localhost:3000"

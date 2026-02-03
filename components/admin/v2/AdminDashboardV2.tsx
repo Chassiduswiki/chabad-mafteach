@@ -66,6 +66,8 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { MetricCard } from './MetricCard';
 import { ReviewQueueV2 } from './ReviewQueueV2';
 import { SystemHealth } from './SystemHealth';
+import { PerformancePanel } from './PerformancePanel';
+import { MonitoringPanel } from './MonitoringPanel';
 import { 
   AIChatPanel, 
   FloatingAIChatButton 
@@ -81,9 +83,11 @@ import {
   fetchMaintenanceStatus,
   fetchContentStats
 } from '@/lib/api/dashboard';
+import type { UserPermissions } from '@/lib/security/permissions';
 
 export function AdminDashboardV2() {
   const [mounted, setMounted] = React.useState(false);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const { 
     dashboard, 
     realTime, 
@@ -91,13 +95,32 @@ export function AdminDashboardV2() {
     reviewQueue, 
     activityLog, 
     maintenance, 
+    performance,
+    monitoring,
     isLoading, 
     isError, 
+    isPerformanceLoading,
+    isMonitoringLoading,
     refetch 
   } = useDashboardData();
 
   React.useEffect(() => {
     setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const response = await fetch('/api/auth/profile');
+        if (!response.ok) throw new Error('Failed to load permissions');
+        const data = await response.json();
+        setPermissions(data.permissions || null);
+      } catch (error) {
+        setPermissions(null);
+      }
+    };
+
+    loadPermissions();
   }, []);
   
   const { data: contentStats } = useQuery({
@@ -112,7 +135,7 @@ export function AdminDashboardV2() {
   const [showChatPanel, setShowChatPanel] = useState(false);
 
   // Handler for tech ops - defined before useEffect that uses it
-  const handleTechOp = async (action: 'invalidate-cache' | 'optimize-database' | 'purge-storage') => {
+  const handleTechOp = async (action: 'invalidate-cache' | 'optimize-database' | 'purge-storage' | 'warm-cache') => {
     setIsTechOpsLoading(action);
     try {
       const res = await fetch('/api/admin/technical-ops', {
@@ -136,6 +159,7 @@ export function AdminDashboardV2() {
       console.log('Starting platform optimization...');
       await handleTechOp('invalidate-cache');
       await handleTechOp('optimize-database');
+      await handleTechOp('warm-cache');
     };
 
     window.addEventListener('platform-optimize', handleOptimize);
@@ -232,9 +256,13 @@ export function AdminDashboardV2() {
 
   const popularTopics = dashboard?.popularTopics || [];
   const isMaintenanceActive = maintenance?.isMaintenance || false;
+  const canEditTopics = permissions?.canEditTopics ?? false;
+  const canViewPerformance = permissions?.canViewPerformanceMetrics ?? false;
+  const canManageUsers = permissions?.canManageUsers ?? false;
+  const canViewMonitoring = permissions?.canViewMonitoring ?? false;
 
   return (
-    <div className="space-y-12 pb-20 max-w-[1600px] mx-auto">
+    <div className="space-y-8 pb-12 max-w-[1600px] mx-auto px-6">
       {/* 1. Critical Overview Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
@@ -264,7 +292,7 @@ export function AdminDashboardV2() {
       </div>
 
       {/* 2. Content & Review Hub */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm flex flex-col">
           <ReviewQueueV2
             data={reviewQueue}
@@ -274,7 +302,8 @@ export function AdminDashboardV2() {
           />
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-8">
+          {canManageUsers && (
           <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-serif italic flex items-center gap-3">
@@ -338,156 +367,163 @@ export function AdminDashboardV2() {
               </Empty>
             )}
           </div>
+          )}
 
-          <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-serif italic flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-purple-500" />
-                Encyclopedia Manager
-              </h2>
-              <Link href="/admin/content" className="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
-                Full Manager
-              </Link>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <span className="text-sm font-medium">Published Topics</span>
-                </div>
-                <span className="text-lg font-serif italic">{contentStats?.topics.published || 0}</span>
+          {canEditTopics && (
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
+                  <BookOpen className="w-5 h-5 text-purple-500" />
+                  Encyclopedia Manager
+                </h2>
+                <Link href="/admin/content" className="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
+                  Full Manager
+                </Link>
               </div>
               
-              <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-amber-600" />
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <span className="text-sm font-medium">Published Topics</span>
                   </div>
-                  <span className="text-sm font-medium">Drafts in Progress</span>
+                  <span className="text-lg font-serif italic">{contentStats?.topics.published || 0}</span>
                 </div>
-                <span className="text-lg font-serif italic">{contentStats?.topics.draft || 0}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4 text-rose-600" />
+                
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <span className="text-sm font-medium">Drafts in Progress</span>
                   </div>
-                  <span className="text-sm font-medium">Archived / Legacy</span>
+                  <span className="text-lg font-serif italic">{contentStats?.topics.draft || 0}</span>
                 </div>
-                <span className="text-lg font-serif italic">{contentStats?.topics.archived || 0}</span>
-              </div>
-              
-              <div className="pt-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
-                  <span>Growth Velocity</span>
-                  <span>+12% this month</span>
-                </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden flex shadow-inner">
-                  <div 
-                    className="h-full bg-emerald-500 transition-all duration-1000" 
-                    style={{ width: `${contentStats?.topics.percentage || 0}%` }} 
-                  />
-                  <div 
-                    className="h-full bg-amber-500/50 transition-all duration-1000" 
-                    style={{ width: `${(contentStats?.topics.draft / contentStats?.topics.total) * 100 || 0}%` }} 
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-serif italic flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                Content Governance
-              </h2>
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-border/50 transition-all shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                      <AlertCircle className="w-4 h-4 text-rose-600" />
+                    </div>
+                    <span className="text-sm font-medium">Archived / Legacy</span>
+                  </div>
+                  <span className="text-lg font-serif italic">{contentStats?.topics.archived || 0}</span>
+                </div>
+                
+                <div className="pt-2">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
+                    <span>Growth Velocity</span>
+                    <span>+12% this month</span>
+                  </div>
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden flex shadow-inner">
+                    <div 
+                      className="h-full bg-emerald-500 transition-all duration-1000" 
+                      style={{ width: `${contentStats?.topics.percentage || 0}%` }} 
+                    />
+                    <div 
+                      className="h-full bg-amber-500/50 transition-all duration-1000" 
+                      style={{ width: `${(contentStats?.topics.draft / contentStats?.topics.total) * 100 || 0}%` }} 
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Link href="/admin/content?type=topics" className="p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-primary/10 transition-all cursor-pointer group shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Topics Published</div>
-                <div className="text-xl font-serif italic text-foreground">
-                  {isLoading || !contentStats ? (
-                    <div className="h-6 w-16 animate-pulse bg-muted rounded" />
-                  ) : (
-                    `${contentStats.topics.published} / ${contentStats.topics.total}`
-                  )}
-                </div>
-                <div className="h-1.5 w-full bg-muted mt-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-emerald-500 transition-all duration-1000" 
-                    style={{ width: `${contentStats?.topics.percentage || 0}%` }} 
-                  />
-                </div>
-              </Link>
-              <Link href="/admin/content?type=statements" className="p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-primary/10 transition-all cursor-pointer group shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Statements Published</div>
-                <div className="text-xl font-serif italic text-foreground">
-                  {isLoading || !contentStats ? (
-                    <div className="h-6 w-16 animate-pulse bg-muted rounded" />
-                  ) : (
-                    `${contentStats.statements.published} / ${contentStats.statements.total}`
-                  )}
-                </div>
-                <div className="h-1.5 w-full bg-muted mt-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 transition-all duration-1000" 
-                    style={{ width: `${contentStats?.statements.percentage || 0}%` }} 
-                  />
-                </div>
-              </Link>
+          )}
+
+          {canEditTopics && (
+            <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-serif italic flex items-center gap-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                  Content Governance
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Link href="/admin/content?type=topics" className="p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-primary/10 transition-all cursor-pointer group shadow-sm">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Topics Published</div>
+                  <div className="text-xl font-serif italic text-foreground">
+                    {isLoading || !contentStats ? (
+                      <div className="h-6 w-16 animate-pulse bg-muted rounded" />
+                    ) : (
+                      `${contentStats.topics.published} / ${contentStats.topics.total}`
+                    )}
+                  </div>
+                  <div className="h-1.5 w-full bg-muted mt-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 transition-all duration-1000" 
+                      style={{ width: `${contentStats?.topics.percentage || 0}%` }} 
+                    />
+                  </div>
+                </Link>
+                <Link href="/admin/content?type=statements" className="p-4 bg-muted/30 rounded-2xl border border-transparent hover:border-primary/10 transition-all cursor-pointer group shadow-sm">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Statements Published</div>
+                  <div className="text-xl font-serif italic text-foreground">
+                    {isLoading || !contentStats ? (
+                      <div className="h-6 w-16 animate-pulse bg-muted rounded" />
+                    ) : (
+                      `${contentStats.statements.published} / ${contentStats.statements.total}`
+                    )}
+                  </div>
+                  <div className="h-1.5 w-full bg-muted mt-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-1000" 
+                      style={{ width: `${contentStats?.statements.percentage || 0}%` }} 
+                    />
+                  </div>
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* 3. System Monitoring & Operations */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-serif italic flex items-center gap-3">
-              <Activity className="w-5 h-5 text-indigo-500" />
-              System Audit Trail
-            </h2>
-            <Link href="/admin/audit-log" className="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
-              Full Activity Log
-            </Link>
-          </div>
-          
-          <div className="space-y-2">
-            {isLoading ? (
-              [...Array(5)].map((_, i) => <div key={i} className="h-14 w-full animate-pulse bg-muted rounded-xl" />)
-            ) : activityLog && activityLog.length > 0 ? (
-              activityLog.slice(0, 6).map((item: any) => (
-                <div key={item.id} className="flex items-start gap-4 p-3 rounded-2xl hover:bg-muted/30 transition-all border border-transparent hover:border-border/50 shadow-sm group">
-                  <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Activity className="w-5 h-5 text-primary/60" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">
-                        <span className="text-primary font-semibold">{item.user?.first_name || 'System'}</span>
-                        <span className="text-muted-foreground font-normal ml-1">performed {item.action} on {item.collection}</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase">{formatTimeAgo(item.timestamp)}</p>
+        {canViewPerformance && (
+          <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm lg:col-span-2">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-serif italic flex items-center gap-3">
+                <Activity className="w-5 h-5 text-indigo-500" />
+                System Audit Trail
+              </h2>
+              <Link href="/admin/audit-log" className="text-xs font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
+                Full Activity Log
+              </Link>
+            </div>
+            
+            <div className="space-y-2">
+              {isLoading ? (
+                [...Array(5)].map((_, i) => <div key={i} className="h-14 w-full animate-pulse bg-muted rounded-xl" />)
+              ) : activityLog && activityLog.length > 0 ? (
+                activityLog.slice(0, 6).map((item: any) => (
+                  <div key={item.id} className="flex items-start gap-4 p-3 rounded-2xl hover:bg-muted/30 transition-all border border-transparent hover:border-border/50 shadow-sm group">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Activity className="w-5 h-5 text-primary/60" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">
+                          <span className="text-primary font-semibold">{item.user?.first_name || 'System'}</span>
+                          <span className="text-muted-foreground font-normal ml-1">performed {item.action} on {item.collection}</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase">{formatTimeAgo(item.timestamp)}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <Empty className="min-h-[200px] border-none p-0">
-                <EmptyHeader>
-                  <EmptyTitle>No recent activity</EmptyTitle>
-                  <EmptyDescription>System logs will appear here.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
+                ))
+              ) : (
+                <Empty className="min-h-[200px] border-none p-0">
+                  <EmptyHeader>
+                    <EmptyTitle>No recent activity</EmptyTitle>
+                    <EmptyDescription>System logs will appear here.</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-6">
           <SystemHealth
@@ -497,6 +533,7 @@ export function AdminDashboardV2() {
             isLoading={isLoading}
           />
 
+          {canManageUsers && (
           <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-serif italic flex items-center gap-3">
@@ -546,7 +583,9 @@ export function AdminDashboardV2() {
               </Link>
             </div>
           </div>
+          )}
 
+          {canManageUsers && (
           <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-serif italic flex items-center gap-3">
@@ -583,6 +622,19 @@ export function AdminDashboardV2() {
             </Button>
             <Button 
               variant="outline" 
+              onClick={() => handleTechOp('warm-cache')}
+              disabled={!!isTechOpsLoading}
+              className="justify-start h-12 rounded-xl border-border/50 bg-background/50 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all group shadow-sm"
+            >
+              {isTechOpsLoading === 'warm-cache' ? (
+                <Loader2 className="w-4 h-4 mr-3 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4 mr-3 text-emerald-500 group-hover:scale-110 transition-transform" />
+              )}
+              <span className="text-[10px] font-bold uppercase tracking-widest">Warm Cache</span>
+            </Button>
+            <Button 
+              variant="outline" 
               onClick={() => handleTechOp('purge-storage')}
               disabled={!!isTechOpsLoading}
               className="justify-start h-12 rounded-xl border-border/50 bg-background/50 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all group shadow-sm"
@@ -596,8 +648,19 @@ export function AdminDashboardV2() {
             </Button>
           </div>
           </div>
+          )}
         </div>
       </div>
+
+      {/* 3.5 Performance Optimization */}
+      {canViewPerformance && (
+      <PerformancePanel data={performance} isLoading={isPerformanceLoading} />
+      )}
+
+      {/* 3.75 Live Monitoring */}
+      {canViewMonitoring && (
+      <MonitoringPanel data={monitoring} isLoading={isMonitoringLoading} />
+      )}
 
       {/* 4. Advanced Governance, CMS & Branding */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

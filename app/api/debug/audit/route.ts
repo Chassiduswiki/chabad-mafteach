@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { readItems, deleteItems } from '@directus/sdk';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, adminWriteRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
+import { debugDisabledResponse, isDebugEnabled } from '@/lib/monitoring/debug';
 
-export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const action = searchParams.get('action');
+async function handleAudit(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
 
-        if (action === 'audit_statement_topics') {
-            // Get all statement_topics
-            const statementTopics = await directus.request(readItems('statement_topics', {
-                fields: ['id', 'statement_id', 'topic_id'],
-                limit: -1
-            }));
+    if (action === 'audit_statement_topics') {
+        // Get all statement_topics
+        const statementTopics = await directus.request(readItems('statement_topics', {
+            fields: ['id', 'statement_id', 'topic_id'],
+            limit: -1
+        }));
 
             // Get all valid statement IDs
             const statements = await directus.request(readItems('statements', {
@@ -41,49 +44,49 @@ export async function GET(request: NextRequest) {
                 st.topic_id && !validTopicIds.has(st.topic_id)
             );
 
+        return NextResponse.json({
+            total_statement_topics: statementTopics.length,
+            total_statements: statements.length,
+            total_topics: topics.length,
+            orphaned_records: orphanedRecords.map(r => ({
+                id: r.id,
+                statement_id: r.statement_id,
+                topic_id: r.topic_id
+            })),
+            invalid_topic_refs: invalidTopicRefs.map(r => ({
+                id: r.id,
+                statement_id: r.statement_id,
+                topic_id: r.topic_id
+            })),
+            issues_found: orphanedRecords.length + invalidTopicRefs.length
+        });
+    }
+
+    if (action === 'test_permissions') {
+        try {
+            // Test read permissions
+            const statementTopics = await directus.request(readItems('statement_topics', {
+                limit: 1
+            }));
+
+            // Test if we can get the structure
             return NextResponse.json({
-                total_statement_topics: statementTopics.length,
-                total_statements: statements.length,
-                total_topics: topics.length,
-                orphaned_records: orphanedRecords.map(r => ({
-                    id: r.id,
-                    statement_id: r.statement_id,
-                    topic_id: r.topic_id
-                })),
-                invalid_topic_refs: invalidTopicRefs.map(r => ({
-                    id: r.id,
-                    statement_id: r.statement_id,
-                    topic_id: r.topic_id
-                })),
-                issues_found: orphanedRecords.length + invalidTopicRefs.length
+                can_read_statement_topics: true,
+                sample_record: statementTopics[0] || null,
+                delete_available: typeof deleteItems !== 'undefined'
+            });
+        } catch (readError) {
+            return NextResponse.json({
+                can_read_statement_topics: false,
+                read_error: readError instanceof Error ? readError.message : String(readError)
             });
         }
+    }
 
-        if (action === 'test_permissions') {
-            try {
-                // Test read permissions
-                const statementTopics = await directus.request(readItems('statement_topics', {
-                    limit: 1
-                }));
-
-                // Test if we can get the structure
-                return NextResponse.json({
-                    can_read_statement_topics: true,
-                    sample_record: statementTopics[0] || null,
-                    delete_available: typeof deleteItems !== 'undefined'
-                });
-            } catch (readError) {
-                return NextResponse.json({
-                    can_read_statement_topics: false,
-                    read_error: readError instanceof Error ? readError.message : String(readError)
-                });
-            }
-        }
-
-        if (action === 'cleanup_statement_topics') {
-            let orphanedRecords: any[] = [];
-            try {
-                console.log('Starting cleanup process...');
+    if (action === 'cleanup_statement_topics') {
+        let orphanedRecords: any[] = [];
+        try {
+            console.log('Starting cleanup process...');
 
                 // Get all statement_topics
                 console.log('Fetching statement_topics...');
@@ -152,29 +155,37 @@ export async function GET(request: NextRequest) {
                     });
                 }
 
-                return NextResponse.json({
-                    message: `Successfully cleaned ${orphanedIds.length} orphaned records`,
-                    cleaned_records: orphanedRecords.map(r => ({
-                        id: r.id,
-                        statement_id: r.statement_id,
-                        topic_id: r.topic_id
-                    })),
-                    cleaned_count: orphanedIds.length
-                });
-            } catch (cleanupError) {
-                console.error('Cleanup error details:', cleanupError);
-                console.error('Error type:', typeof cleanupError);
-                console.error('Error keys:', Object.keys(cleanupError || {}));
-                const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-                return NextResponse.json({
-                    error: 'Failed to cleanup orphaned records',
-                    details: cleanupMessage,
-                    orphaned_count: orphanedRecords?.length || 0
-                }, { status: 500 });
-            }
+            return NextResponse.json({
+                message: `Successfully cleaned ${orphanedIds.length} orphaned records`,
+                cleaned_records: orphanedRecords.map(r => ({
+                    id: r.id,
+                    statement_id: r.statement_id,
+                    topic_id: r.topic_id
+                })),
+                cleaned_count: orphanedIds.length
+            });
+        } catch (cleanupError) {
+            console.error('Cleanup error details:', cleanupError);
+            console.error('Error type:', typeof cleanupError);
+            console.error('Error keys:', Object.keys(cleanupError || {}));
+            const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+            return NextResponse.json({
+                error: 'Failed to cleanup orphaned records',
+                details: cleanupMessage,
+                orphaned_count: orphanedRecords?.length || 0
+            }, { status: 500 });
         }
+    }
 
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+}
+
+export const GET = requirePermission('canAccessDebug', withAudit('read', 'debug.audit', async (request: NextRequest) => {
+    const rateLimited = enforceRateLimit(request, adminReadRateLimit);
+    if (rateLimited) return rateLimited;
+    if (!isDebugEnabled()) return debugDisabledResponse();
+    try {
+        return await handleAudit(request);
     } catch (error) {
         console.error('Debug API error:', error);
         console.error('Error type:', typeof error);
@@ -182,4 +193,26 @@ export async function GET(request: NextRequest) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         return NextResponse.json({ error: 'Failed to run debug action', details: errorMessage }, { status: 500 });
     }
-}
+}));
+
+export const POST = requirePermission('canAccessDebug', withAudit('write', 'debug.audit', async (request: NextRequest) => {
+    const rateLimited = enforceRateLimit(request, adminWriteRateLimit);
+    if (rateLimited) return rateLimited;
+    if (!isDebugEnabled()) return debugDisabledResponse();
+
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    if (action !== 'cleanup_statement_topics') {
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    try {
+        return await handleAudit(request);
+    } catch (error) {
+        console.error('Debug API error:', error);
+        console.error('Error type:', typeof error);
+        console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ error: 'Failed to run debug action', details: errorMessage }, { status: 500 });
+    }
+}));

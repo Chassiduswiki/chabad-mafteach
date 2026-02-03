@@ -52,6 +52,19 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
     }
   }, [open]);
 
+  // Auto-focus the modal when it opens for keyboard navigation
+  useEffect(() => {
+    if (open) {
+      // Focus the modal container after a brief delay to ensure DOM is ready
+      setTimeout(() => {
+        const modalContainer = document.querySelector('[role="dialog"]') as HTMLElement;
+        if (modalContainer) {
+          modalContainer.focus();
+        }
+      }, 100);
+    }
+  }, [open]);
+
   // Debounced search
   useEffect(() => {
     if (!searchQuery.trim() || isManualEntry) {
@@ -123,6 +136,9 @@ export function CitationInsertModal({ open, onClose, onInsert }: CitationInsertM
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4"
       onClick={onClose}
       onKeyDown={handleKeyDown}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
     >
       <div
         className="w-full max-w-lg rounded-2xl bg-background shadow-2xl border border-border overflow-hidden"

@@ -3,6 +3,15 @@ import { readItems, deleteItems } from '@directus/sdk';
 
 const directus = createClient();
 
+// Helper function to bypass strict typing for collection operations
+async function readCollection(collection: string, options?: any) {
+  return directus.request(readItems(collection as any, options));
+}
+
+async function deleteCollection(collection: string, ids: string[]) {
+  return directus.request(deleteItems(collection as any, ids));
+}
+
 export async function fixDataIntegrityIssues() {
   console.log('🔧 Starting data integrity fixes...');
 
@@ -10,24 +19,20 @@ export async function fixDataIntegrityIssues() {
     // 1. Fix orphaned statement_topics records
     console.log('\n1. Removing orphaned statement_topics records...');
 
-    const statementTopics = await directus.request(
-      readItems('statement_topics', {
-        fields: ['id', 'statement_id', 'topic_id']
-      })
-    );
+    const statementTopics = await readCollection('statement_topics', {
+      fields: ['id', 'statement_id', 'topic_id']
+    });
 
     const orphanedIds: string[] = [];
 
     for (const record of statementTopics) {
       try {
         // Check if the referenced statement exists
-        const statement = await directus.request(
-          readItems('statements', {
+        const statement = await readCollection('statements', {
             filter: { id: { _eq: record.statement_id } },
             fields: ['id'],
             limit: 1
-          })
-        );
+          });
 
         if (!statement || statement.length === 0) {
           orphanedIds.push(record.id.toString());
@@ -42,7 +47,7 @@ export async function fixDataIntegrityIssues() {
       console.log(`Removing ${orphanedIds.length} orphaned statement_topics records...`);
 
       // Delete orphaned records
-      await directus.request(deleteItems('statement_topics', orphanedIds));
+      await deleteCollection('statement_topics', orphanedIds);
 
       console.log(`✅ Successfully removed ${orphanedIds.length} orphaned records`);
     } else {
@@ -52,24 +57,20 @@ export async function fixDataIntegrityIssues() {
     // 2. Check for statements with invalid block_id references
     console.log('\n2. Checking statements with invalid block_id references...');
 
-    const statements = await directus.request(
-      readItems('statements', {
+    const statements = await readCollection('statements', {
         fields: ['id', 'block_id', 'text']
-      })
-    );
+      });
 
     const invalidBlockRefs: any[] = [];
 
     for (const statement of statements) {
       try {
         // Check if the referenced content_block exists
-        const contentBlock = await directus.request(
-          readItems('content_blocks', {
+        const contentBlock = await readCollection('content_blocks', {
             filter: { id: { _eq: statement.block_id } },
             fields: ['id'],
             limit: 1
-          })
-        );
+          });
 
         if (!contentBlock || contentBlock.length === 0) {
           invalidBlockRefs.push({

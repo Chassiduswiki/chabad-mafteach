@@ -6,8 +6,7 @@
  */
 
 import { Editor } from '@tiptap/core';
-import { CitationAttrs } from '@/components/editor/plugins/citations/comprehensiveCitationPlugin';
-import { CitationData } from '@/components/editor/extensions/AdvancedCitation';
+import { CitationAttrs, UnifiedCitation, CitationData } from '@/lib/citations/types';
 import { 
   serializeCitationToHtml, 
   deserializeHtmlToCitation, 
@@ -15,7 +14,6 @@ import {
   extractCitationsFromHtml,
   editorCitationToSourceLink,
   sourceLinkToEditorCitation,
-  UnifiedCitation,
   SourceLink,
   Source
 } from './citationSerializer';

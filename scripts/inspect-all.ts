@@ -53,11 +53,12 @@ async function inspect() {
 
             // Try to get total count
             try {
-                // aggregate count
-                const agg = await client.request(readItems(name as any, {
-                    aggregate: { count: '*' }
+                // Get count using limit -1 approach
+                const countResult = await client.request(readItems(name as any, {
+                    limit: -1,
+                    fields: ['id']
                 })) as any;
-                console.log(`Total Records: ${agg[0]?.count ?? 'unknown'}`);
+                console.log(`Total Records: ${countResult?.length ?? 'unknown'}`);
             } catch (countErr: any) {
                 console.log(`Count Error: ${countErr.message}`);
             }

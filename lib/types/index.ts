@@ -376,6 +376,110 @@ export interface TranslationHistory {
 
 // ============ Directus SDK Schema =============
 
+// Re-export idea chain types for convenience
+export type {
+    IdeaChain,
+    IdeaChainCollaborator,
+    IdeaChainVersion,
+    IdeaChainSnapshot,
+    IdeaNode,
+    IdeaNodeLink,
+    IdeaChainTopic,
+    IdeaNodeWithSource,
+    IdeaChainFull,
+    IdeaChainListItem,
+    ContributionType,
+    RelationshipType,
+    ChainStatus,
+    CollaboratorRole,
+} from '../idea-chains/types';
+
+import type {
+    IdeaChain,
+    IdeaChainCollaborator,
+    IdeaChainVersion,
+    IdeaNode,
+    IdeaNodeLink,
+    IdeaChainTopic,
+} from '../idea-chains/types';
+
+// ============ Source Books Collections =============
+
+export type SourceBookCategory =
+    | 'chassidus'
+    | 'halacha'
+    | 'kabbalah'
+    | 'mussar'
+    | 'tanach'
+    | 'talmud'
+    | 'midrash'
+    | 'sichos'
+    | 'maamarim'
+    | 'other';
+
+export type ReferenceStyle = 'page' | 'folio' | 'chapter' | 'section';
+
+export interface SourceBook {
+    id: string;
+    status: 'draft' | 'published';
+    canonical_name: string;
+    hebrew_name?: string;
+    slug: string;
+    alternate_names?: string[];
+    author?: string;
+    year_written?: number;
+    category?: SourceBookCategory;
+    reference_style: ReferenceStyle;
+    total_pages?: number;
+    notes?: string;
+    // HebrewBooks (primary platform)
+    hebrewbooks_id?: number;
+    hebrewbooks_offset: number;
+    // Chabad.org
+    chabad_org_root_id?: number;
+    chabad_org_synced_at?: string;
+    // Other platforms
+    lahak_root_id?: string;
+    chabadlibrary_id?: string;
+    sefaria_slug?: string;
+    // Timestamps
+    user_created?: string;
+    date_created?: string;
+    date_updated?: string;
+    // Relations
+    chapters?: SourceBookChapter[];
+}
+
+export interface SourceBookChapter {
+    id: string;
+    book_id: string | SourceBook;
+    sort?: number;
+    chapter_number?: number;
+    chapter_name?: string;
+    chapter_name_english?: string;
+    start_page?: number | null;
+    end_page?: number | null;
+    hebrewbooks_start_page?: number | null;
+    hebrewbooks_end_page?: number | null;
+    page_validation_status?: string | null;
+    // Platform-specific IDs
+    chabad_org_article_id?: number;
+    lahak_content_id?: string;
+    sefaria_ref?: string;
+    // Timestamps
+    date_created?: string;
+    date_updated?: string;
+}
+
+// Platform link generation helpers
+export interface PlatformLinks {
+    hebrewbooks?: string;
+    chabad_org?: string;
+    lahak?: string;
+    chabadlibrary?: string;
+    sefaria?: string;
+}
+
 export interface Schema {
     authors: Author[];
     documents: Document[];
@@ -391,6 +495,16 @@ export interface Schema {
     translations: Translation[];
     topic_translations: TopicTranslation[];
     translation_history: TranslationHistory[];
+    // Idea Chain collections
+    idea_chains: IdeaChain[];
+    idea_chain_collaborators: IdeaChainCollaborator[];
+    idea_chain_versions: IdeaChainVersion[];
+    idea_nodes: IdeaNode[];
+    idea_node_links: IdeaNodeLink[];
+    idea_chain_topics: IdeaChainTopic[];
+    // Source Books collections
+    source_books: SourceBook[];
+    source_book_chapters: SourceBookChapter[];
 }
 
 // ============ Legacy Type Aliases =============

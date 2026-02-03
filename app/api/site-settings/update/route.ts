@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
-import { updateItem, readSingleton } from '@directus/sdk';
+import { updateSingleton, readSingleton } from '@directus/sdk';
 import { verifyAuth } from '@/lib/auth';
 
 export async function PATCH(request: NextRequest) {
@@ -42,17 +42,9 @@ export async function PATCH(request: NextRequest) {
     
     const directus = createClient();
     
-    // First get the singleton to find its ID
-    const current = await directus.request(readSingleton('site_settings'));
-    const singletonId = (current as any)?.id;
-    
-    if (!singletonId) {
-      return NextResponse.json({ error: 'Site settings not found' }, { status: 404 });
-    }
-    
-    // Update using updateItem with the singleton's ID
-    console.log('[site-settings/update] Updating ID:', singletonId, 'with:', Object.keys(updateData));
-    const updated = await directus.request(updateItem('site_settings', singletonId, updateData));
+    // Update singleton directly
+    console.log('[site-settings/update] Updating singleton with:', Object.keys(updateData));
+    const updated = await directus.request(updateSingleton('site_settings', updateData));
     
     console.log('[site-settings/update] Success');
     return NextResponse.json(updated);

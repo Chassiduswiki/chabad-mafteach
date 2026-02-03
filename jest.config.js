@@ -17,6 +17,38 @@ const customJestConfig = {
     '<rootDir>/.next/',
     '<rootDir>/e2e/',
   ],
+  collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    '!**/*.d.ts',
+  ],
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70,
+    },
+    './lib/citations/citationParser.ts': {
+      statements: 90,
+      branches: 80,
+      functions: 90,
+      lines: 90,
+    },
+    './lib/source-links/index.ts': {
+      statements: 90,
+      branches: 80,
+      functions: 90,
+      lines: 90,
+    },
+    './lib/performance/analyze-performance.ts': {
+      statements: 90,
+      branches: 80,
+      functions: 90,
+      lines: 90,
+    },
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

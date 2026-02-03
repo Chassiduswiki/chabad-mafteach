@@ -78,4 +78,12 @@ export const getAllTopics = async (): Promise<Topic[]> => {
     }
 };
 
+// Helper to generate asset URLs
+// We use the direct URL instead of the proxy because the proxy currently forces JSON parsing
+export const getAssetUrl = (id: string) => {
+    if (!id) return '';
+    const url = process.env.NEXT_PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
+    return `${url.replace(/\/$/, '')}/assets/${id}`;
+};
+
 export { createClient, getDirectusSingleton as getDirectus };

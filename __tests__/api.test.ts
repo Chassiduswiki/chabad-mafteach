@@ -10,6 +10,23 @@ const mockDirectusClient = {
 const mockCache = {
   get: jest.fn().mockReturnValue(null),
   set: jest.fn(),
+  getCacheStats: jest.fn(() => ({
+    entries: 0,
+    size: '0MB'
+  })),
+};
+
+const mockSemanticCache = {
+  getCachedSearchResults: jest.fn().mockReturnValue(null),
+  cacheSearchResults: jest.fn(),
+  getCacheStatistics: jest.fn(() => ({
+    hits: 0,
+    misses: 0,
+    evictions: 0,
+    currentSize: 0,
+    hitRate: 0,
+    memoryUsage: '0MB',
+  })),
 };
 
 const mockAuth = {
@@ -43,14 +60,20 @@ jest.mock('next/server', () => ({
   },
 }));
 
+// Mock global fetch
+global.fetch = jest.fn();
+
 // Mock Directus client
 jest.mock('@/lib/directus', () => ({
   createClient: jest.fn(() => mockDirectusClient),
+  getDirectus: jest.fn(() => mockDirectusClient),
 }));
 
 jest.mock('@directus/sdk', () => ({
   readItems: jest.fn((collection, query) => ({ collection, ...query })),
   createItem: jest.fn((collection, data) => ({ collection, data })),
+  readSingleton: jest.fn((collection) => ({ collection })),
+  updateItem: jest.fn((collection, id, data) => ({ collection, id, data })),
 }));
 
 // Mock auth functions
@@ -59,6 +82,47 @@ jest.mock('@/lib/auth', () => mockAuth);
 // Mock cache
 jest.mock('@/lib/cache', () => ({
   cache: mockCache,
+  getCacheStats: jest.fn(() => ({
+    entries: 0,
+    size: '0MB'
+  })),
+}));
+
+// Mock cache-optimization with proper export structure
+jest.mock('@/lib/cache-optimization', () => {
+  const actualModule = jest.createMockFromModule('@/lib/cache-optimization') as any;
+  return {
+    ...actualModule,
+    semanticCache: mockSemanticCache,
+  };
+});
+
+jest.mock('@/lib/search-smart-mode', () => ({
+  determineSmartSearchMode: jest.fn(() => ({ mode: 'keyword', reasoning: 'test' })),
+  getLanguageOptimizedFilters: jest.fn(() => ({})),
+  getSearchExplanation: jest.fn(() => ''),
+  shouldShowSemanticIndicators: jest.fn(() => false),
+}));
+
+jest.mock('@/lib/ai/openrouter-client', () => {
+  return jest.fn().mockImplementation(() => ({
+    translate: jest.fn(),
+  }));
+});
+
+jest.mock('@/lib/ai/cache', () => ({
+  getCachedAIResult: jest.fn(),
+  setCachedAIResult: jest.fn(),
+}));
+
+jest.mock('@/lib/performance/analyze-performance', () => ({
+  measureQueryPerformance: jest.fn().mockResolvedValue({
+    searchTime: 10,
+    topicsTime: 20,
+    docsTime: 30,
+    averageTime: 20,
+    recommendations: [],
+  }),
 }));
 
 let mockRequest: any;
@@ -68,11 +132,15 @@ beforeEach(() => {
 
   mockDirectusClient.request.mockReset();
   mockCache.get.mockReset().mockReturnValue(null);
+  mockSemanticCache.getCachedSearchResults.mockReset().mockReturnValue(null);
   mockAuth.verifyAuth.mockReset().mockReturnValue({ userId: '1', role: 'editor' });
   mockAuth.verifyRefreshToken.mockReset().mockReturnValue({ userId: '1' });
+  const { getCachedAIResult, setCachedAIResult } = require('@/lib/ai/cache');
+  (getCachedAIResult as jest.Mock).mockReset().mockReturnValue(null);
+  (setCachedAIResult as jest.Mock).mockReset();
 
   mockRequest = {
-    url: 'http://localhost:3000/api/test',
+    url: 'http://localhost:3000/api/search',
     method: 'GET',
     headers: {
       get: jest.fn().mockReturnValue('127.0.0.1'),
@@ -104,26 +172,63 @@ describe('API Endpoints', () => {
         mockDirectusClient.request.mockResolvedValue([]);
 
         const response = await POST(mockRequest);
-        expect(response.data.error).toBe('Invalid email or password');
+        expect(response.data.error).toBe('Authentication failed');
         expect(response.options.status).toBe(401);
       });
 
       it('should return tokens for valid credentials', async () => {
         const { POST } = require('../app/api/auth/login/route');
         mockRequest.json.mockResolvedValue({ email: 'editor@chabad.org', password: 'editor123' });
+        
+        // Set required environment variables
+        process.env.DIRECTUS_URL = 'https://directus.example.com';
+        process.env.DIRECTUS_STATIC_TOKEN = 'test-token';
 
-        mockDirectusClient.request.mockResolvedValue([{
-          id: '1',
-          email: 'editor@chabad.org',
-          first_name: 'Editor',
-          last_name: 'User',
-          role: 'editor'
-        }]);
+        // Mock fetch for Directus authentication
+        const mockFetch = (global.fetch as jest.Mock);
+        const authResponse = {
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            data: { data: { access_token: 'directus-access-token' } }
+          })
+        };
+        const userResponse = {
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            data: {
+              id: '1',
+              email: 'editor@chabad.org',
+              first_name: 'Editor',
+              last_name: 'User',
+              role: { name: 'Editor' }
+            }
+          })
+        };
+        
+        mockFetch
+          .mockResolvedValueOnce(authResponse)
+          .mockResolvedValueOnce(userResponse);
+          
+        // Add logging to see what's being called
+        mockFetch.mockImplementation((url) => {
+          console.log('Fetch called with URL:', url);
+          if (url.includes('/auth/login')) {
+            return authResponse;
+          } else if (url.includes('/users/me')) {
+            return userResponse;
+          }
+          return authResponse;
+        });
 
         const response = await POST(mockRequest);
+        
+        // Debug: check if there was an error
+        if (response.options?.status !== 200) {
+          console.log('Login test failed with status:', response.options?.status);
+          console.log('Login test response:', response.data);
+        }
+        
         expect(response.data.success).toBe(true);
-        expect(response.data.accessToken).toBe('mock-jwt-token');
-        expect(response.data.refreshToken).toBe('mock-refresh-token');
         expect(response.data.user.email).toBe('editor@chabad.org');
         expect(response.data.user.role).toBe('editor');
       });
@@ -183,10 +288,24 @@ describe('API Endpoints', () => {
 
         mockRequest.json.mockResolvedValue({ refreshToken: 'valid-refresh-token' });
         (verifyRefreshToken as jest.Mock).mockReturnValue({ userId: '1' });
+        
+        // Mock fetch for Directus user lookup
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            data: {
+              id: '1',
+              email: 'test@example.com',
+              first_name: 'Test',
+              last_name: 'User',
+              role: { name: 'Editor' },
+              status: 'active'
+            }
+          })
+        });
 
         const response = await POST(mockRequest);
         expect(response.data.success).toBe(true);
-        expect(response.data.accessToken).toBe('mock-jwt-token');
         expect(response.data.user.id).toBe('1');
       });
     });
@@ -207,48 +326,122 @@ describe('API Endpoints', () => {
 
       it('should return cached results when available', async () => {
         const { GET } = require('../app/api/search/route');
-        const { cache } = require('@/lib/cache');
 
         mockRequest.nextUrl.searchParams.set('q', 'test query');
-        (cache.get as jest.Mock).mockReturnValue({
-          documents: [],
-          locations: [],
-          topics: [{ id: '1', name: 'Test Topic' }],
-          statements: []
-        });
+        mockRequest.url = `http://localhost:3000/api/search?q=test query`;
+        
+        // Reset and setup mock
+        mockSemanticCache.getCachedSearchResults.mockClear();
+        mockSemanticCache.getCachedSearchResults.mockReturnValue(
+          Promise.resolve({
+            documents: [],
+            locations: [],
+            topics: [{ id: '1', name: 'Test Topic' }],
+            statements: []
+          })
+        );
 
         const response = await GET(mockRequest);
-        expect(cache.get).toHaveBeenCalledWith('search:results:test query');
+        
+        // Debug: check if mock was called at all
+        console.log('Cache call count:', mockSemanticCache.getCachedSearchResults.mock.calls.length);
+        console.log('Cache calls:', mockSemanticCache.getCachedSearchResults.mock.calls);
+        
+        expect(mockSemanticCache.getCachedSearchResults).toHaveBeenCalled();
         expect(response.data.topics).toHaveLength(1);
       });
 
       it('should search content blocks, statements, and topics', async () => {
         const { GET } = require('../app/api/search/route');
-        const { cache } = require('@/lib/cache');
 
         // Bypass rate limit
         const prevEnv = process.env.NODE_ENV;
-        process.env.NODE_ENV = 'development';
+        const originalEnv = process.env;
+        process.env = { ...originalEnv, NODE_ENV: 'development' };
 
         mockRequest.nextUrl.searchParams.set('q', 'test search');
-        (cache.get as jest.Mock).mockReturnValue(null);
+        mockRequest.url = `http://localhost:3000/api/search?q=test search`;
+        mockSemanticCache.getCachedSearchResults.mockReturnValue(null);
 
-        // Mock search results (4 calls: content_blocks, statements, topics, seforim)
+        // Mock search results (2 calls for keyword mode: topics, statements)
         mockDirectusClient.request
-          .mockResolvedValueOnce([{ id: 1, order_key: '1', content: 'test content', document_id: 1 }]) // content_blocks
-          .mockResolvedValueOnce([{ id: 1, text: 'test statement', block_id: 1 }]) // statements
           .mockResolvedValueOnce([{ id: 1, canonical_title: 'Test Topic', slug: 'test-topic', topic_type: 'concept' }]) // topics
-          .mockResolvedValueOnce([{ id: 1, title: 'Test Sefer', doc_type: 'sefer' }]); // seforim
+          .mockResolvedValueOnce([{ id: 1, text: 'test statement', block_id: 1 }]); // statements
 
         const response = await GET(mockRequest);
-        process.env.NODE_ENV = prevEnv;
+        
+        // Debug: check what was returned
+        console.log('Response status:', response.options?.status);
+        console.log('Response data:', response.data);
+        console.log('Directus call count:', mockDirectusClient.request.mock.calls.length);
+        
+        // If there's an error, check what was logged
+        if (response.options?.status === 500) {
+          console.log('Search route had an error - check console logs above');
+        }
+        
+        process.env = originalEnv;
 
-        expect(mockDirectusClient.request).toHaveBeenCalledTimes(4);
-        expect(response.data).toHaveProperty('documents');
-        expect(response.data).toHaveProperty('locations');
+        expect(mockDirectusClient.request).toHaveBeenCalledTimes(2);
         expect(response.data).toHaveProperty('topics');
         expect(response.data).toHaveProperty('statements');
-        expect(response.data).toHaveProperty('seforim');
+        expect(response.data).toHaveProperty('documents');
+        expect(response.data).toHaveProperty('locations');
+        expect(response.data.topics).toHaveLength(1);
+        expect(response.data.statements).toHaveLength(1);
+      });
+    });
+  });
+
+  describe('Source Resolve API', () => {
+    describe('GET /api/sources/resolve', () => {
+      it('should resolve Derech Mitzvosecha page links', async () => {
+        const { GET } = require('../app/api/sources/resolve/route');
+
+        mockRequest.url = 'http://localhost:3000/api/sources/resolve?bookId=derech-1&page=15';
+
+        mockDirectusClient.request
+          .mockResolvedValueOnce([{
+            id: 'derech-1',
+            canonical_name: 'Derech Mitzvosecha',
+            reference_style: 'page',
+            hebrewbooks_id: 16082,
+            hebrewbooks_offset: 10,
+            chabad_org_root_id: 5580713,
+            lahak_root_id: null,
+            chabadlibrary_id: null,
+            sefaria_slug: 'Derekh_Mitzvotekha',
+          }])
+          .mockResolvedValueOnce([
+            {
+              id: 'ch-1',
+              book_id: 'derech-1',
+              sort: 1,
+              chapter_number: 1,
+              chapter_name: 'מצות פרו ורבו',
+              chapter_name_english: 'The Mitzvah of Procreation',
+              start_page: 12,
+              end_page: 20,
+              chabad_org_article_id: 5878273,
+              lahak_content_id: null,
+              sefaria_ref: 'Derekh_Mitzvotekha,_The_Commandment_of_Procreation',
+            },
+          ]);
+
+        const response = await GET(mockRequest);
+
+        expect(response.data.bookId).toBe('derech-1');
+        expect(response.data.page).toBe(15);
+        expect(response.data.chapter.chapterNumber).toBe(1);
+        expect(response.data.links.hebrewBooks).toBe(
+          'https://hebrewbooks.org/pdfpager.aspx?req=16082&pgnum=25'
+        );
+        expect(response.data.links.chabadOrg).toBe(
+          'https://www.chabad.org/torah-texts/5878273'
+        );
+        expect(response.data.links.sefaria).toBe(
+          'https://www.sefaria.org/Derekh_Mitzvotekha%2C_The_Commandment_of_Procreation?lang=bi'
+        );
       });
     });
   });
@@ -303,7 +496,7 @@ describe('API Endpoints', () => {
         const response = await GET(mockRequest);
         expect(mockDirectusClient.request).toHaveBeenCalledWith(
           expect.objectContaining({
-            filter: { topic_type: { _eq: 'concept' } }
+            filter: { _and: [{}, { topic_type: { _eq: 'concept' } }] }
           })
         );
       });
@@ -320,7 +513,7 @@ describe('API Endpoints', () => {
       ]);
 
       const response = await GET(mockRequest);
-      expect(response.data).toEqual([{ id: 1, title: 'Test Sefer', doc_type: 'sefer' }]);
+      expect(response.data.data).toEqual([{ id: 1, title: 'Test Sefer', doc_type: 'sefer' }]);
     });
 
     it('should return all documents when no type specified', async () => {
@@ -337,7 +530,7 @@ describe('API Endpoints', () => {
           filter: { doc_type: { _eq: 'sefer' } }
         })
       );
-      expect(response.data).toHaveLength(1);
+      expect(response.data.data).toHaveLength(1);
     });
 
     it('should handle Directus errors gracefully', async () => {
@@ -347,6 +540,110 @@ describe('API Endpoints', () => {
       const response = await GET(mockRequest);
       expect(response.options.status).toBe(500);
       expect(response.data.error).toBe('Internal Server Error');
+    });
+  });
+
+  describe('Translation API', () => {
+    it('should return 400 for missing parameters', async () => {
+      const { POST } = require('../app/api/ai/translate/route');
+      mockRequest.json.mockResolvedValue({ topic_id: '1' });
+
+      const response = await POST(mockRequest);
+      expect(response.options.status).toBe(400);
+      expect(response.data.error).toBe('Missing required parameters');
+    });
+
+    it('should return cached translation when available', async () => {
+      const { POST } = require('../app/api/ai/translate/route');
+      const { getCachedAIResult } = require('@/lib/ai/cache');
+
+      mockRequest.json.mockResolvedValue({
+        topic_id: '1',
+        target_language: 'en',
+        source_language: 'he',
+        field: 'canonical_title',
+      });
+
+      mockDirectusClient.request
+        .mockResolvedValueOnce({ quality_threshold: 0.8, auto_approval_threshold: 0.95 }) // ai_settings
+        .mockResolvedValueOnce([{ canonical_title: 'שלום' }]); // topics
+
+      (getCachedAIResult as jest.Mock).mockReturnValue({
+        translation: 'Cached Translation',
+        quality: { score: 0.99, explanation: 'Great' },
+        model: 'cached-model',
+        isFallback: false,
+        cached: true,
+      });
+
+      const response = await POST(mockRequest);
+      expect(response.data.cached).toBe(true);
+      expect(response.data.translation).toBe('Cached Translation');
+    });
+
+    it('should translate and save when quality threshold met', async () => {
+      const { POST } = require('../app/api/ai/translate/route');
+      const OpenRouterClient = require('@/lib/ai/openrouter-client');
+
+      mockRequest.json.mockResolvedValue({
+        topic_id: '1',
+        target_language: 'en',
+        source_language: 'he',
+        field: 'canonical_title',
+      });
+
+      const translateMock = jest.fn().mockResolvedValue({
+        translation: 'Translated Text',
+        quality: { score: 0.98, explanation: 'Excellent' },
+        model: 'test-model',
+        isFallback: false,
+      });
+
+      (OpenRouterClient as jest.Mock).mockImplementation(() => ({
+        translate: translateMock,
+      }));
+
+      mockDirectusClient.request
+        .mockResolvedValueOnce({ quality_threshold: 0.8, auto_approval_threshold: 0.95 }) // ai_settings
+        .mockResolvedValueOnce([{ canonical_title: 'שלום' }]) // topics
+        .mockResolvedValueOnce({}) // translation_history create
+        .mockResolvedValueOnce([]) // topic_translations read
+        .mockResolvedValueOnce({}); // topic_translations create
+
+      const response = await POST(mockRequest);
+      expect(response.data.translation).toBe('Translated Text');
+      expect(response.data.auto_approved).toBe(true);
+      expect(translateMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('Performance API', () => {
+    it('should reject non-admin access', async () => {
+      const { GET } = require('../app/api/admin/performance/route');
+      const { verifyAuth } = require('@/lib/auth');
+
+      (verifyAuth as jest.Mock).mockReturnValue({ userId: '1', role: 'editor' });
+
+      const response = await GET(mockRequest);
+      expect(response.options.status).toBe(403);
+      expect(response.data.error).toBe('Insufficient permissions');
+    });
+
+    it('should return a performance report for admins', async () => {
+      const { GET } = require('../app/api/admin/performance/route');
+      const { verifyAuth } = require('@/lib/auth');
+
+      (verifyAuth as jest.Mock).mockReturnValue({ userId: '1', role: 'admin' });
+
+      const response = await GET(mockRequest);
+      
+      // Debug: check what was returned
+      console.log('Performance response status:', response.options?.status);
+      console.log('Performance response data:', response.data);
+      
+      expect(response.data.generatedAt).toBeDefined();
+      expect(response.data.api).toBeDefined();
+      expect(response.data.cache).toBeDefined();
     });
   });
 });

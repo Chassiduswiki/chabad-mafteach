@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AutocompleteInput } from '@/components/ui/autocomplete-input';
@@ -249,6 +249,9 @@ export function IngestionModal({ onDocumentCreated, trigger }: IngestionModalPro
             <BookOpen className="h-5 w-5" />
             Import Content
           </DialogTitle>
+          <DialogDescription>
+            Import content from Sefaria, upload files, or add external sources to your library.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Tab Navigation */}

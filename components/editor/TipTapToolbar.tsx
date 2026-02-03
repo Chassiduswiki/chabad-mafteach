@@ -17,10 +17,19 @@ import {
   Loader2,
   Split,
   Image,
-  Link,
+  Link as LinkIcon,
   BookOpen,
   Check,
-  RefreshCw
+  RefreshCw,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  Highlighter,
+  Palette,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Table as TableIcon
 } from 'lucide-react';
 import { AIToolbar } from './AIToolbar';
 
@@ -47,9 +56,17 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
   isSaving = false,
   className
 }) => {
+  // Get character count stats
+  const characterCount = editor?.storage?.characterCount;
+  const currentCount = characterCount?.characters() || 0;
+  const wordCount = characterCount?.words() || 0;
+  const limit = characterCount?.limit;
+
   return (
-    <div className={`flex items-center justify-between p-3 border-b border-border bg-muted/50 ${className || ''}`}>
-      <div className="flex items-center gap-1">
+    <div className={`flex flex-col border-b border-border bg-muted/50 ${className || ''}`}>
+      {/* Main toolbar */}
+      <div className="flex items-center justify-between p-3">
+        <div className="flex items-center gap-1 flex-wrap">
         {/* History Controls */}
         <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
           <button
@@ -113,7 +130,7 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('bold') ? 'bg-muted' : ''}`}
-            title="Bold"
+            title="Bold (Ctrl+B)"
             aria-label="Bold"
           >
             <Bold className="w-4 h-4" />
@@ -121,10 +138,34 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('italic') ? 'bg-muted' : ''}`}
-            title="Italic"
+            title="Italic (Ctrl+I)"
             aria-label="Italic"
           >
             <Italic className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('underline') ? 'bg-muted' : ''}`}
+            title="Underline (Ctrl+U)"
+            aria-label="Underline"
+          >
+            <UnderlineIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('strike') ? 'bg-muted' : ''}`}
+            title="Strikethrough"
+            aria-label="Strikethrough"
+          >
+            <Strikethrough className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('highlight') ? 'bg-muted' : ''}`}
+            title="Highlight"
+            aria-label="Highlight"
+          >
+            <Highlighter className="w-4 h-4" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleCode().run()}
@@ -172,6 +213,82 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
           </button>
         </div>
 
+        {/* Text Alignment */}
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}`}
+            title="Align Left"
+            aria-label="Align Left"
+          >
+            <AlignLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}`}
+            title="Align Center"
+            aria-label="Align Center"
+          >
+            <AlignCenter className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}`}
+            title="Align Right"
+            aria-label="Align Right"
+          >
+            <AlignRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive({ textAlign: 'justify' }) ? 'bg-muted' : ''}`}
+            title="Justify"
+            aria-label="Justify"
+          >
+            <AlignJustify className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Insert Features */}
+        <div className="flex gap-0.5 border-r border-border pr-2 mr-2">
+          <button
+            onClick={() => editor.chain().focus().toggleLink({ href: prompt('Enter URL:') || '' }).run()}
+            className={`p-2 rounded hover:bg-muted text-foreground ${editor.isActive('link') ? 'bg-muted' : ''}`}
+            title="Insert Link"
+            aria-label="Insert Link"
+          >
+            <LinkIcon className="w-4 h-4" />
+          </button>
+          {onInsertImage && (
+            <button
+              onClick={onInsertImage}
+              className="p-2 rounded hover:bg-muted text-foreground"
+              title="Insert Image (OCR supported)"
+              aria-label="Insert Image"
+            >
+              <Image className="w-4 h-4" />
+            </button>
+          )}
+          {onInsertCitation && (
+            <button
+              onClick={onInsertCitation}
+              className="p-2 rounded hover:bg-muted text-foreground"
+              title="Insert Citation (or type @)"
+              aria-label="Insert Citation"
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            className="p-2 rounded hover:bg-muted text-foreground"
+            title="Insert Table"
+            aria-label="Insert Table"
+          >
+            <TableIcon className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Advanced Features */}
         <div className="flex gap-0.5">
           {onGrammarCheck && (
@@ -194,55 +311,54 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
               <RefreshCw className="w-4 h-4" />
             </button>
           )}
-          {onInsertImage && (
+        </div>
+        <AIToolbar editor={editor} />
+        </div>
+
+        {/* Save Button */}
+        <div className="flex items-center gap-2">
+          {onBreakStatements && (
             <button
-              onClick={onInsertImage}
-              className="p-2 rounded hover:bg-muted text-foreground"
-              title="Insert Image (OCR supported)"
-              aria-label="Insert Image"
+              onClick={onBreakStatements}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="Automatically split paragraphs into individual statements"
             >
-              <Image className="w-4 h-4" />
+              <Split className="w-4 h-4" />
             </button>
           )}
-          {onInsertCitation && (
+          {onSave && (
             <button
-              onClick={onInsertCitation}
-              className="p-2 rounded hover:bg-muted text-foreground"
-              title="Insert Citation"
-              aria-label="Insert Citation"
+              onClick={onSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <BookOpen className="w-4 h-4" />
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? 'Saving...' : 'Save'}
             </button>
           )}
         </div>
-        <AIToolbar editor={editor} />
       </div>
 
-      {/* Save Button */}
-      <div className="flex items-center gap-2">
-        {onBreakStatements && (
-          <button
-            onClick={onBreakStatements}
-            className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            title="Automatically split paragraphs into individual statements"
-          >
-            <Split className="w-4 h-4" />
-          </button>
-        )}
-        {onSave && (
-          <button
-            onClick={onSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
-        )}
+      {/* Stats bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground bg-background/50 border-t border-border">
+        <div className="flex items-center gap-4">
+          <span>
+            {wordCount} {wordCount === 1 ? 'word' : 'words'}
+          </span>
+          <span>
+            {currentCount} {currentCount === 1 ? 'character' : 'characters'}
+            {limit && ` / ${limit}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">Ctrl+B</kbd> Bold
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">Ctrl+I</kbd> Italic
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">@</kbd> Citation
+        </div>
       </div>
     </div>
   );

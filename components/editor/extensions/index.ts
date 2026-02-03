@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { HebrewLanguage } from './HebrewLanguage';
 import { HebrewOCR } from './HebrewOCR';
-import { AdvancedCitation } from './AdvancedCitation';
+import CitationExtension from './citation/CitationExtension';
 import { AIEnhancementExtension } from './AIEnhancementExtension';
 import { SmartCitationExtension } from './SmartCitationExtension';
 import { RealTimeTranslationExtension } from './RealTimeTranslationExtension';
@@ -14,6 +14,8 @@ export type { InlineAISuggestionOptions, SuggestionContext } from './InlineAISug
 export const createTipTapExtensions = (options?: {
   onCitationClick?: (citation: any) => void;
   onCitationEdit?: (citation: any) => void;
+  onTrigger?: (range: { from: number; to: number }) => void;
+  onDismiss?: () => void;
   onOCRResult?: (text: string) => void;
   onOCRError?: (error: string) => void;
   onSuggestCitations?: (suggestions: any[]) => void;
@@ -49,11 +51,13 @@ export const createTipTapExtensions = (options?: {
       onOCRError: options?.onOCRError,
     }),
 
-    // Advanced citation system
-    AdvancedCitation.configure({
+    // Fixed citation system with error handling
+    CitationExtension.configure({
       onCitationClick: options?.onCitationClick,
       onCitationEdit: options?.onCitationEdit,
-      citations: [], // Will be populated from external data
+      onTrigger: options?.onTrigger,
+      onDismiss: options?.onDismiss,
+      topicId: options?.topicId ? parseInt(options.topicId) : undefined,
     }),
 
     // Smart Citation Logic

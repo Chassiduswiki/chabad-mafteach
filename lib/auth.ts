@@ -96,24 +96,21 @@ export function createAuthToken(userId: string, role: string = 'user'): string {
  * Requires authentication for sensitive operations
  */
 export function requireAuth(
-  handler: (request: NextRequest, context: { userId: string; role: string }) => Promise<NextResponse>
+  handler: (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const auth = verifyAuth(request);
-    const isDev = process.env.NODE_ENV === 'development';
 
-    if (!auth && !isDev) {
+    if (!auth) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const context = auth || { userId: 'dev-user', role: 'admin' };
-
     // Check if user has required permissions for write operations
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      if (!context.role || !['editor', 'admin'].includes(context.role)) {
+      if (!auth.role || !['editor', 'admin'].includes(auth.role)) {
         return NextResponse.json(
           { error: 'Insufficient permissions' },
           { status: 403 }
@@ -121,7 +118,7 @@ export function requireAuth(
       }
     }
 
-    return handler(request, context as { userId: string; role: string });
+    return handler(request, auth as { userId: string; role: string }, ...args);
   };
 }
 
@@ -134,25 +131,49 @@ export function requireEditor(
 ) {
   return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const auth = verifyAuth(request);
-    const isDev = process.env.NODE_ENV === 'development';
 
-    if (!auth && !isDev) {
+    if (!auth) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const context = auth || { userId: 'dev-user', role: 'admin' };
-
-    if (!context.role || !['editor', 'admin'].includes(context.role)) {
+    if (!auth.role || !['editor', 'admin'].includes(auth.role)) {
       return NextResponse.json(
         { error: 'Editor permissions required' },
         { status: 403 }
       );
     }
 
-    return handler(request, context as { userId: string; role: string }, ...args);
+    return handler(request, auth as { userId: string; role: string }, ...args);
+  };
+}
+
+/**
+ * Middleware for admin-only operations
+ */
+export function requireAdmin(
+  handler: (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => Promise<NextResponse>
+) {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+    const auth = verifyAuth(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!auth.role || auth.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Admin permissions required' },
+        { status: 403 }
+      );
+    }
+
+    return handler(request, auth as { userId: string; role: string }, ...args);
   };
 }
 

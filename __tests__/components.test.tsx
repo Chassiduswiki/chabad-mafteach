@@ -4,6 +4,7 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import ArticleTab from '@/components/topics/ArticleTab';
 import { ArticleReader } from '@/components/topics/ArticleReader';
 import { ExploreCategories } from '@/components/explore/ExploreCategories';
+import { PerformancePanel } from '@/components/admin/v2/PerformancePanel';
 
 // Component tests
 describe('ErrorBoundary', () => {
@@ -118,9 +119,9 @@ describe('ArticleTab Integration', () => {
     };
 
     render(<ArticleTab topic={mockTopic as any} />);
-    // The component should render "Article in Development" if no content_blocks are loaded yet
-    // since loadContentBlocks is async and we haven't mocked the directus calls inside it.
-    expect(screen.getByText(/Article in Development/i)).toBeInTheDocument();
+    // Should render ArticleReader when content is available
+    expect(screen.getByText('Test Topic')).toBeInTheDocument();
+    expect(screen.getByText('Article Reader Component')).toBeInTheDocument();
   });
 });
 
@@ -160,5 +161,46 @@ describe('Performance', () => {
     const renderTime = endTime - startTime;
 
     expect(renderTime).toBeLessThan(500); // Should handle large content in reasonable time
+  });
+});
+
+describe('Admin Performance Panel', () => {
+  it('renders key performance metrics', () => {
+    render(
+      <PerformancePanel
+        data={{
+          generatedAt: new Date().toISOString(),
+          api: {
+            searchTime: 120,
+            topicsTime: 80,
+            docsTime: 90,
+            averageTime: 96,
+            recommendations: ['Use caching'],
+          },
+          cache: {
+            memory: { entries: 10, size: '12 KB' },
+            semantic: { hits: 5, misses: 5, evictions: 0, currentSize: 10, hitRate: 0.5, memoryUsage: '1MB' },
+          },
+          bundle: {
+            available: true,
+            chunkCount: 5,
+            totalChunkSize: 1024 * 1024,
+            averageChunkSize: 200000,
+            staticSize: 1500000,
+            largeChunks: [],
+          },
+          database: {
+            recommendedIndexes: [],
+            slowQueries: [],
+            sqlIndexCount: 5,
+          },
+          alerts: [],
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Performance Console/i)).toBeInTheDocument();
+    expect(screen.getByText(/API Avg/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cache Hit Rate/i)).toBeInTheDocument();
   });
 });

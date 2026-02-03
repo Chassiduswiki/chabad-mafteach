@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 import { readItems } from '@directus/sdk';
-import { verifyAuth } from '@/lib/auth';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
 
-export async function GET(req: NextRequest) {
+export const GET = requirePermission('canEditTopics', withAudit('read', 'admin.content.stats', async (req: NextRequest) => {
+  const rateLimited = enforceRateLimit(req, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
+
   try {
-    const auth = verifyAuth(req);
-    if (!auth || !['admin', 'editor'].includes(auth.role || '')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
     const directus = createClient();
 
     // Fetch topics with status
@@ -50,4 +50,4 @@ export async function GET(req: NextRequest) {
     console.error('Content stats error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}));

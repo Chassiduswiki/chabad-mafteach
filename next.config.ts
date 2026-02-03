@@ -19,13 +19,13 @@ const nextConfig: NextConfig = {
         type: 'javascript/auto',
       });
     }
-    
+
     // Enable automatic instrumentation of Vercel Cron Monitors
     // Replaces deprecated automaticVercelMonitors option
     if (config.experiments && config.experiments.buildMerging) {
       config.experiments.buildMerging = true;
     }
-    
+
     return config;
   },
   async rewrites() {
@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
     const isDev = process.env.NODE_ENV !== 'production';
     const csp = isDev
       ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: http: ws: wss:; worker-src 'self' blob:; frame-ancestors 'none';"
-      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'none';";
+      : "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https:; worker-src 'self' blob: frame-ancestors 'none';";
 
     return [
       {
@@ -54,6 +54,48 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Protect admin routes from indexing
+        source: '/admin/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: csp,
+          },
+        ],
+      },
+      {
+        // Protect API routes from indexing
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: csp,
+          },
+        ],
+      },
+      {
+        // Protect auth routes from indexing
+        source: '/auth/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: csp,
           },
         ],
       },

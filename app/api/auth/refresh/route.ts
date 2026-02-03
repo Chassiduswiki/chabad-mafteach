@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRefreshToken, createAuthToken } from '@/lib/auth';
-import { createClient } from '@/lib/directus';
-
-const directus = createClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,33 +21,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, validate user exists in our simple user store
-    // In production, this would query the user database
-    const validUsers: Record<string, { id: string; role: string; name: string; email: string }> = {
-      '1': { id: '1', role: 'editor', name: 'Editor User', email: 'editor@chabad.org' },
-      '2': { id: '2', role: 'admin', name: 'Admin User', email: 'admin@chabad.org' }
-    };
+    // Fetch user from Directus to validate they still exist and get current role
+    const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || process.env.DIRECTUS_URL;
+    const staticToken = process.env.DIRECTUS_STATIC_TOKEN;
 
-    const user = validUsers[refreshTokenData.userId];
-    if (!user) {
+    if (!directusUrl || !staticToken) {
+      console.error('Directus configuration missing');
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    const userResponse = await fetch(
+      `${directusUrl}/users/${refreshTokenData.userId}?fields=id,email,first_name,last_name,role.name,status`,
+      {
+        headers: { 'Authorization': `Bearer ${staticToken}` }
+      }
+    );
+
+    if (!userResponse.ok) {
+      console.error('Failed to fetch user from Directus:', userResponse.status);
+      return NextResponse.json(
+        { error: 'User not found or session expired' },
         { status: 401 }
       );
     }
 
+    const userData = await userResponse.json();
+    const directusUser = userData.data;
+
+    // Check if user is active
+    if (directusUser.status !== 'active') {
+      return NextResponse.json(
+        { error: 'User account is not active' },
+        { status: 401 }
+      );
+    }
+
+    // Map Directus roles to app roles
+    const role = directusUser.role?.name?.toLowerCase().includes('admin') ? 'admin' : 'editor';
+    const name = `${directusUser.first_name || ''} ${directusUser.last_name || ''}`.trim() || directusUser.email;
+
     // Generate new access token
-    const newAccessToken = createAuthToken(user.id, user.role);
+    const newAccessToken = createAuthToken(directusUser.id, role);
 
     // Return new access token (refresh token remains the same)
     return NextResponse.json({
       success: true,
       accessToken: newAccessToken,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
+        id: directusUser.id,
+        email: directusUser.email,
+        name,
+        role
       }
     });
 

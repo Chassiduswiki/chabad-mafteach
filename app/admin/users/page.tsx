@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Table,
     TableBody,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Loader2, Users } from 'lucide-react';
+import { UserPlus, Loader2, Users, Crown, User, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -22,11 +22,36 @@ async function fetchUsers() {
     return res.json();
 }
 
+async function promoteUser(userId: string, role: string) {
+    const res = await fetch(`/api/admin/users/${userId}/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+    });
+    if (!res.ok) throw new Error('Failed to promote user');
+    return res.json();
+}
+
 export default function UsersPage() {
+    const queryClient = useQueryClient();
     const { data, isLoading, error } = useQuery({
         queryKey: ['admin-users'],
         queryFn: fetchUsers,
     });
+
+    const promoteMutation = useMutation({
+        mutationFn: ({ userId, role }: { userId: string; role: string }) => promoteUser(userId, role),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+        },
+    });
+
+    const handlePromote = (userId: string, currentRole: string) => {
+        const newRole = currentRole === 'user' ? 'editor' : 'user';
+        if (confirm(`Are you sure you want to ${newRole === 'editor' ? 'promote' : 'demote'} this user to ${newRole}?`)) {
+            promoteMutation.mutate({ userId, role: newRole });
+        }
+    };
 
     return (
         <div className="container max-w-6xl py-10 space-y-8">
@@ -70,6 +95,7 @@ export default function UsersPage() {
                                     <TableHead>Role</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Last Access</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -97,6 +123,36 @@ export default function UsersPage() {
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
                                             {user.last_access ? formatDistanceToNow(new Date(user.last_access), { addSuffix: true }) : 'Never'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-2">
+                                                {user.role?.name !== 'admin' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handlePromote(user.id, user.role?.name || 'user')}
+                                                        disabled={promoteMutation.isPending}
+                                                    >
+                                                        {user.role?.name === 'editor' ? (
+                                                            <>
+                                                                <User className="h-3 w-3 mr-1" />
+                                                                Demote
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Crown className="h-3 w-3 mr-1" />
+                                                                Promote
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                )}
+                                                {user.role?.name === 'admin' && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                        <Shield className="h-3 w-3" />
+                                                        Admin
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}

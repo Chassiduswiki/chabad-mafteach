@@ -28,22 +28,37 @@ export interface GraphData {
 
 /**
  * GET /api/graph
- * 
+ *
  * Returns topic nodes and their relationships for graph visualization.
- * 
+ *
  * Query params:
  * - limit: Max number of topics to include (default: 30)
  * - center: Topic slug to center the graph on (optional)
- * - depth: How many relationship levels to traverse (default: 1)
+ * - depth: How many relationship levels to traverse (default: 2)
+ * - types: Comma-separated topic types to include (e.g., "concept,sefirah")
+ * - relationships: Comma-separated relationship types to include (e.g., "related_to,conceptual_parent")
  */
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
     const centerSlug = searchParams.get('center');
-    const depth = Math.min(parseInt(searchParams.get('depth') || '1'), 3);
+    const depth = Math.min(parseInt(searchParams.get('depth') || '2'), 5);
+
+    // Parse filter arrays
+    const typesParam = searchParams.get('types');
+    const topicTypes = typesParam ? typesParam.split(',').filter(Boolean) : null;
+
+    const relationshipsParam = searchParams.get('relationships');
+    const relationshipTypes = relationshipsParam ? relationshipsParam.split(',').filter(Boolean) : null;
 
     try {
-        // Fetch all topic relationships
+        // Build filter for relationship types
+        const filter: Record<string, any> = {};
+        if (relationshipTypes && relationshipTypes.length > 0) {
+            filter.relation_type = { _in: relationshipTypes };
+        }
+
+        // Fetch topic relationships with optional filtering
         const relationships = await directus.request(readItems('topic_relationships' as any, {
             fields: [
                 'id',
@@ -53,6 +68,7 @@ export async function GET(request: NextRequest) {
                 { parent_topic_id: ['id', 'canonical_title', 'canonical_title_en', 'slug', 'topic_type'] },
                 { child_topic_id: ['id', 'canonical_title', 'canonical_title_en', 'slug', 'topic_type'] }
             ] as any,
+            filter: Object.keys(filter).length > 0 ? filter : undefined,
             limit: -1
         }));
 
@@ -117,6 +133,11 @@ export async function GET(request: NextRequest) {
 
         let nodes = Array.from(nodeMap.values());
 
+        // Filter nodes by topic type if specified
+        if (topicTypes && topicTypes.length > 0) {
+            nodes = nodes.filter(n => n.category && topicTypes.includes(n.category));
+        }
+
         // If centering on a specific topic, filter to that subgraph
         if (centerSlug) {
             const centerNode = nodes.find(n => n.slug === centerSlug);
@@ -163,8 +184,16 @@ export async function GET(request: NextRequest) {
         // If we have no relationships, fetch some topics anyway for the graph
         if (nodes.length === 0) {
             console.log('Graph API: No relationships found, fetching topics directly');
+
+            // Build topic filter
+            const topicFilter: Record<string, any> = {};
+            if (topicTypes && topicTypes.length > 0) {
+                topicFilter.topic_type = { _in: topicTypes };
+            }
+
             const topics = await directus.request(readItems('topics' as any, {
                 fields: ['id', 'canonical_title', 'canonical_title_en', 'slug', 'topic_type'] as any,
+                filter: Object.keys(topicFilter).length > 0 ? topicFilter : undefined,
                 limit: limit
             }));
 

@@ -113,6 +113,66 @@ export default function TopicEditorPage() {
     enabled: !!state.topic && !state.isLoading
   });
 
+  // --- Translation Handling (Hoisted for use in AutoSave) ---
+
+  const handleTranslationSave = useCallback(async (field: keyof TopicFormData, content: string) => {
+    if (!state.topic) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch(`/api/topics/translations`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          topicId: state.topic.id,
+          language: 'en',
+          field,
+          value: content,
+        }),
+      });
+    } catch (error) {
+      console.error(`Failed to save translation for ${field}:`, error);
+    }
+  }, [state.topic]);
+
+  // Helper to save translations in batch
+  const saveTranslationsInBatch = async (data: TopicFormData) => {
+    if (!state.topic) return;
+
+    const translatableFields = [
+      'description', 'overview', 'article', 'definition_positive',
+      'definition_negative', 'practical_takeaways', 'historical_context',
+      'mashal', 'global_nimshal', 'charts', 'common_confusions'
+    ];
+
+    // Process sequentially to rely on connection pooling rather than flooding
+    // OPTIMIZATION: Only save fields that have actually changed
+    for (const field of translatableFields) {
+      const value = data[field as keyof TopicFormData];
+      const initialValue = (state.topic as any)[field];
+
+      // Only save if defined AND changed from initial/last loaded value
+      // We accept loose equality for null/undefined vs empty string if needed, but strict is safer here
+      if (typeof value !== 'undefined' && value !== initialValue) {
+        try {
+          await handleTranslationSave(field as keyof TopicFormData, value as string);
+        } catch (e) {
+          console.warn(`Failed to save translation field ${field}`, e);
+        }
+      }
+    }
+  };
+
+  // Enhanced editor update handler (No longer saves on every keystroke)
+  const handleEditorUpdate = (field: keyof TopicFormData, content: string) => {
+    state.handleEditorUpdate(field, content);
+  };
+
+  // ---------------------------------------------------------
+
   // Auto-save handler
   const handleAutoSave = useCallback(async (data: TopicFormData) => {
     if (!state.topic) return;
@@ -132,6 +192,9 @@ export default function TopicEditorPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Auto-save failed');
       }
+
+      // Also save translations in batch (debounced via auto-save)
+      await saveTranslationsInBatch(data);
     } catch (error) {
       console.error('Auto-save error:', error);
       throw error;
@@ -164,6 +227,7 @@ export default function TopicEditorPage() {
         ...(displayConfig && { display_config: displayConfig })
       };
 
+      // 1. Save standard topic data
       const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${state.topic.slug || slug}`, {
         method: 'PATCH',
@@ -178,6 +242,9 @@ export default function TopicEditorPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Save failed: ${response.status}`);
       }
+
+      // 2. Save translations (this ensures all rich text fields are persisted to translations table)
+      await saveTranslationsInBatch(state.formData);
 
       setManualSaveStatus('success');
       markAsSaved();
@@ -409,43 +476,6 @@ export default function TopicEditorPage() {
     setConcepts(prev => prev.map(c =>
       c.id === conceptId ? { ...c, type } : c
     ));
-  };
-
-  // Translation handler
-  const handleTranslationSave = useCallback(async (field: keyof TopicFormData, content: string) => {
-    if (!state.topic) return;
-
-    try {
-      const token = localStorage.getItem('auth_token');
-      await fetch(`/api/topics/translations`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
-          topicId: state.topic.id,
-          language: 'en',
-          field,
-          value: content,
-        }),
-      });
-    } catch (error) {
-      console.error(`Failed to save translation for ${field}:`, error);
-    }
-  }, [state.topic]);
-
-  // Enhanced editor update that also saves translations
-  const handleEditorUpdate = (field: keyof TopicFormData, content: string) => {
-    state.handleEditorUpdate(field, content);
-    const translatableFields = [
-      'description', 'overview', 'article', 'definition_positive',
-      'definition_negative', 'practical_takeaways', 'historical_context',
-      'mashal', 'global_nimshal', 'charts', 'common_confusions'
-    ];
-    if (translatableFields.includes(field)) {
-      handleTranslationSave(field, content);
-    }
   };
 
   // AI Event Listeners
@@ -817,6 +847,8 @@ export default function TopicEditorPage() {
                   formData={state.formData}
                   onUpdate={state.updateFormField}
                   availableSources={state.linkedSources}
+                  onSave={handleManualSave}
+                  saveStatus={getSaveStatus()}
                 />
               }
               settingsContent={

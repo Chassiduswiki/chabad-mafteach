@@ -22,13 +22,30 @@ export function BottomSheet({ isOpen, onClose, children, title, height = 'h-auto
 
     // Prevent background scrolling when sheet is open
     useEffect(() => {
+        // Only run on client to avoid hydration mismatch
+        if (typeof window === 'undefined') return;
+        
         if (isOpen) {
+            // Save current overflow state and scrollbar width
+            const originalOverflow = document.body.style.overflow;
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            
             document.body.style.overflow = 'hidden';
+            // Add padding-right to compensate for scrollbar removal
+            if (scrollbarWidth > 0) {
+                document.body.style.paddingRight = `${scrollbarWidth}px`;
+            }
+            
             setDragY(0);
+            
+            return () => { 
+                document.body.style.overflow = originalOverflow;
+                document.body.style.paddingRight = '';
+            };
         } else {
             document.body.style.overflow = 'unset';
+            document.body.style.paddingRight = '';
         }
-        return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {

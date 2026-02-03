@@ -9,6 +9,8 @@ import { useSearch } from '@/lib/search-context';
 import { useAnalytics } from '@/lib/analytics-tracker';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { rankSearchResults, getSearchQueryVariants, SearchResult as RankedResult } from '@/lib/utils/search-processor';
+import { SearchExplanation } from '@/components/search/SearchExplanation';
+import { isHebrew } from '@/lib/utils/search';
 
 type SearchResult = {
     id: string;
@@ -18,6 +20,17 @@ type SearchResult = {
     category?: string;
     slug?: string;
     url: string;
+    canonical_title_transliteration?: string;
+    canonical_title_en?: string;
+    // Semantic search fields
+    is_semantic_match?: boolean;
+    semantic_score?: number;
+    hybrid_score?: number;
+    keyword_score?: number;
+    // Smart search fields
+    explanation?: string;
+    mode?: string;
+    showSemanticIndicators?: boolean;
 };
 
 // Category color mapping for badges - matches TopicsList colors
@@ -83,6 +96,7 @@ export function CommandMenu() {
     const [results, setResults] = React.useState<SearchResult[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
+    const [searchData, setSearchData] = React.useState<any>(null);
     const router = useRouter();
     const { data: settings } = useSiteSettings();
 
@@ -98,6 +112,7 @@ export function CommandMenu() {
     React.useEffect(() => {
         if (!search) {
             setResults([]);
+            setSearchData(null);
             return;
         }
 
@@ -118,14 +133,19 @@ export function CommandMenu() {
                 };
 
                 // Map raw results to our SearchResult type with ID validation
-                const topicResults: SearchResult[] = (data.topics || []).filter((t: { slug?: string }) => t.slug).map((t: { id: string; slug: string; name?: string; canonical_title?: string; description?: string; definition_short?: string; category?: string; topic_type?: string }) => ({
+                const topicResults: SearchResult[] = (data.topics || []).filter((t: { slug?: string }) => t.slug).map((t: any) => ({
                     id: `topic-${t.id || t.slug}`,
                     title: t.name || t.canonical_title || 'Untitled',
                     type: 'topic' as const,
                     subtitle: stripHtml(t.description || t.definition_short),
                     category: t.category || t.topic_type,
                     slug: t.slug,
-                    url: `/topics/${t.slug}`
+                    url: `/topics/${t.slug}`,
+                    // Preserve semantic search fields
+                    is_semantic_match: t.is_semantic_match || false,
+                    semantic_score: t.semantic_score,
+                    hybrid_score: t.hybrid_score,
+                    keyword_score: t.keyword_score,
                 }));
 
                 const documentsResults: SearchResult[] = (data.seforim || []).filter((s: { id?: string | number }) => s.id).map((s: { id: string | number; title: string; author?: string; doc_type?: string; category?: string }) => ({
@@ -135,6 +155,9 @@ export function CommandMenu() {
                     subtitle: [s.author, s.doc_type, s.category].filter(Boolean).join(' • '),
                     url: `/seforim/${s.id}`
                 }));
+
+                // Store the API response data for SearchExplanation
+                setSearchData(data);
 
                 const locationResults: SearchResult[] = (data.locations || []).map((l: { id: string | number; display_name?: string; title: string; content_preview?: string; url?: string; sefer?: string | number; document_id?: string | number }) => ({
                     id: `loc-${l.id}`,
@@ -255,6 +278,7 @@ export function CommandMenu() {
                                 </div>
                             </div>
 
+
                             {/* Results Area */}
                             <Command.List className="flex-1 overflow-y-auto px-4 pb-12 scrollbar-none scroll-smooth">
                                 {loading && (
@@ -337,6 +361,17 @@ export function CommandMenu() {
                                                             <h4 className="text-sm font-semibold text-foreground truncate">
                                                                 {item.title}
                                                             </h4>
+                                                            {item.is_semantic_match && (
+                                                                <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-1.5 py-0.5 rounded-full">
+                                                                    <Brain className="w-3 h-3" />
+                                                                    <span>Semantic</span>
+                                                                    {item.semantic_score && (
+                                                                        <span className="text-muted-foreground">
+                                                                            ({Math.round(item.semantic_score * 100)}%)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                             {item.category && (
                                                                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                                                                     {item.category}
@@ -379,9 +414,8 @@ export function CommandMenu() {
                                     autoFocus
                                 />
                                 <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-                                        <span>ESC</span>
-                                        <span>TO CLOSE</span>
+                                    <div className="text-xs text-muted-foreground">
+                                        Press <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">ESC</kbd> to close
                                     </div>
                                     <button onClick={() => setOpen(false)} className="p-2 hover:bg-muted rounded-xl transition-colors">
                                         <X className="w-5 h-5 text-muted-foreground" />
@@ -389,6 +423,7 @@ export function CommandMenu() {
                                 </div>
                             </div>
 
+                                {/* Results Area */}
                             <Command.List className="max-h-[60vh] overflow-y-auto p-4 scrollbar-thin">
                                 {loading && (
                                     <div className="flex items-center justify-center py-12 text-muted-foreground gap-3">

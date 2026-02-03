@@ -80,10 +80,18 @@ export function useTranslations(topicId: number | null) {
 
   const updateTranslation = async (id: number, data: Partial<Translation>) => {
     try {
-      const response = await fetch(`/api/topics/translations?id=${id}`, {
+      // For the PATCH endpoint, we need to convert to the expected format
+      const patchData = {
+        topicId: data.topic_id,
+        language: data.language_code,
+        field: Object.keys(data).find(key => key !== 'id' && key !== 'topic_id' && key !== 'language_code'),
+        value: Object.values(data).find((val, idx) => idx > 2) // Skip first 3 values (id, topic_id, language_code)
+      };
+
+      const response = await fetch(`/api/topics/translations`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(patchData),
       });
 
       if (!response.ok) {
@@ -92,6 +100,37 @@ export function useTranslations(topicId: number | null) {
 
       const updated = await response.json();
       setTranslations(prev => prev.map(t => t.id === id ? updated : t));
+      return updated;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const upsertTranslationField = async (topicId: number, language: string, field: string, value: any) => {
+    try {
+      const response = await fetch(`/api/topics/translations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topicId, language, field, value }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upsert translation field');
+      }
+
+      const updated = await response.json();
+      
+      // Update local state
+      setTranslations(prev => {
+        const existing = prev.find(t => t.topic_id === topicId && t.language_code === language);
+        if (existing) {
+          return prev.map(t => t.id === existing.id ? { ...t, ...updated } : t);
+        } else {
+          return [...prev, updated];
+        }
+      });
+      
       return updated;
     } catch (err: any) {
       setError(err.message);
@@ -123,6 +162,7 @@ export function useTranslations(topicId: number | null) {
     getTranslation,
     createTranslation,
     updateTranslation,
+    upsertTranslationField,
     deleteTranslation,
   };
 }

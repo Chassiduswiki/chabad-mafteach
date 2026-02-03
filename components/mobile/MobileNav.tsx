@@ -12,6 +12,9 @@ const Search = React.lazy(() => import('lucide-react').then(mod => ({ default: m
 const Hash = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.Hash })));
 const BookOpen = React.lazy(() => import('lucide-react').then(mod => ({ default: mod.BookOpen })));
 
+// Lazy load CompactUserMenu to prevent HMR issues
+const CompactUserMenu = React.lazy(() => import('@/components/auth/CompactUserMenu').then(mod => ({ default: mod.CompactUserMenu })));
+
 // Icon wrapper component
 function IconWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -88,6 +91,14 @@ export function MobileNav() {
                         <IconWrapper><Search size={22} strokeWidth={2} /></IconWrapper>
                         <span className="text-[10px] font-medium">Search</span>
                     </button>
+                    
+                    {/* Compact User Menu */}
+                    <div className="flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl text-muted-foreground min-w-[60px]">
+                        <Suspense fallback={<div className="w-6 h-6 rounded-full bg-muted animate-pulse" />}>
+                            <CompactUserMenu />
+                        </Suspense>
+                        <span className="text-[10px] font-medium">Account</span>
+                    </div>
                 </div>
             </div>
         </nav>

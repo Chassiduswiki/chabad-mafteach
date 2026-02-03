@@ -203,12 +203,9 @@ export function ParagraphsEditor({ topicId }: ParagraphsEditorProps) {
                                                 editor.commands.setContent(paragraph.text);
                                             }
                                             // Set up content change listener
-                                            editor.on('update', ({ editor }: any) => {
+                                            editor.on('blur', ({ editor }: any) => {
                                                 const content = editor.getHTML();
                                                 handleUpdateParagraph(paragraph.id, content);
-                                            });
-
-                                            editor.on('blur', () => {
                                                 setEditingId(null);
                                             });
                                         }}

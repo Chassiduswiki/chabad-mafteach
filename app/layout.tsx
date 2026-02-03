@@ -14,6 +14,7 @@ import { UmamiTracker } from "@/components/analytics/UmamiTracker";
 
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
 import { OnboardingManager } from "@/components/onboarding/OnboardingManager";
+import { LanguageProvider } from "@/components/providers/LanguageProvider";
 
 import { MobileNav } from "@/components/mobile/MobileNav";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -155,7 +156,7 @@ export default async function RootLayout({
   const userIsAdmin = await isAdmin();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Performance Optimization: Preload critical assets for LCP */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -190,9 +191,10 @@ export default async function RootLayout({
         </a>
         <ThemeProvider>
           <QueryProvider>
-            <SearchProvider>
-              <OnboardingProvider>
-                <PopupProvider>
+            <LanguageProvider>
+              <SearchProvider>
+                <OnboardingProvider>
+                  <PopupProvider>
                   {isMaintenanceActive && !userIsAdmin ? (
                     <div className="min-h-screen flex items-center justify-center bg-background px-4">
                       <div className="max-w-md w-full text-center space-y-6">
@@ -232,9 +234,10 @@ export default async function RootLayout({
                       <OnboardingManager />
                     </>
                   )}
-                </PopupProvider>
-              </OnboardingProvider>
-            </SearchProvider>
+                  </PopupProvider>
+                </OnboardingProvider>
+              </SearchProvider>
+            </LanguageProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

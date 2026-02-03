@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
 import { TipTapToolbar } from './TipTapToolbar';
 import { CitationViewerModal } from './CitationViewerModal';
-import { CitationInsertModal } from './CitationInsertModal';
+import { EliteCitationModal } from './EliteCitationModal';
 import { ImageUploadModal } from './ImageUploadModal';
 import { SlashCommandMenu } from './SlashCommandMenu';
 import { BubbleToolbar } from './BubbleToolbar';
@@ -117,7 +117,7 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
         />
       )}
 
-      <CitationInsertModal
+      <EliteCitationModal
         open={showCitationModal}
         onClose={() => setShowCitationModal(false)}
         onInsert={insertCitation}

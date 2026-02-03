@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
+import { debugDisabledResponse, isDebugEnabled } from '@/lib/monitoring/debug';
 
-export const GET = async (request: NextRequest) => {
+export const GET = requirePermission('canAccessDebug', withAudit('read', 'debug.ai-status', async (request: NextRequest) => {
+  const rateLimited = enforceRateLimit(request, adminReadRateLimit);
+  if (rateLimited) return rateLimited;
+  if (!isDebugEnabled()) return debugDisabledResponse();
   try {
     // Check environment variables (without exposing actual values)
     const envStatus = {
@@ -42,4 +49,4 @@ export const GET = async (request: NextRequest) => {
       { status: 500 }
     );
   }
-};
+}));
