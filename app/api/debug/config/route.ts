@@ -1,12 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/directus';
 const directus = createClient();
 import { readItems } from '@directus/sdk';
 import { Schema } from '@/lib/types';
+import { requirePermission } from '@/lib/security/permissions';
+import { withAudit } from '@/lib/security/audit';
+import { adminReadRateLimit, enforceRateLimit } from '@/lib/security/rate-limit';
+import { debugDisabledResponse, isDebugEnabled } from '@/lib/monitoring/debug';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export const GET = requirePermission('canAccessDebug', withAudit('read', 'debug.config', async (request: NextRequest) => {
+    const rateLimited = enforceRateLimit(request, adminReadRateLimit);
+    if (rateLimited) return rateLimited;
+    if (!isDebugEnabled()) return debugDisabledResponse();
     const configStatus = {
         NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || '(not set)',
         DIRECTUS_URL: process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_DIRECTUS_URL || '(not set)',
@@ -49,4 +56,4 @@ export async function GET() {
         },
         collections: collectionStatuses
     });
-}
+}));

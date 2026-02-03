@@ -3,13 +3,11 @@
  * Replaces console.log with proper logging service
  */
 
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
-  FATAL = 4,
-}
+import { getLoggingConfig } from '@/lib/logging/config';
+import { LogLevel, logLevelName } from '@/lib/logging/levels';
+import { writeLogToFile } from '@/lib/logging/file-store';
+import { writeLogToDirectus } from '@/lib/logging/directus-store';
+import { safeStringify } from '@/lib/logging/format';
 
 export interface LogEntry {
   timestamp: string;
@@ -28,7 +26,8 @@ export interface LogEntry {
 
 class Logger {
   private static instance: Logger;
-  private logLevel: LogLevel = process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG;
+  private config = getLoggingConfig();
+  private logLevel: LogLevel = this.config.level;
   private logs: LogEntry[] = [];
   private readonly maxLogs = 1000;
 
@@ -45,7 +44,12 @@ class Logger {
     return level >= this.logLevel;
   }
 
-  private createLogEntry(level: LogLevel, message: string, context?: Record<string, any>): LogEntry {
+  private createLogEntry(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, any>,
+    error?: Error
+  ): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level,
@@ -54,6 +58,13 @@ class Logger {
       component: context?.component,
       userId: context?.userId,
       requestId: context?.requestId,
+      error: error
+        ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
+        : undefined,
     };
   }
 
@@ -65,15 +76,23 @@ class Logger {
       this.logs = this.logs.slice(-this.maxLogs);
     }
 
-    // Output to console in development
-    if (process.env.NODE_ENV === 'development') {
+    // Output to console based on config
+    if (this.config.console.enabled) {
       this.outputToConsole(entry);
+    }
+
+    if (this.config.file.enabled) {
+      void writeLogToFile(entry, this.config);
+    }
+
+    if (this.config.directus.enabled) {
+      void writeLogToDirectus(entry, this.config);
     }
   }
 
   private outputToConsole(entry: LogEntry): void {
-    const levelName = LogLevel[entry.level];
-    const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : '';
+    const levelName = logLevelName(entry.level);
+    const contextStr = entry.context ? ` ${safeStringify(entry.context)}` : '';
     
     switch (entry.level) {
       case LogLevel.DEBUG:
@@ -89,7 +108,7 @@ class Logger {
       case LogLevel.FATAL:
         console.error(`[${levelName}] ${entry.message}${contextStr}`);
         if (entry.error) {
-          console.error(entry.error.stack);
+          console.error(entry.error.stack || entry.error.message);
         }
         break;
     }
@@ -119,28 +138,14 @@ class Logger {
   error(message: string, error?: Error, context?: Record<string, any>): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
     
-    const entry = this.createLogEntry(LogLevel.ERROR, message, {
-      ...context,
-      error: error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : undefined,
-    });
+    const entry = this.createLogEntry(LogLevel.ERROR, message, context, error);
     this.addLog(entry);
   }
 
   fatal(message: string, error?: Error, context?: Record<string, any>): void {
     if (!this.shouldLog(LogLevel.FATAL)) return;
     
-    const entry = this.createLogEntry(LogLevel.FATAL, message, {
-      ...context,
-      error: error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : undefined,
-    });
+    const entry = this.createLogEntry(LogLevel.FATAL, message, context, error);
     this.addLog(entry);
   }
 
@@ -187,6 +192,23 @@ class Logger {
     return this.logs.slice(-count);
   }
 
+  // Get error stats within a time window (ms)
+  getErrorStats(windowMs: number = 15 * 60 * 1000): { total: number; fatal: number; error: number; since: string } {
+    const sinceTime = Date.now() - windowMs;
+    const since = new Date(sinceTime).toISOString();
+    const errors = this.logs.filter((log) => {
+      const timestamp = new Date(log.timestamp).getTime();
+      return timestamp >= sinceTime && (log.level === LogLevel.ERROR || log.level === LogLevel.FATAL);
+    });
+
+    return {
+      total: errors.length,
+      fatal: errors.filter((log) => log.level === LogLevel.FATAL).length,
+      error: errors.filter((log) => log.level === LogLevel.ERROR).length,
+      since
+    };
+  }
+
   // Get logs by level
   getLogsByLevel(level: LogLevel): LogEntry[] {
     return this.logs.filter(log => log.level === level);
@@ -205,6 +227,7 @@ class Logger {
   // Set log level
   setLogLevel(level: LogLevel): void {
     this.logLevel = level;
+    this.config = { ...this.config, level };
   }
 }
 

@@ -108,7 +108,7 @@ async function processTopics() {
           }
 
           // Estimate cost
-          const cost = estimateEmbeddingCost(text.length);
+          const cost = estimateEmbeddingCost(text);
           stats.totalCost += cost;
 
           if (options.dryRun) {
@@ -196,7 +196,7 @@ async function processStatements() {
           }
 
           // Estimate cost
-          const cost = estimateEmbeddingCost(text.length);
+          const cost = estimateEmbeddingCost(text);
           stats.totalCost += cost;
 
           if (options.dryRun) {

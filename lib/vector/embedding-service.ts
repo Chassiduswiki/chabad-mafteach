@@ -431,3 +431,21 @@ export function clearEmbeddingCache(pattern?: string): void {
     });
   }
 }
+
+/**
+ * Estimate embedding cost for a given text
+ */
+export function estimateEmbeddingCost(text: string, model: string = 'openai/text-embedding-3-small'): number {
+  // Rough estimation based on token count (1 token ≈ 4 characters for English)
+  const estimatedTokens = Math.ceil(text.length / 4);
+  
+  // Pricing per 1M tokens (approximate)
+  const pricingPerMillion: Record<string, number> = {
+    'openai/text-embedding-3-small': 0.02,
+    'openai/text-embedding-3-large': 0.13,
+    'openai/text-embedding-ada-002': 0.10,
+  };
+  
+  const pricePerMillion = pricingPerMillion[model] || 0.02;
+  return (estimatedTokens / 1_000_000) * pricePerMillion;
+}

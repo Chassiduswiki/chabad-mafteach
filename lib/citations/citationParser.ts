@@ -91,7 +91,7 @@ const SOURCE_PATTERNS: Array<{
   {
     type: 'tanya',
     patterns: [
-      /^תניא\b/i,
+      /^תניא/i,
       /^tanya\b/i,
       /^לקו["״]?א\b/i,
       /^ליקוטי\s*אמרים\b/i,
@@ -401,6 +401,7 @@ export function looksLikeCitation(text: string): boolean {
     /^תניא/,
     /^תו["״]?א/,
     /^לקו["״]?ת/,
+    /^ls\b/i,
     /vol\./i,
     /p\.\s*\d+/i,
     /ע["״׳']\s*\d+/,

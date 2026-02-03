@@ -7,6 +7,9 @@ export interface UserPermissions {
   canAccessAnalytics: boolean;
   canManageSourceBooks: boolean;
   canViewPerformanceMetrics: boolean;
+  canManageBackups: boolean;
+  canAccessDebug: boolean;
+  canViewMonitoring: boolean;
 }
 
 export type PermissionKey = keyof UserPermissions;
@@ -16,7 +19,10 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
   canManageUsers: false,
   canAccessAnalytics: false,
   canManageSourceBooks: false,
-  canViewPerformanceMetrics: false
+  canViewPerformanceMetrics: false,
+  canManageBackups: false,
+  canAccessDebug: false,
+  canViewMonitoring: false
 };
 
 const ROLE_PERMISSIONS: Record<string, UserPermissions> = {
@@ -25,21 +31,30 @@ const ROLE_PERMISSIONS: Record<string, UserPermissions> = {
     canManageUsers: true,
     canAccessAnalytics: true,
     canManageSourceBooks: true,
-    canViewPerformanceMetrics: true
+    canViewPerformanceMetrics: true,
+    canManageBackups: true,
+    canAccessDebug: true,
+    canViewMonitoring: true
   },
   editor: {
     canEditTopics: true,
     canManageUsers: false,
     canAccessAnalytics: false,
     canManageSourceBooks: true,
-    canViewPerformanceMetrics: false
+    canViewPerformanceMetrics: false,
+    canManageBackups: false,
+    canAccessDebug: false,
+    canViewMonitoring: false
   },
   reviewer: {
     canEditTopics: false,
     canManageUsers: false,
     canAccessAnalytics: false,
     canManageSourceBooks: false,
-    canViewPerformanceMetrics: false
+    canViewPerformanceMetrics: false,
+    canManageBackups: false,
+    canAccessDebug: false,
+    canViewMonitoring: false
   },
   user: { ...DEFAULT_PERMISSIONS }
 };
@@ -73,5 +88,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   canManageUsers: 'Manage Users',
   canAccessAnalytics: 'Access Analytics',
   canManageSourceBooks: 'Manage Source Books',
-  canViewPerformanceMetrics: 'View Performance Metrics'
+  canViewPerformanceMetrics: 'View Performance Metrics',
+  canManageBackups: 'Manage Backups',
+  canAccessDebug: 'Access Debug Tools',
+  canViewMonitoring: 'View Monitoring'
 };

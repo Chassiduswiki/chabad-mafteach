@@ -56,7 +56,7 @@ function normalizeCitation(
  * Converts editor citation data to database source_link format
  */
 export function editorCitationToSourceLink(
-  citation: CitationAttrs | CitationData,
+  citation: CitationAttrs | CitationData | UnifiedCitation,
   statementId?: number | null,
   topicId?: number | null
 ): SourceLink {

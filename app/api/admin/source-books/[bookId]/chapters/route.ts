@@ -64,10 +64,11 @@ const applyValidationStatuses = async (chapters: SourceBookChapter[]) => {
 
 export async function GET(
     _request: NextRequest,
-    { params }: { params: { bookId: string } }
+    { params }: { params: Promise<{ bookId: string }> }
 ) {
     try {
-        const chapters = await fetchChapters(params.bookId);
+        const { bookId } = await params;
+        const chapters = await fetchChapters(bookId);
         return NextResponse.json({ data: chapters });
     } catch (error) {
         return handleApiError(error);
@@ -76,9 +77,10 @@ export async function GET(
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { bookId: string } }
+    { params }: { params: Promise<{ bookId: string }> }
 ) {
     try {
+        const { bookId } = await params;
         const body = await request.json();
         const updates = Array.isArray(body?.updates) ? body.updates : [];
 
@@ -93,7 +95,7 @@ export async function PATCH(
             }).filter(Boolean)
         );
 
-        const chapters = await fetchChapters(params.bookId);
+        const chapters = await fetchChapters(bookId);
         const validation = await applyValidationStatuses(chapters);
         const hydrated = chapters.map(chapter => ({
             ...chapter,

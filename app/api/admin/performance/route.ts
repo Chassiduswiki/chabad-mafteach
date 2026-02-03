@@ -172,6 +172,7 @@ export const GET = requirePermission('canViewPerformanceMetrics', withAudit('rea
     return NextResponse.json(report);
   } catch (error) {
     console.error('Performance report error:', error);
+    console.error('Performance report error details:', (error as any)?.stack);
     return NextResponse.json({ error: 'Failed to generate performance report' }, { status: 500 });
   }
 }));

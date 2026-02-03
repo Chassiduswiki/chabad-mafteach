@@ -67,6 +67,7 @@ import { MetricCard } from './MetricCard';
 import { ReviewQueueV2 } from './ReviewQueueV2';
 import { SystemHealth } from './SystemHealth';
 import { PerformancePanel } from './PerformancePanel';
+import { MonitoringPanel } from './MonitoringPanel';
 import { 
   AIChatPanel, 
   FloatingAIChatButton 
@@ -95,9 +96,11 @@ export function AdminDashboardV2() {
     activityLog, 
     maintenance, 
     performance,
+    monitoring,
     isLoading, 
     isError, 
     isPerformanceLoading,
+    isMonitoringLoading,
     refetch 
   } = useDashboardData();
 
@@ -256,6 +259,7 @@ export function AdminDashboardV2() {
   const canEditTopics = permissions?.canEditTopics ?? false;
   const canViewPerformance = permissions?.canViewPerformanceMetrics ?? false;
   const canManageUsers = permissions?.canManageUsers ?? false;
+  const canViewMonitoring = permissions?.canViewMonitoring ?? false;
 
   return (
     <div className="space-y-8 pb-12 max-w-[1600px] mx-auto px-6">
@@ -299,7 +303,6 @@ export function AdminDashboardV2() {
         </div>
 
         <div className="space-y-8">
-          {canManageUsers && (
           {canManageUsers && (
           <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between mb-8">
@@ -364,6 +367,7 @@ export function AdminDashboardV2() {
               </Empty>
             )}
           </div>
+          )}
 
           {canEditTopics && (
             <div className="p-8 rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm shadow-sm">
@@ -643,14 +647,19 @@ export function AdminDashboardV2() {
               <span className="text-[10px] font-bold uppercase tracking-widest">Purge Storage</span>
             </Button>
           </div>
-          )}
           </div>
+          )}
         </div>
       </div>
 
       {/* 3.5 Performance Optimization */}
       {canViewPerformance && (
       <PerformancePanel data={performance} isLoading={isPerformanceLoading} />
+      )}
+
+      {/* 3.75 Live Monitoring */}
+      {canViewMonitoring && (
+      <MonitoringPanel data={monitoring} isLoading={isMonitoringLoading} />
       )}
 
       {/* 4. Advanced Governance, CMS & Branding */}

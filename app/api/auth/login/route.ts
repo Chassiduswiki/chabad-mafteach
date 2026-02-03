@@ -3,6 +3,7 @@ import { createAuthToken, createRefreshToken, checkAccountLockout, recordFailedL
 import { SECURITY } from '@/lib/constants';
 import { setAuthCookie, setAuthStatusCookie } from '@/lib/cookie-utils';
 import { recordAuditEvent } from '@/lib/security/audit';
+import { logSecurityEvent } from '@/lib/logging/security';
 
 // Simple in-memory rate limiter for Next.js
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = checkRateLimit(ip);
   if (!rateLimitResult.allowed) {
     const resetInSeconds = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+    void logSecurityEvent({
+      userId: 'unknown',
+      action: 'login_rate_limited',
+      resource: 'auth.login',
+      success: false,
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') || 'unknown',
+      reason: 'rate_limit_exceeded'
+    });
     return NextResponse.json(
       {
         error: 'Too many login attempts. Please try again later.',
@@ -75,6 +85,15 @@ export async function POST(request: NextRequest) {
     const lockoutStatus = checkAccountLockout(email);
     if (lockoutStatus.isLocked) {
       const waitTime = Math.ceil(lockoutStatus.lockoutRemaining! / 60);
+      void logSecurityEvent({
+        userId: email || 'unknown',
+        action: 'login_locked',
+        resource: 'auth.login',
+        success: false,
+        ipAddress: ip,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        reason: 'account_lockout'
+      });
       return NextResponse.json(
         {
           error: `Account temporarily locked for security. Please try again in ${waitTime} minute${waitTime !== 1 ? 's' : ''}.`,
@@ -108,15 +127,15 @@ export async function POST(request: NextRequest) {
         recordFailedLogin(email);
         const errorData = await loginResponse.json().catch(() => ({}));
         console.error('Directus login failed:', errorData);
-        void recordAuditEvent({
+        void logSecurityEvent({
           userId: email || 'unknown',
-          action: 'login',
+          action: 'login_failed',
           resource: 'auth.login',
-          timestamp: new Date().toISOString(),
+          success: false,
           ipAddress: ip,
           userAgent: request.headers.get('user-agent') || 'unknown',
-          success: false,
-          metadata: { reason: `directus_${loginResponse.status}` }
+          reason: `directus_${loginResponse.status}`,
+          metadata: { status: loginResponse.status }
         });
         
         // Provide more specific error messages
@@ -143,15 +162,14 @@ export async function POST(request: NextRequest) {
 
       if (!directusAccessToken) {
         console.error('No access token in Directus response');
-        void recordAuditEvent({
+        void logSecurityEvent({
           userId: email || 'unknown',
-          action: 'login',
+          action: 'login_failed',
           resource: 'auth.login',
-          timestamp: new Date().toISOString(),
+          success: false,
           ipAddress: ip,
           userAgent: request.headers.get('user-agent') || 'unknown',
-          success: false,
-          metadata: { reason: 'missing_directus_token' }
+          reason: 'missing_directus_token'
         });
         return NextResponse.json(
           { error: 'Authentication failed' },
@@ -166,15 +184,14 @@ export async function POST(request: NextRequest) {
 
       if (!userDetailsResponse.ok) {
         console.error('Failed to fetch user details');
-        void recordAuditEvent({
+        void logSecurityEvent({
           userId: email || 'unknown',
-          action: 'login',
+          action: 'login_failed',
           resource: 'auth.login',
-          timestamp: new Date().toISOString(),
+          success: false,
           ipAddress: ip,
           userAgent: request.headers.get('user-agent') || 'unknown',
-          success: false,
-          metadata: { reason: 'user_details_failed' }
+          reason: 'user_details_failed'
         });
         return NextResponse.json(
           { error: 'Failed to retrieve user information' },
@@ -232,16 +249,16 @@ export async function POST(request: NextRequest) {
       return response;
     } catch (directusError) {
       console.error('Directus auth error:', directusError);
+      console.error('Error details:', (directusError as any)?.stack);
       recordFailedLogin(email);
-      void recordAuditEvent({
+      void logSecurityEvent({
         userId: email || 'unknown',
-        action: 'login',
+        action: 'login_failed',
         resource: 'auth.login',
-        timestamp: new Date().toISOString(),
+        success: false,
         ipAddress: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        success: false,
-        metadata: { reason: 'directus_error' }
+        reason: 'directus_error'
       });
       return NextResponse.json(
         { error: 'Authentication failed' },
@@ -251,15 +268,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
-    void recordAuditEvent({
+    void logSecurityEvent({
       userId: 'unknown',
-      action: 'login',
+      action: 'login_failed',
       resource: 'auth.login',
-      timestamp: new Date().toISOString(),
+      success: false,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') || 'unknown',
-      success: false,
-      metadata: { reason: 'server_error' }
+      reason: 'server_error'
     });
     return NextResponse.json(
       { error: 'Internal server error' },

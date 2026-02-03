@@ -12,7 +12,7 @@ import {
   getBooleanEnv,
   getDefaultRetentionDays,
   writeManifest,
-} from './utils';
+} from '@/lib/backup/utils';
 import { recordBackupResult, recordBackupStart } from '@/lib/backup/monitoring';
 
 function getDatabaseUrl(): string {
@@ -115,7 +115,7 @@ async function backupSqlite(url: URL, outputPath: string, compress: boolean) {
   }
 }
 
-async function run() {
+export async function runDatabaseBackup() {
   const backupDir = getBackupDir();
   const backupId = getBackupId('db');
   const targetDir = path.join(backupDir, backupId);
@@ -192,17 +192,19 @@ async function run() {
   console.log(`Database backup complete: ${finalPath}`);
 }
 
-run().catch(error => {
-  const message = error instanceof Error ? error.message : String(error);
-  const backupId = getBackupId('db_failed');
-  recordBackupResult({
-    id: backupId,
-    type: 'database',
-    status: 'failed',
-    startedAt: new Date().toISOString(),
-    completedAt: new Date().toISOString(),
-    message,
+if (require.main === module) {
+  runDatabaseBackup().catch(error => {
+    const message = error instanceof Error ? error.message : String(error);
+    const backupId = getBackupId('db_failed');
+    recordBackupResult({
+      id: backupId,
+      type: 'database',
+      status: 'failed',
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      message,
+    });
+    console.error('Database backup failed:', message);
+    process.exit(1);
   });
-  console.error('Database backup failed:', message);
-  process.exit(1);
-});
+}

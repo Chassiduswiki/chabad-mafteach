@@ -7,6 +7,8 @@ export interface AuditLogEntry {
   userId: string;
   action: string;
   resource: string;
+  resourceId?: string;
+  changes?: Record<string, any>;
   timestamp: string;
   ipAddress: string;
   userAgent: string;
@@ -45,6 +47,40 @@ export async function recordAuditEvent(entry: AuditLogEntry): Promise<void> {
   }
 }
 
+const SENSITIVE_KEYS = ['password', 'token', 'secret', 'apiKey', 'authorization', 'cookie'];
+
+function redactSensitiveFields(value: any): any {
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveFields);
+  }
+  if (value && typeof value === 'object') {
+    const redacted: Record<string, any> = {};
+    Object.entries(value).forEach(([key, val]) => {
+      if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
+        redacted[key] = '[redacted]';
+      } else {
+        redacted[key] = redactSensitiveFields(val);
+      }
+    });
+    return redacted;
+  }
+  if (typeof value === 'string' && value.length > 2000) {
+    return `${value.slice(0, 2000)}…`;
+  }
+  return value;
+}
+
+async function extractAuditChanges(request: NextRequest): Promise<Record<string, any> | undefined> {
+  if (request.method === 'GET' || request.method === 'HEAD') return undefined;
+  try {
+    const cloned = request.clone();
+    const body = await cloned.json();
+    return redactSensitiveFields(body);
+  } catch {
+    return undefined;
+  }
+}
+
 export function withAudit(
   action: string,
   resource: string,
@@ -53,6 +89,7 @@ export function withAudit(
   return async (request: NextRequest, context: { userId: string; role: string }, ...args: any[]) => {
     let response: NextResponse | undefined;
     let success = false;
+    const changes = await extractAuditChanges(request);
 
     try {
       response = await handler(request, context, ...args);
@@ -63,10 +100,15 @@ export function withAudit(
         userId: context.userId,
         action,
         resource,
+        changes,
         timestamp: new Date().toISOString(),
         ipAddress: getRequestIp(request),
         userAgent: getRequestUserAgent(request),
-        success
+        success,
+        metadata: {
+          method: request.method,
+          path: request.nextUrl?.pathname,
+        }
       };
 
       void recordAuditEvent(entry);

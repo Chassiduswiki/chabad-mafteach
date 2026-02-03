@@ -4,8 +4,8 @@
  * Run with: npx ts-node scripts/add-derech-mitzvosecha.ts
  */
 
-const DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://directus-production-20db.up.railway.app';
-const DIRECTUS_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
+const DERECH_DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://directus-production-20db.up.railway.app';
+const DERECH_DIRECTUS_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
 // Inline fetch function to avoid import issues
 interface ChabadOrgNavigationChild {
@@ -43,7 +43,7 @@ async function fetchChabadOrgChapters(rootId: number) {
     return { chapters, error: undefined };
 }
 
-if (!DIRECTUS_TOKEN) {
+if (!DERECH_DIRECTUS_TOKEN) {
     console.error('DIRECTUS_STATIC_TOKEN environment variable is required');
     process.exit(1);
 }
@@ -76,7 +76,7 @@ async function createBook() {
     const response = await fetch(`${DIRECTUS_URL}/items/source_books`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${DIRECTUS_TOKEN}`,
+            'Authorization': `Bearer ${DERECH_DIRECTUS_TOKEN}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(derechMitzvosecha),
@@ -90,7 +90,7 @@ async function createBook() {
             const existing = await fetch(
                 `${DIRECTUS_URL}/items/source_books?filter[slug][_eq]=derech-mitzvosecha`,
                 {
-                    headers: { 'Authorization': `Bearer ${DIRECTUS_TOKEN}` },
+                    headers: { 'Authorization': `Bearer ${DERECH_DIRECTUS_TOKEN}` },
                 }
             );
             const data = await existing.json();
@@ -134,7 +134,7 @@ async function syncChapters(bookId: string) {
             const response = await fetch(`${DIRECTUS_URL}/items/source_book_chapters`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${DIRECTUS_TOKEN}`,
+                    'Authorization': `Bearer ${DERECH_DIRECTUS_TOKEN}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(chapterData),
@@ -165,7 +165,7 @@ async function syncChapters(bookId: string) {
     await fetch(`${DIRECTUS_URL}/items/source_books/${bookId}`, {
         method: 'PATCH',
         headers: {
-            'Authorization': `Bearer ${DIRECTUS_TOKEN}`,
+            'Authorization': `Bearer ${DERECH_DIRECTUS_TOKEN}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -176,7 +176,7 @@ async function syncChapters(bookId: string) {
     console.log('Updated sync timestamp');
 }
 
-async function main() {
+async function addDerechMitzvosechaMain() {
     console.log('Adding Derech Mitzvosecha to Source Books...');
     console.log(`URL: ${DIRECTUS_URL}\n`);
 
@@ -193,4 +193,4 @@ async function main() {
     console.log('3. Test URL generation via the API');
 }
 
-main().catch(console.error);
+addDerechMitzvosechaMain().catch(console.error);

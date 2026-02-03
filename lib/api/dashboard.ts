@@ -114,6 +114,53 @@ export interface PerformanceMetrics {
   alerts: Array<{ type: 'warning' | 'critical'; message: string }>;
 }
 
+export interface MonitoringPayload {
+  metrics: {
+    generatedAt: string;
+    cpu: {
+      cores: number;
+      loadAvg1m: number;
+      loadAvg5m: number;
+      loadAvg15m: number;
+      loadPercent: number;
+    };
+    memory: {
+      totalBytes: number;
+      usedBytes: number;
+      freeBytes: number;
+      usagePercent: number;
+    };
+    disk: {
+      path: string;
+      totalBytes: number | null;
+      usedBytes: number | null;
+      freeBytes: number | null;
+      usagePercent: number | null;
+    };
+    app: {
+      uptimeSec: number;
+      nodeVersion: string;
+      pid: number;
+    };
+    realtime: {
+      activeUsers: number | null;
+    };
+    errors: {
+      windowMinutes: number;
+      total: number;
+      fatal: number;
+      error: number;
+    };
+  };
+  checks: {
+    directus: {
+      status: 'ok' | 'failed';
+      error?: string;
+    };
+  };
+  alerts: Array<{ type: 'warning' | 'critical'; message: string }>;
+}
+
 
 // Fetching functions
 export async function fetchDashboardData() {
@@ -161,5 +208,11 @@ export async function fetchContentStats() {
 export async function fetchPerformanceMetrics(): Promise<PerformanceMetrics> {
   const res = await fetch(`${getBaseUrl()}/api/admin/performance`);
   if (!res.ok) throw new Error('Failed to fetch performance metrics');
+  return res.json();
+}
+
+export async function fetchMonitoringMetrics(): Promise<MonitoringPayload> {
+  const res = await fetch(`${getBaseUrl()}/api/admin/monitoring`);
+  if (!res.ok) throw new Error('Failed to fetch monitoring metrics');
   return res.json();
 }

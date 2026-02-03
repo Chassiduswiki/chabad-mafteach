@@ -119,9 +119,9 @@ describe('ArticleTab Integration', () => {
     };
 
     render(<ArticleTab topic={mockTopic as any} />);
-    // The component should render "Article in Development" if no content_blocks are loaded yet
-    // since loadContentBlocks is async and we haven't mocked the directus calls inside it.
-    expect(screen.getByText(/Article in Development/i)).toBeInTheDocument();
+    // Should render ArticleReader when content is available
+    expect(screen.getByText('Test Topic')).toBeInTheDocument();
+    expect(screen.getByText('Article Reader Component')).toBeInTheDocument();
   });
 });
 
