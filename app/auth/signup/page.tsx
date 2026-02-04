@@ -131,7 +131,7 @@ export default function SignUpPage() {
                   required
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
-                  placeholder="Moshe"
+                  placeholder="Mendel"
                 />
               </div>
               <div>
@@ -146,7 +146,7 @@ export default function SignUpPage() {
                   required
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
-                  placeholder="Schneerson"
+                  placeholder="Benploni"
                 />
               </div>
             </div>

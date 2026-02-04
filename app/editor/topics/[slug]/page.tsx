@@ -178,12 +178,12 @@ export default function TopicEditorPage() {
     if (!state.topic) return;
 
     try {
-      const token = localStorage.getItem('auth_token');
+      // const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${state.topic.slug || slug}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
+          // ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(data),
       });
@@ -228,12 +228,12 @@ export default function TopicEditorPage() {
       };
 
       // 1. Save standard topic data
-      const token = localStorage.getItem('auth_token');
+      // const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/topics/${state.topic.slug || slug}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
+          // ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(saveData),
       });
@@ -716,7 +716,7 @@ export default function TopicEditorPage() {
         <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6 ${(isLocked && !isOwner) ? 'opacity-75 pointer-events-none' : ''}`}>
           {/* Sidebar */}
           <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="sticky top-[120px]">
+            <div className="sticky top-[80px]">
               <TopicEditorSidebar
                 formData={state.formData}
                 relationshipCount={state.relationships.length}

@@ -197,24 +197,32 @@ export function EliteCitationModal({
       return;
     }
 
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
         const response = await fetch(
-          `/api/sources/search?q=${encodeURIComponent(smartInput)}&limit=8`
+          `/api/sources/search?q=${encodeURIComponent(smartInput)}&limit=8`,
+          { signal: controller.signal }
         );
         if (response.ok) {
           const data = await response.json();
           setSearchResults(data.data || data || []);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Search failed:', error);
       } finally {
-        setIsSearching(false);
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     }, 200);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [smartInput, parsedCitation]);
 
   // Fetch hierarchy when browser is shown
@@ -244,6 +252,7 @@ export function EliteCitationModal({
   useEffect(() => {
     if (!open || !contextText?.trim()) return;
 
+    const controller = new AbortController();
     const loadAiSuggestions = async () => {
       setIsLoadingAi(true);
       try {
@@ -257,7 +266,8 @@ export function EliteCitationModal({
 
         if (keywords) {
           const response = await fetch(
-            `/api/sources/search?q=${encodeURIComponent(keywords)}&limit=3`
+            `/api/sources/search?q=${encodeURIComponent(keywords)}&limit=3`,
+            { signal: controller.signal }
           );
           if (response.ok) {
             const data = await response.json();
@@ -265,14 +275,20 @@ export function EliteCitationModal({
           }
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('AI suggestions failed:', error);
       } finally {
-        setIsLoadingAi(false);
+        if (!controller.signal.aborted) {
+          setIsLoadingAi(false);
+        }
       }
     };
 
     const timer = setTimeout(loadAiSuggestions, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [open, contextText]);
 
   // ============================================================================
@@ -546,11 +562,10 @@ export function EliteCitationModal({
               key={source.id}
               onClick={() => selectSource(source)}
               onMouseEnter={() => setFocusedIndex(index)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${
-                index === focusedIndex
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${index === focusedIndex
                   ? 'bg-primary/10'
                   : 'hover:bg-muted'
-              }`}
+                }`}
             >
               <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -698,11 +713,10 @@ export function EliteCitationModal({
             {index > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
             <button
               onClick={() => navigateBack(index)}
-              className={`px-2 py-0.5 rounded-md hover:bg-muted transition-colors ${
-                index === breadcrumbs.length - 1
+              className={`px-2 py-0.5 rounded-md hover:bg-muted transition-colors ${index === breadcrumbs.length - 1
                   ? 'font-medium text-foreground bg-muted'
                   : 'text-muted-foreground'
-              }`}
+                }`}
             >
               {crumb.title}
             </button>
@@ -725,9 +739,8 @@ export function EliteCitationModal({
                 key={source.id}
                 onClick={() => navigateInto(source)}
                 onMouseEnter={() => setFocusedIndex(index)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
+                  }`}
               >
                 {source.is_browsable ? (
                   <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
