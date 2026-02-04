@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
           reason: `directus_${loginResponse.status}`,
           metadata: { status: loginResponse.status }
         });
-        
+
         // Provide more specific error messages
         if (loginResponse.status === 401) {
           return NextResponse.json(
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
 
       // Map Directus roles to app roles
       const role = directusUser.role?.name?.toLowerCase().includes('admin') ? 'admin' : 'editor';
-      
+
       console.log('Mapped role:', role);
 
       // Record successful login (resets lockout counter)
@@ -234,6 +234,8 @@ export async function POST(request: NextRequest) {
       // Create response with cookies
       const response = NextResponse.json({
         success: true,
+        accessToken,
+        refreshToken,
         user: {
           id: directusUser.id,
           email: directusUser.email,

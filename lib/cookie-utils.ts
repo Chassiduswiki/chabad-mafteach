@@ -13,7 +13,7 @@ export function setAuthCookie(token: string, options: CookieOptions = {}): strin
   const {
     httpOnly = true,
     secure = process.env.NODE_ENV === 'production',
-    sameSite = 'strict',
+    sameSite = 'lax',
     maxAge = 24 * 60 * 60, // 24 hours in seconds
     path = '/'
   } = options;

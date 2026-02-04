@@ -40,10 +40,10 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes by access level
   const isEditorRoute = pathname.startsWith('/editor') ||
-                        pathname.startsWith('/chain-builder') ||
-                        pathname === '/collections/new';
+    pathname.startsWith('/chain-builder') ||
+    pathname === '/collections/new';
   const isAdminRoute = pathname.startsWith('/admin') ||
-                       pathname.startsWith('/analytics');
+    pathname.startsWith('/analytics');
   const isAuthenticatedRoute = pathname === '/profile';
 
   if (!isEditorRoute && !isAdminRoute && !isAuthenticatedRoute) {
@@ -60,6 +60,7 @@ export async function middleware(request: NextRequest) {
 
   if (!finalToken) {
     // Redirect to signin if no token
+    console.log('[Middleware] No token found, redirecting to signin');
     return NextResponse.redirect(new URL('/auth/signin', request.url));
   }
 

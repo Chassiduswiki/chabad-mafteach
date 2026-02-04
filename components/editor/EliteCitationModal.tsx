@@ -75,6 +75,15 @@ interface EliteCitationModalProps {
   }) => void;
   /** Optional: context text for AI suggestions */
   contextText?: string;
+  /** Optional: pre-populate from an existing citation (edit mode) */
+  initialCitation?: {
+    sourceId: number | null;
+    sourceTitle: string;
+    reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
+  };
 }
 
 // ============================================================================
@@ -86,7 +95,9 @@ export function EliteCitationModal({
   onClose,
   onInsert,
   contextText,
+  initialCitation,
 }: EliteCitationModalProps) {
+  const isEditMode = Boolean(initialCitation);
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -126,6 +137,17 @@ export function EliteCitationModal({
   // Keyboard navigation
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
+  // Free-text citation / Add source
+  const [freeTextMode, setFreeTextMode] = useState(false);
+  const [freeTextCitation, setFreeTextCitation] = useState('');
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newSourceTitle, setNewSourceTitle] = useState('');
+  const [newSourceAuthor, setNewSourceAuthor] = useState('');
+  const [newSourceUrl, setNewSourceUrl] = useState('');
+  const [isCreatingSource, setIsCreatingSource] = useState(false);
+  const [createSourceError, setCreateSourceError] = useState<string | null>(null);
+  const [resolutionFailed, setResolutionFailed] = useState(false);
+
   // ============================================================================
   // EFFECTS
   // ============================================================================
@@ -150,13 +172,51 @@ export function EliteCitationModal({
       setUrl('');
       setAiSuggestions([]);
       setFocusedIndex(-1);
+      setFreeTextMode(false);
+      setFreeTextCitation('');
+      setShowAddSource(false);
+      setNewSourceTitle('');
+      setNewSourceAuthor('');
+      setNewSourceUrl('');
+      setIsCreatingSource(false);
+      setCreateSourceError(null);
+      setResolutionFailed(false);
     }
   }, [open]);
+
+  // Pre-populate from initialCitation (edit mode)
+  useEffect(() => {
+    if (!open || !initialCitation) return;
+
+    const source: Source = {
+      id: initialCitation.sourceId ?? 0,
+      title: initialCitation.sourceTitle,
+      parent_id: null,
+      external_url: initialCitation.url,
+      is_leaf: true,
+    };
+
+    if (initialCitation.sourceId) {
+      setSelectedSource(source);
+      setFormattedCitation({ full: initialCitation.sourceTitle, sourceName: initialCitation.sourceTitle });
+    } else {
+      setFreeTextMode(true);
+      setFreeTextCitation(initialCitation.sourceTitle);
+    }
+
+    setReference(initialCitation.reference || '');
+    setQuote(initialCitation.quote || '');
+    setNote(initialCitation.note || '');
+    setUrl(initialCitation.url || '');
+    if (initialCitation.quote || initialCitation.note || initialCitation.url) {
+      setShowAdvanced(true);
+    }
+  }, [open, initialCitation]);
 
   // Reset focused index when lists change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [showBrowser, sources, searchResults, selectedSource, resolvedSource]);
+  }, [showBrowser, sources, searchResults, selectedSource, resolvedSource, freeTextMode, showAddSource]);
 
   // Focus input on open
   useEffect(() => {
@@ -197,24 +257,32 @@ export function EliteCitationModal({
       return;
     }
 
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
         const response = await fetch(
-          `/api/sources/search?q=${encodeURIComponent(smartInput)}&limit=8`
+          `/api/sources/search?q=${encodeURIComponent(smartInput)}&limit=8`,
+          { signal: controller.signal }
         );
         if (response.ok) {
           const data = await response.json();
           setSearchResults(data.data || data || []);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Search failed:', error);
       } finally {
-        setIsSearching(false);
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     }, 200);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [smartInput, parsedCitation]);
 
   // Fetch hierarchy when browser is shown
@@ -244,6 +312,7 @@ export function EliteCitationModal({
   useEffect(() => {
     if (!open || !contextText?.trim()) return;
 
+    const controller = new AbortController();
     const loadAiSuggestions = async () => {
       setIsLoadingAi(true);
       try {
@@ -257,7 +326,8 @@ export function EliteCitationModal({
 
         if (keywords) {
           const response = await fetch(
-            `/api/sources/search?q=${encodeURIComponent(keywords)}&limit=3`
+            `/api/sources/search?q=${encodeURIComponent(keywords)}&limit=3`,
+            { signal: controller.signal }
           );
           if (response.ok) {
             const data = await response.json();
@@ -265,14 +335,20 @@ export function EliteCitationModal({
           }
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('AI suggestions failed:', error);
       } finally {
-        setIsLoadingAi(false);
+        if (!controller.signal.aborted) {
+          setIsLoadingAi(false);
+        }
       }
     };
 
     const timer = setTimeout(loadAiSuggestions, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [open, contextText]);
 
   // ============================================================================
@@ -283,6 +359,7 @@ export function EliteCitationModal({
     if (!parsed.volume || !parsed.page || !parsed.rootSourceId) return;
 
     setIsResolving(true);
+    setResolutionFailed(false);
     try {
       const response = await fetch(
         `/api/sources/hierarchy?resolve=${parsed.volume},${parsed.page}&root_id=${parsed.rootSourceId}`
@@ -293,6 +370,7 @@ export function EliteCitationModal({
         setResolvedSource(data.source);
       } else {
         setResolvedSource(null);
+        setResolutionFailed(true);
       }
     } catch (error) {
       console.error('Resolution failed:', error);
@@ -398,7 +476,68 @@ export function EliteCitationModal({
     setBreadcrumbs(breadcrumbs.slice(0, index + 1));
   };
 
+  const enterFreeTextMode = () => {
+    setFreeTextCitation(smartInput);
+    setFreeTextMode(true);
+    setSmartInput('');
+    setSearchResults([]);
+    setResolutionFailed(false);
+  };
+
+  const handleCreateSource = async () => {
+    if (!newSourceTitle.trim()) return;
+    setIsCreatingSource(true);
+    setCreateSourceError(null);
+    try {
+      const response = await fetch('/api/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newSourceTitle.trim(),
+          author_name: newSourceAuthor.trim() || undefined,
+          external_url: newSourceUrl.trim() || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        setCreateSourceError(err.error || 'Failed to create source');
+        return;
+      }
+      const data = await response.json();
+      const created = data.data;
+      selectSource({
+        id: created.id,
+        title: created.title,
+        parent_id: null,
+        external_url: created.external_url,
+        external_system: created.external_system,
+        is_leaf: true,
+      });
+      setShowAddSource(false);
+      setNewSourceTitle('');
+      setNewSourceAuthor('');
+      setNewSourceUrl('');
+    } catch {
+      setCreateSourceError('Network error. Try again.');
+    } finally {
+      setIsCreatingSource(false);
+    }
+  };
+
   const handleInsert = () => {
+    if (freeTextMode) {
+      onInsert({
+        sourceId: null,
+        sourceTitle: freeTextCitation,
+        reference: '',
+        quote: quote.trim() || undefined,
+        note: note.trim() || undefined,
+        url: url.trim() || undefined,
+      });
+      onClose();
+      return;
+    }
+
     if (!selectedSource) return;
 
     // Use the formatted citation for a clean English reference
@@ -424,6 +563,8 @@ export function EliteCitationModal({
     const activeList = showBrowser ? sources : searchResults;
     const canNavigateList =
       !selectedSource &&
+      !freeTextMode &&
+      !showAddSource &&
       !resolvedSource &&
       activeList.length > 0 &&
       (showBrowser || searchResults.length > 0);
@@ -431,17 +572,22 @@ export function EliteCitationModal({
     if (e.key === 'Escape') {
       if (showBrowser) {
         setShowBrowser(false);
-      } else if (selectedSource) {
+      } else if (showAddSource) {
+        setShowAddSource(false);
+      } else if (selectedSource || freeTextMode) {
         setSelectedSource(null);
+        setFormattedCitation(null);
+        setFreeTextMode(false);
+        setFreeTextCitation('');
       } else {
         onClose();
       }
     } else if (e.key === 'Enter') {
       if (isFormField && !isSmartInput) return;
-      if (resolvedSource && !selectedSource) {
+      if (resolvedSource && !selectedSource && !freeTextMode) {
         e.preventDefault();
         selectResolvedSource();
-      } else if (selectedSource) {
+      } else if (selectedSource || freeTextMode) {
         e.preventDefault();
         handleInsert();
       } else if (showBrowser && focusedIndex >= 0 && sources[focusedIndex]) {
@@ -507,6 +653,11 @@ export function EliteCitationModal({
                 (add page number to auto-resolve)
               </span>
             )}
+            {resolutionFailed && (
+              <span className="text-amber-600 dark:text-amber-400 text-xs">
+                (not found — try a different page)
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -540,17 +691,16 @@ export function EliteCitationModal({
 
       {/* Search Results Dropdown */}
       {searchResults.length > 0 && !resolvedSource && !selectedSource && (
-        <div className="absolute z-[90] w-full mt-1 bg-background border border-border rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+        <div className="w-full mt-2 bg-background border border-border rounded-xl shadow-sm overflow-hidden max-h-64 overflow-y-auto">
           {searchResults.map((source, index) => (
             <button
               key={source.id}
               onClick={() => selectSource(source)}
               onMouseEnter={() => setFocusedIndex(index)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${
-                index === focusedIndex
-                  ? 'bg-primary/10'
-                  : 'hover:bg-muted'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 last:border-b-0 ${index === focusedIndex
+                ? 'bg-primary/10'
+                : 'hover:bg-muted'
+                }`}
             >
               <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
@@ -579,6 +729,13 @@ export function EliteCitationModal({
               )}
             </button>
           ))}
+          <button
+            onClick={enterFreeTextMode}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-xs text-muted-foreground hover:bg-muted/50 transition-colors border-t border-border"
+          >
+            <Type className="h-3.5 w-3.5" />
+            {`Use "${smartInput}" as citation`}
+          </button>
         </div>
       )}
     </div>
@@ -590,32 +747,49 @@ export function EliteCitationModal({
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="font-medium text-muted-foreground text-sm" dir="rtl">
-                {selectedSource!.title}
-              </span>
-            </div>
-            {formattedCitation && (
-              <p className="font-semibold text-foreground mt-1 pl-6">
-                {formattedCitation.full}
-              </p>
-            )}
-            {selectedSource!.external_url && (
-              <a
-                href={selectedSource!.external_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2 pl-6"
-              >
-                View on {selectedSource!.external_system || 'source'} <ExternalLink className="h-3 w-3" />
-              </a>
+            {freeTextMode ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Type className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground">Free-text citation</span>
+                </div>
+                <p className="font-semibold text-foreground mt-1 pl-6">{freeTextCitation}</p>
+                <p className="text-xs text-muted-foreground mt-1 pl-6">
+                  Not linked to a source in the library
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="font-medium text-muted-foreground text-sm" dir="rtl">
+                    {selectedSource!.title}
+                  </span>
+                </div>
+                {formattedCitation && (
+                  <p className="font-semibold text-foreground mt-1 pl-6">
+                    {formattedCitation.full}
+                  </p>
+                )}
+                {selectedSource!.external_url && (
+                  <a
+                    href={selectedSource!.external_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2 pl-6"
+                  >
+                    View on {selectedSource!.external_system || 'source'} <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </>
             )}
           </div>
           <button
             onClick={() => {
               setSelectedSource(null);
               setFormattedCitation(null);
+              setFreeTextMode(false);
+              setFreeTextCitation('');
             }}
             className="p-1.5 hover:bg-muted rounded-lg transition-colors"
           >
@@ -683,7 +857,7 @@ export function EliteCitationModal({
           Citation will appear as:
         </p>
         <p className="text-base font-semibold text-foreground">
-          {formattedCitation?.full || selectedSource!.title}
+          {freeTextMode ? freeTextCitation : (formattedCitation?.full || selectedSource!.title)}
         </p>
       </div>
     </div>
@@ -698,11 +872,10 @@ export function EliteCitationModal({
             {index > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
             <button
               onClick={() => navigateBack(index)}
-              className={`px-2 py-0.5 rounded-md hover:bg-muted transition-colors ${
-                index === breadcrumbs.length - 1
-                  ? 'font-medium text-foreground bg-muted'
-                  : 'text-muted-foreground'
-              }`}
+              className={`px-2 py-0.5 rounded-md hover:bg-muted transition-colors ${index === breadcrumbs.length - 1
+                ? 'font-medium text-foreground bg-muted'
+                : 'text-muted-foreground'
+                }`}
             >
               {crumb.title}
             </button>
@@ -725,9 +898,8 @@ export function EliteCitationModal({
                 key={source.id}
                 onClick={() => navigateInto(source)}
                 onMouseEnter={() => setFocusedIndex(index)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
+                  }`}
               >
                 {source.is_browsable ? (
                   <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
@@ -801,6 +973,102 @@ export function EliteCitationModal({
     );
   };
 
+  const renderNotFoundOptions = () => {
+    const showOptions =
+      smartInput.trim() &&
+      !isSearching &&
+      searchResults.length === 0 &&
+      !resolvedSource &&
+      (!parsedCitation?.resolvable || resolutionFailed);
+    if (!showOptions) return null;
+
+    return (
+      <div className="mt-3 px-3 py-3 border border-border rounded-lg bg-muted/40">
+        <p className="text-sm text-muted-foreground">
+          No sources match <span className="font-medium text-foreground">&quot;{smartInput}&quot;</span>
+        </p>
+        <div className="flex flex-wrap gap-2 mt-2.5">
+          <button
+            onClick={enterFreeTextMode}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Type className="h-3.5 w-3.5" />
+            Insert as citation
+          </button>
+          <button
+            onClick={() => { setShowAddSource(true); setNewSourceTitle(smartInput); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border text-sm font-medium text-foreground rounded-lg hover:bg-muted transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add this source
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAddSourceForm = () => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { setShowAddSource(false); setCreateSourceError(null); }}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back
+        </button>
+        <h3 className="text-sm font-semibold text-foreground">Add New Source</h3>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Title</label>
+          <input
+            type="text"
+            value={newSourceTitle}
+            onChange={(e) => setNewSourceTitle(e.target.value)}
+            placeholder="e.g. Derech Mitzvosecha"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Author (optional)</label>
+          <input
+            type="text"
+            value={newSourceAuthor}
+            onChange={(e) => setNewSourceAuthor(e.target.value)}
+            placeholder="e.g. Maharam Chayim"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">URL (optional)</label>
+          <input
+            type="url"
+            value={newSourceUrl}
+            onChange={(e) => setNewSourceUrl(e.target.value)}
+            placeholder="https://hebrewbooks.org/..."
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+      </div>
+
+      {createSourceError && (
+        <p className="text-sm text-red-600">{createSourceError}</p>
+      )}
+      <button
+        onClick={handleCreateSource}
+        disabled={isCreatingSource || !newSourceTitle.trim()}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isCreatingSource ? (
+          <><Loader2 className="h-4 w-4 animate-spin" /> Creating...</>
+        ) : (
+          <><Plus className="h-4 w-4" /> Create & Select</>
+        )}
+      </button>
+    </div>
+  );
+
   // ============================================================================
   // MAIN RENDER
   // ============================================================================
@@ -824,10 +1092,10 @@ export function EliteCitationModal({
             <div className="p-1.5 bg-primary/10 rounded-lg">
               <BookOpen className="h-4 w-4 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Add Citation</h2>
+            <h2 className="text-lg font-semibold text-foreground">{isEditMode ? 'Edit Citation' : 'Add Citation'}</h2>
           </div>
           <div className="flex items-center gap-2">
-            {!showBrowser && !selectedSource && (
+            {!showBrowser && !selectedSource && !freeTextMode && !showAddSource && (
               <button
                 onClick={() => setShowBrowser(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
@@ -847,14 +1115,17 @@ export function EliteCitationModal({
 
         {/* Content */}
         <div className="p-5 flex-1 overflow-y-auto">
-          {selectedSource ? (
+          {(selectedSource || freeTextMode) ? (
             renderSelectedSource()
           ) : showBrowser ? (
             renderBrowser()
+          ) : showAddSource ? (
+            renderAddSourceForm()
           ) : (
             <>
               {renderAiSuggestions()}
               {renderSmartInput()}
+              {renderNotFoundOptions()}
 
               {/* Keyboard Hints */}
               {!smartInput && !searchResults.length && (
@@ -884,10 +1155,15 @@ export function EliteCitationModal({
         </div>
 
         {/* Footer */}
-        {selectedSource && (
+        {(selectedSource || freeTextMode) && (
           <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-muted/30">
             <button
-              onClick={() => setSelectedSource(null)}
+              onClick={() => {
+                setSelectedSource(null);
+                setFormattedCitation(null);
+                setFreeTextMode(false);
+                setFreeTextCitation('');
+              }}
               className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
             >
               Back
@@ -896,8 +1172,11 @@ export function EliteCitationModal({
               onClick={handleInsert}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
-              <Plus className="h-4 w-4" />
-              Insert Citation
+              {isEditMode ? (
+                <><Check className="h-4 w-4" /> Update Citation</>
+              ) : (
+                <><Plus className="h-4 w-4" /> Insert Citation</>
+              )}
             </button>
           </div>
         )}

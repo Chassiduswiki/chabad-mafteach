@@ -41,6 +41,11 @@ function SignInContent() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Store token in localStorage for client-side compatibility
+        if (data.accessToken) {
+          localStorage.setItem('auth_token', data.accessToken);
+        }
+
         setSuccess(true);
         setError('');
         setIsLocked(false);
@@ -151,31 +156,30 @@ function SignInContent() {
             </div>
 
             {/* Info Message */}
-        {infoMessage && (
-          <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-700 text-sm">
-            <CheckCircle className="h-4 w-4 flex-shrink-0" />
-            {infoMessage}
-          </div>
-        )}
+            {infoMessage && (
+              <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-700 text-sm">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                {infoMessage}
+              </div>
+            )}
 
-        {/* Error Message */}
-        {error && (
-          <div className={`flex items-start gap-2 p-3 rounded-md text-sm ${
-            isLocked 
-              ? 'bg-amber-500/10 border border-amber-500/20 text-amber-700' 
-              : 'bg-destructive/10 border border-destructive/20 text-destructive'
-          }`}>
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <div>
-              <p>{error}</p>
-              {isLocked && lockoutTime && (
-                <p className="text-xs mt-1 opacity-80">
-                  Try again in {Math.ceil(lockoutTime / 60)} minute{Math.ceil(lockoutTime / 60) !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
+            {/* Error Message */}
+            {error && (
+              <div className={`flex items-start gap-2 p-3 rounded-md text-sm ${isLocked
+                  ? 'bg-amber-500/10 border border-amber-500/20 text-amber-700'
+                  : 'bg-destructive/10 border border-destructive/20 text-destructive'
+                }`}>
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p>{error}</p>
+                  {isLocked && lockoutTime && (
+                    <p className="text-xs mt-1 opacity-80">
+                      Try again in {Math.ceil(lockoutTime / 60)} minute{Math.ceil(lockoutTime / 60) !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
@@ -202,7 +206,7 @@ function SignInContent() {
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Account Access</h3>
           <p className="text-xs text-muted-foreground">
-            Use your registered email and password to access your account. 
+            Use your registered email and password to access your account.
             This session is valid for 24 hours.
           </p>
         </div>

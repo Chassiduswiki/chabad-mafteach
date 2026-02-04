@@ -3,7 +3,6 @@ import { HebrewLanguage } from './HebrewLanguage';
 import { HebrewOCR } from './HebrewOCR';
 import CitationExtension from './citation/CitationExtension';
 import { AIEnhancementExtension } from './AIEnhancementExtension';
-import { SmartCitationExtension } from './SmartCitationExtension';
 import { RealTimeTranslationExtension } from './RealTimeTranslationExtension';
 import { AutoCompleteExtension } from '../AutoCompleteExtension';
 import { InlineAISuggestionExtension, SuggestionContext } from './InlineAISuggestionExtension';
@@ -13,7 +12,7 @@ export type { InlineAISuggestionOptions, SuggestionContext } from './InlineAISug
 
 export const createTipTapExtensions = (options?: {
   onCitationClick?: (citation: any) => void;
-  onCitationEdit?: (citation: any) => void;
+  onCitationEdit?: (citation: any, pos: number) => void;
   onTrigger?: (range: { from: number; to: number }) => void;
   onDismiss?: () => void;
   onOCRResult?: (text: string) => void;
@@ -51,19 +50,14 @@ export const createTipTapExtensions = (options?: {
       onOCRError: options?.onOCRError,
     }),
 
-    // Fixed citation system with error handling
+    // Unified citation system (node, commands, AI suggestions, keyboard shortcuts)
     CitationExtension.configure({
       onCitationClick: options?.onCitationClick,
       onCitationEdit: options?.onCitationEdit,
       onTrigger: options?.onTrigger,
       onDismiss: options?.onDismiss,
-      topicId: options?.topicId ? parseInt(options.topicId) : undefined,
-    }),
-
-    // Smart Citation Logic
-    SmartCitationExtension.configure({
       onSuggestCitations: options?.onSuggestCitations,
-      topicId: options?.topicId,
+      topicId: options?.topicId ? parseInt(options.topicId) : undefined,
     }),
 
     // Real-time Translation
