@@ -84,6 +84,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [showImageModal, setShowImageModal] = useState(false);
 const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(null);
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -205,12 +206,12 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
             pos,
           });
         },
-        onTrigger: () => {
-          // Open citation modal when @ is typed
+        onTrigger: (range) => {
+          triggerRangeRef.current = range;
           setShowCitationModal(true);
         },
         onDismiss: () => {
-          // Close citation modal on Escape
+          triggerRangeRef.current = null;
           setShowCitationModal(false);
         },
         onOCRResult: (text) => {
@@ -307,10 +308,14 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
   }) => {
     if (!editor) return;
 
-    console.log('insertCitation called with:', citation);
-
     try {
-      // Use the dedicated insertCitation command from our extension
+      // If this insertion was triggered by @, delete the @ character first
+      if (triggerRangeRef.current) {
+        const { from, to } = triggerRangeRef.current;
+        editor.chain().deleteRange({ from, to }).run();
+        triggerRangeRef.current = null;
+      }
+
       const success = editor.commands.insertCitation({
         id: `cite_${Math.random().toString(36).substring(2, 12)}`,
         sourceId: citation.sourceId,
@@ -321,8 +326,6 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
         note: citation.note,
         url: citation.url,
       });
-
-      console.log('insertCitation command result:', success);
 
       if (success) {
         setShowCitationModal(false);
