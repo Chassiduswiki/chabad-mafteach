@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
           content: processedValue,
           topicId: topicId
         })
+      }).then(res => {
+        if (!res.ok) console.error(`Citation extraction failed for topic ${topicId} (quick-edit): HTTP ${res.status}`);
       }).catch(err => console.error('Quick edit background extraction failed:', err));
     }
 

@@ -141,6 +141,8 @@ export async function PATCH(
                             content: combinedContent,
                             topicId: updatedTopic.id
                         })
+                    }).then(res => {
+                        if (!res.ok) console.error(`Citation extraction failed for topic ${updatedTopic.id}: HTTP ${res.status}`);
                     }).catch(err => console.error('Background citation extraction failed:', err));
                 }
             } catch (extractError) {
