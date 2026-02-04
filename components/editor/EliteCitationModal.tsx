@@ -75,6 +75,15 @@ interface EliteCitationModalProps {
   }) => void;
   /** Optional: context text for AI suggestions */
   contextText?: string;
+  /** Optional: pre-populate from an existing citation (edit mode) */
+  initialCitation?: {
+    sourceId: number | null;
+    sourceTitle: string;
+    reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
+  };
 }
 
 // ============================================================================
@@ -86,7 +95,9 @@ export function EliteCitationModal({
   onClose,
   onInsert,
   contextText,
+  initialCitation,
 }: EliteCitationModalProps) {
+  const isEditMode = Boolean(initialCitation);
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -172,6 +183,35 @@ export function EliteCitationModal({
       setResolutionFailed(false);
     }
   }, [open]);
+
+  // Pre-populate from initialCitation (edit mode)
+  useEffect(() => {
+    if (!open || !initialCitation) return;
+
+    const source: Source = {
+      id: initialCitation.sourceId ?? 0,
+      title: initialCitation.sourceTitle,
+      parent_id: null,
+      external_url: initialCitation.url,
+      is_leaf: true,
+    };
+
+    if (initialCitation.sourceId) {
+      setSelectedSource(source);
+      setFormattedCitation({ full: initialCitation.sourceTitle, sourceName: initialCitation.sourceTitle });
+    } else {
+      setFreeTextMode(true);
+      setFreeTextCitation(initialCitation.sourceTitle);
+    }
+
+    setReference(initialCitation.reference || '');
+    setQuote(initialCitation.quote || '');
+    setNote(initialCitation.note || '');
+    setUrl(initialCitation.url || '');
+    if (initialCitation.quote || initialCitation.note || initialCitation.url) {
+      setShowAdvanced(true);
+    }
+  }, [open, initialCitation]);
 
   // Reset focused index when lists change
   useEffect(() => {
@@ -1052,7 +1092,7 @@ export function EliteCitationModal({
             <div className="p-1.5 bg-primary/10 rounded-lg">
               <BookOpen className="h-4 w-4 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Add Citation</h2>
+            <h2 className="text-lg font-semibold text-foreground">{isEditMode ? 'Edit Citation' : 'Add Citation'}</h2>
           </div>
           <div className="flex items-center gap-2">
             {!showBrowser && !selectedSource && !freeTextMode && !showAddSource && (
@@ -1132,8 +1172,11 @@ export function EliteCitationModal({
               onClick={handleInsert}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
-              <Plus className="h-4 w-4" />
-              Insert Citation
+              {isEditMode ? (
+                <><Check className="h-4 w-4" /> Update Citation</>
+              ) : (
+                <><Plus className="h-4 w-4" /> Insert Citation</>
+              )}
             </button>
           </div>
         )}

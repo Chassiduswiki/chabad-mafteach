@@ -24,6 +24,19 @@ interface CitationData {
   content?: string;
 }
 
+interface EditingCitation {
+  citationId: string;
+  citation: {
+    sourceId: number | null;
+    sourceTitle: string;
+    reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
+  };
+  pos: number;
+}
+
 interface EditorContextType {
   editor: Editor | null;
   feedback: { type: "success" | "error"; message: string } | null;
@@ -39,6 +52,9 @@ interface EditorContextType {
   showImageModal: boolean;
   setShowImageModal: (show: boolean) => void;
   insertImage: (imageUrl: string, altText: string) => void;
+  editingCitation: EditingCitation | null;
+  setEditingCitation: (value: EditingCitation | null) => void;
+  updateCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string; quote?: string; note?: string; url?: string }) => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -65,6 +81,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [showCitationModal, setShowCitationModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(null);
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -172,9 +189,19 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
             content: `${citation.sourceTitle} - ${citation.reference}`,
           });
         },
-        onCitationEdit: (citation) => {
-          console.log('Edit citation:', citation);
-          // TODO: Open citation edit dialog
+        onCitationEdit: (citation, pos) => {
+          setEditingCitation({
+            citationId: citation.id,
+            citation: {
+              sourceId: citation.sourceId,
+              sourceTitle: citation.sourceTitle,
+              reference: citation.reference || '',
+              quote: citation.quote,
+              note: citation.note,
+              url: citation.url,
+            },
+            pos,
+          });
         },
         onTrigger: () => {
           // Open citation modal when @ is typed
@@ -311,6 +338,52 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setShowImageModal(false);
   };
 
+  const updateCitation = (citation: {
+    sourceId: number | null;
+    sourceTitle: string;
+    reference: string;
+    quote?: string;
+    note?: string;
+    url?: string;
+  }) => {
+    if (!editor || !editingCitation) return;
+
+    const unified = {
+      id: editingCitation.citationId,
+      sourceId: citation.sourceId,
+      sourceTitle: citation.sourceTitle,
+      citationType: 'reference' as const,
+      reference: citation.reference,
+      quote: citation.quote,
+      note: citation.note,
+      url: citation.url,
+    };
+
+    // Try the original position first; if the doc shifted, scan for the node by citationId
+    let targetPos = editingCitation.pos;
+    const nodeAtPos = editor.state.doc.nodeAt(targetPos);
+    if (!nodeAtPos || nodeAtPos.type.name !== 'citation' || nodeAtPos.attrs.citationId !== editingCitation.citationId) {
+      let found = false;
+      editor.state.doc.descendants((node, pos) => {
+        if (found) return false;
+        if (node.type.name === 'citation' && node.attrs.citationId === editingCitation.citationId) {
+          targetPos = pos;
+          found = true;
+          return false;
+        }
+      });
+      if (!found) {
+        setFeedback({ type: "error", message: 'Citation not found — it may have been deleted.' });
+        setEditingCitation(null);
+        return;
+      }
+    }
+
+    editor.commands.updateCitation(targetPos, unified);
+    setEditingCitation(null);
+    setFeedback({ type: "success", message: `Citation updated: ${citation.sourceTitle}` });
+  };
+
   const contextValue: EditorContextType = {
     editor,
     feedback,
@@ -326,6 +399,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     showImageModal,
     setShowImageModal,
     insertImage,
+    editingCitation,
+    setEditingCitation,
+    updateCitation,
   };
 
   return (
