@@ -1108,7 +1108,7 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
                                     Interactive Map
                                 </span>
                                 <h2 className="text-3xl font-serif italic text-foreground">How This Concept Connects</h2>
-                                <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between {topic.canonical_title} and other Chassidic ideas.</p>
+                                <p className="text-muted-foreground mt-2 max-w-lg mx-auto font-light">Explore the intricate web of relationships between <span dir="auto" className="inline">{topic.canonical_title}</span> and other Chassidic ideas.</p>
                             </div>
                             <ConstellationErrorBoundary>
                                 {forceGraphData.nodes.length > 1 ? (
