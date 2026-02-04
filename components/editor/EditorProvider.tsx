@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useEditor, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -35,7 +35,7 @@ interface EditorContextType {
   isEditorReady: boolean;
   showCitationModal: boolean;
   setShowCitationModal: (show: boolean) => void;
-  insertCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string; quote?: string; note?: string; url?: string }) => void;
+  insertCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string; citationType?: string; quote?: string; note?: string; url?: string }) => void;
   showImageModal: boolean;
   setShowImageModal: (show: boolean) => void;
   insertImage: (imageUrl: string, altText: string) => void;
@@ -65,6 +65,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [showCitationModal, setShowCitationModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -221,12 +222,26 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       }),
     ],
     content: initialContent,
+    onUpdate: ({ editor }) => {
+      // Debounced update on every doc change — ensures content isn't lost
+      // if the user navigates away without blurring the editor
+      if (updateDebounceRef.current) {
+        clearTimeout(updateDebounceRef.current);
+      }
+      updateDebounceRef.current = setTimeout(() => {
+        if (onUpdate) {
+          onUpdate(editor.getHTML());
+        }
+      }, 500);
+    },
     onBlur: ({ editor }) => {
-      // Handle content changes when editor loses focus
-      const html = editor.getHTML();
-      console.log('Content updated on blur:', html);
+      // Immediate flush on blur — cancels any pending debounced update
+      if (updateDebounceRef.current) {
+        clearTimeout(updateDebounceRef.current);
+        updateDebounceRef.current = null;
+      }
       if (onUpdate) {
-        onUpdate(html);
+        onUpdate(editor.getHTML());
       }
     },
     editorProps: {
@@ -257,6 +272,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     sourceId: number | null;
     sourceTitle: string;
     reference: string;
+    citationType?: string;
     quote?: string;
     note?: string;
     url?: string;
@@ -271,7 +287,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         id: `cite_${Math.random().toString(36).substring(2, 12)}`,
         sourceId: citation.sourceId,
         sourceTitle: citation.sourceTitle,
-        citationType: 'reference',
+        citationType: citation.citationType || 'reference',
         reference: citation.reference,
         quote: citation.quote,
         note: citation.note,

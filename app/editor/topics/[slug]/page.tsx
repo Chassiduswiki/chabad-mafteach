@@ -834,9 +834,13 @@ export default function TopicEditorPage() {
                     onInsertCitation={(c) => {
                       const articleEditor = state.editorsRef.current['article'];
                       if (articleEditor) {
-                        articleEditor.chain().focus().insertContent(
-                          `<citation sourceId="${c.sourceId}" sourceTitle="${c.sourceTitle}" reference="${c.reference}"></citation> `
-                        ).run();
+                        articleEditor.chain().focus().insertCitation({
+                          id: `cite_${Math.random().toString(36).substring(2, 12)}`,
+                          sourceId: c.sourceId,
+                          sourceTitle: c.sourceTitle,
+                          citationType: 'reference',
+                          reference: c.reference,
+                        }).run();
                       }
                     }}
                   />

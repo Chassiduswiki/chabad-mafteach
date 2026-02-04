@@ -69,6 +69,7 @@ interface EliteCitationModalProps {
     sourceId: number | null;
     sourceTitle: string;
     reference: string;
+    citationType?: string;
     quote?: string;
     note?: string;
     url?: string;
@@ -420,10 +421,14 @@ export function EliteCitationModal({
     // Use the formatted citation for a clean English reference
     const citationTitle = formattedCitation?.full || selectedSource.title;
 
+    // Infer citation type from what the source actually has
+    const citationType = selectedSource.page_number ? 'page' : 'reference';
+
     onInsert({
       sourceId: selectedSource.id,
       sourceTitle: citationTitle,
       reference: '', // Leave empty since sourceTitle already contains full formatted citation
+      citationType,
       quote: quote.trim() || undefined,
       note: note.trim() || undefined,
       url: url.trim() || selectedSource.external_url || undefined,
