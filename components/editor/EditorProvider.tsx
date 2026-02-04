@@ -16,6 +16,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import Focus from '@tiptap/extension-focus';
 import { createTipTapExtensions } from './extensions';
+import { CitationType, normalizeCitationType } from '../../lib/citations/types';
 
 interface CitationData {
   source_id: number | string | null;
@@ -314,7 +315,7 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
         id: `cite_${Math.random().toString(36).substring(2, 12)}`,
         sourceId: citation.sourceId,
         sourceTitle: citation.sourceTitle,
-        citationType: citation.citationType || 'reference',
+        citationType: normalizeCitationType(citation.citationType || 'reference'),
         reference: citation.reference,
         quote: citation.quote,
         note: citation.note,

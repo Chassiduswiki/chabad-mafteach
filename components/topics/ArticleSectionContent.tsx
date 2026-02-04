@@ -24,7 +24,13 @@ const SefirosChart = dynamic(() => import('@/components/graph/SefirosChart').the
 let _DOMPurify: typeof import('dompurify').default | null = null;
 function getDOMPurify() {
     if (!_DOMPurify && typeof window !== 'undefined') {
-        _DOMPurify = require('dompurify').default;
+        try {
+            const dompurifyModule = require('dompurify');
+            _DOMPurify = dompurifyModule.default || dompurifyModule;
+        } catch (error) {
+            console.warn('DOMPurify not available:', error);
+            return null;
+        }
     }
     return _DOMPurify;
 }
@@ -151,7 +157,13 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
                         // Regex to match plain text citations like [section 1], [ch. 5], [p. 23], etc.
                         const plainCitationRegex = /\[([^\]]+)\]/g;
 
-                        const sanitized = getDOMPurify()!.sanitize(content, {
+                        const dompurify = getDOMPurify();
+                        if (!dompurify) {
+                            // Fallback: return content without sanitization if DOMPurify is not available
+                            return <div dangerouslySetInnerHTML={{ __html: content }} />;
+                        }
+                        
+                        const sanitized = dompurify.sanitize(content, {
                             ADD_TAGS: ['span'],
                             ADD_ATTR: ['class', 'data-citation-id', 'data-source-id', 'data-source-title', 'data-reference', 'data-quote', 'data-note', 'data-url']
                         });
