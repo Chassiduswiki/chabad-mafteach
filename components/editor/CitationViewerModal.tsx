@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, BookOpen, ExternalLink, Copy, Check } from 'lucide-react';
+import { SourceLinksSection } from '@/components/source-links/SourceLinksSection';
 
 interface CitationData {
   source_id: number | string | null;
@@ -158,6 +159,9 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
               </a>
             </div>
           )}
+
+          {/* Multi-platform source links */}
+          <SourceLinksSection sourceTitle={citation.source_title} reference={citation.reference} />
 
           {/* Full Content (if available) */}
           {citation.content && citation.content !== `${citation.source_title} - ${citation.reference}` && (

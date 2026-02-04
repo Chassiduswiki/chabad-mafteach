@@ -529,38 +529,25 @@ This means: **input the root ID once, get all 81 chapter IDs automatically**.
 - [ ] Build admin UI for adding books (can use Directus admin for now)
 - [ ] Set up permissions for roles
 
-### Phase 2: Link Generation API
-- [ ] Create `/api/source-links/[bookSlug]` endpoint
-- [ ] Implement URL generation for each platform
-- [ ] Implement page → chapter resolution
-- [ ] Implement chapter → pages resolution
-- [ ] Add caching layer
+### Phase 2: Link Generation API ✅ COMPLETE
+- [x] Create `/api/source-links/[bookSlug]` endpoint — page and chapter resolution modes, book-level fallback
+- [x] Create `/api/source-links/[bookSlug]/chapters` endpoint — full chapter list with page ranges for client-side caching
+- [x] Create `/api/source-links/lookup` endpoint — title→slug matching against canonical_name, hebrew_name, alternate_names
+- [x] Business logic layer in `lib/api/source-books.ts` — `getBookBySlug`, `getChaptersForBook`, `listBooks`
+- [x] URL generation for each platform — delegated to existing `lib/source-links/index.ts`
+- [x] Page → chapter resolution — `getChapterForPage` + `getLinksForPage`
+- [x] Chapter → pages resolution — `getLinksForChapter` with page range in response
+- [x] Citation UI integration — `SourceLinksSection` component renders "Read on" links inside `CitationViewerModal`; auto-resolves source title to book, extracts page/chapter from reference string
+- [ ] Add caching layer (HTTP cache headers on resolution responses)
 
 ### Phase 3: Integration
-- [ ] Integrate with Idea Chain nodes
-- [ ] Add source link picker UI
-- [ ] Scholar workflow for adding page boundaries
+- [ ] Integrate with Idea Chain nodes (nodes already have `citation_reference` — wire through same lookup)
+- [ ] Scholar workflow for adding page boundaries (Directus admin works for now)
 
 ### Phase 4: Expansion
 - [ ] Add more books to catalog
 - [ ] Scholar contribution workflow
 - [ ] Coverage reporting dashboard
-
-### Phase 1: Simple Book Catalog
-- [ ] Create Directus collections
-- [ ] Build admin UI to add book mappings
-- [ ] Create link generator service
-- [ ] Integrate with Idea Chain nodes
-
-### Phase 2: Citation Resolver
-- [ ] Parse common citation formats
-- [ ] Handle page/folio/chapter references
-- [ ] Generate multi-platform link sets
-
-### Phase 3: Scholar Contributions
-- [ ] UI for scholars to add/verify links
-- [ ] Verification workflow
-- [ ] Coverage reporting
 
 ---
 
