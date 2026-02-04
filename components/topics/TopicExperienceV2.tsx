@@ -296,7 +296,7 @@ interface GraphEdge {
 export function TopicExperienceV2({ topic, relatedTopics, sources, citations, inlineCitations }: TopicExperienceProps) {
     const { language: currentLanguage } = useLanguageSafe();
     const [activeSection, setActiveSection] = useState<SectionType>('definition');
-    const [isLoading, setIsLoading] = useState(true);
+    // const [isLoading, setIsLoading] = useState(true); // Removed artificial delay
     const [focusMode, setFocusMode] = useState(false);
     const [allTopicsForLinking, setAllTopicsForLinking] = useState<Array<{ name?: string; canonical_title: string; slug: string }>>([]);
     const [hasTranslations, setHasTranslations] = useState(false);
@@ -328,7 +328,7 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
                     if (parts.length !== 3) {
                         throw new Error('Invalid token format');
                     }
-                    
+
                     const payload = JSON.parse(atob(parts[1]));
                     if (payload.role !== userRole) {
                         setUserRole(payload.role);
@@ -472,9 +472,9 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
     });
     const tabsRef = useRef<HTMLDivElement>(null);
 
-    // Simulate loading for smooth transition
+    // Simulate loading for smooth transition - REMOVED for SEO/Production fixes
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 500);
+        // const timer = setTimeout(() => setIsLoading(false), 500);
 
         if (typeof window !== 'undefined') {
             const hasSeenTutorial = localStorage.getItem('hasSeenFocusModeTutorial');
@@ -484,7 +484,7 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
             }
         }
 
-        return () => clearTimeout(timer);
+        // return () => clearTimeout(timer);
     }, [isTutorialOpen]);
 
     // Helper: Highlight key concepts in text
@@ -789,9 +789,9 @@ export function TopicExperienceV2({ topic, relatedTopics, sources, citations, in
     //     }
     // };
 
-    if (isLoading) {
-        return <TopicSkeleton />;
-    }
+    // if (isLoading) {
+    //     return <TopicSkeleton />;
+    // }
 
     return (
         <ErrorBoundary componentName="TopicExperienceV2">
