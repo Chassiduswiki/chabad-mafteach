@@ -66,7 +66,12 @@ export default function ContextualSearch({ placeholder = "Search topics...", sea
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
             const data = await response.json();
 
-            setResults(data);
+            setResults({
+                topics: data.topics || [],
+                seforim: data.seforim || [],
+                locations: data.locations || [],
+                statements: data.statements || [],
+            });
             setIsOpen(true);
         } catch (error) {
             console.error('Search failed:', error);
