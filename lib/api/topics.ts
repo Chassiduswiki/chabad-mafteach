@@ -260,12 +260,33 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
                     'verse_reference',
                     'section_reference',
                     'notes',
-                    'source_id'
+                    {
+                        source_id: [
+                            'id',
+                            'title',
+                            'external_url',
+                            'external_system'
+                        ]
+                    }
                 ] as any,
                 sort: ['id'] as any
             })) as any[];
-            
+
             console.log(`Found ${topicSources.length} topic-level sources for topic ${topic.id}`);
+
+            sources = topicSources.map(ts => ({
+                id: ts.source_id?.id,
+                title: ts.source_id?.title,
+                link_id: ts.id,
+                relationship_type: ts.relationship_type,
+                page_number: ts.page_number,
+                verse_reference: ts.verse_reference,
+                section_reference: ts.section_reference,
+                notes: ts.notes,
+                external_url: ts.source_id?.external_url,
+                external_system: ts.source_id?.external_system,
+                is_primary: ts.notes?.includes('Primary')
+            })).filter(s => s.id);
             
             // Fetch statement-level citations (inline citations) - SIMPLIFIED
             const statementCitations = await directus.request(readItems('source_links' as any, {
