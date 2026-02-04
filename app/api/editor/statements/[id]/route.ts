@@ -33,6 +33,23 @@ export async function PATCH(
 
         if (response.ok) {
             const data = await response.json();
+
+            // Trigger citation extraction if text was updated
+            if (body.text !== undefined) {
+                const protocol = request.nextUrl.protocol;
+                const host = request.nextUrl.host;
+                fetch(`${protocol}//${host}/api/citations/extract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: body.text,
+                        statementId: id
+                    })
+                }).then(res => {
+                    if (!res.ok) console.error(`Citation extraction failed for statement ${id}: HTTP ${res.status}`);
+                }).catch(err => console.error(`Citation extraction error for statement ${id}:`, err));
+            }
+
             return NextResponse.json({ statement: data.data, success: true });
         } else {
             const errorText = await response.text();

@@ -40,12 +40,11 @@ export function useTopicLock({ slug, enabled = true, onLockedByOther }: UseLockO
 
   const acquireLock = useCallback(async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      // const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const response = await fetch(`/api/topics/${slug}/lock`, {
-        method: 'POST',
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
+        // headers: {
+        //   ...(token && { 'Authorization': `Bearer ${token}` }),
+        // },
       });
 
       if (response.status === 409) {

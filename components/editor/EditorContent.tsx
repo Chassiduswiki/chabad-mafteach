@@ -38,6 +38,9 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
     showImageModal,
     setShowImageModal,
     insertImage,
+    editingCitation,
+    setEditingCitation,
+    updateCitation,
   } = useEditorContext();
 
   // Call onEditorReady when editor becomes available
@@ -121,6 +124,13 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
         open={showCitationModal}
         onClose={() => setShowCitationModal(false)}
         onInsert={insertCitation}
+      />
+
+      <EliteCitationModal
+        open={Boolean(editingCitation)}
+        onClose={() => setEditingCitation(null)}
+        onInsert={updateCitation}
+        initialCitation={editingCitation?.citation}
       />
 
       <ImageUploadModal

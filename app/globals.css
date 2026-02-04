@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
-@theme {
   /* Typography Scale - Obsidian Inspired */
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-hebrew: "Frank Ruhl Libre", "Noto Serif Hebrew", "David Libre", serif;
@@ -57,12 +56,11 @@
 }
 
 @import "tailwindcss";
-@plugin "tailwindcss-animate";
-@plugin "@tailwindcss/typography";
+@import "tailwindcss-animate";
+@import "@tailwindcss/typography";
 
 /* Crown & Earth Design System - Premium Blue Theme */
 /* stylelint-disable-next-line at-rule-no-unknown */
-@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -309,6 +307,7 @@ body {
 /* Smooth Scrolling & Scrollbars */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 3.5rem; /* 56px - Account for sticky header */
 }
 
 ::-webkit-scrollbar {
@@ -516,6 +515,11 @@ html {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Main Content Area - Account for sticky header */
+main[id="main-content"] {
+  padding-top: 3.5rem; /* 56px - Match header height */
 }
 
 /* Mobile homepage utilities - Task 2.11 */
@@ -889,6 +893,7 @@ html {
   /* Max 4 lines */
   display: -webkit-box;
   -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 
@@ -1094,9 +1099,9 @@ span[data-type="citation"][data-source-id=""] {
   .heading-hero { font-size: 3.75rem; } /* 60px */
 }
 
-/* Prose Content Styling - For topic content paragraphs */
-.prose-content {
-  @apply prose prose-neutral max-w-none;
+  /* Prose Content Styling - For topic content paragraphs */
+  .prose-content {
+    /* @apply prose prose-neutral max-w-none; */
   color: var(--foreground);
   line-height: 1.6;
 }

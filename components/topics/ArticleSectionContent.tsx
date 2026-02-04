@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import parse, { DOMNode, Element, domToReact } from 'html-react-parser';
-import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { parseGlossaryContent } from '@/lib/content/glossary-parser';
@@ -20,6 +19,21 @@ const SefirosChart = dynamic(() => import('@/components/graph/SefirosChart').the
     ssr: false,
     loading: () => <div className="h-[500px] w-full animate-pulse bg-muted rounded-xl" />
 });
+
+// DOMPurify requires window/document — lazy-load so SSR doesn't crash
+let _DOMPurify: typeof import('dompurify').default | null = null;
+function getDOMPurify() {
+    if (!_DOMPurify && typeof window !== 'undefined') {
+        try {
+            const dompurifyModule = require('dompurify');
+            _DOMPurify = dompurifyModule.default || dompurifyModule;
+        } catch (error) {
+            console.warn('DOMPurify not available:', error);
+            return null;
+        }
+    }
+    return _DOMPurify;
+}
 
 interface SectionConfig {
     title: string;
@@ -58,6 +72,10 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
 
     // At this point, TypeScript knows section.content is a string
     const content = section.content;
+
+    // DOMPurify needs the DOM — only render the sanitized HTML path after mount
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const glossaryItems = useMemo(() => {
         if (['definition', 'mashal', 'personal_nimshal', 'global_nimshal'].includes(section.type)) {
@@ -132,17 +150,24 @@ export const ArticleSectionContent = ({ section, topic, citationMap }: ArticleSe
                 </div>
             ) : (
                 <div className="prose prose-lg dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary hover:prose-a:underline">
-                    {(() => {
+                    {mounted && (() => {
                         // Track citation index outside the replace function
                         let citationIndex = 0;
-                        
+
                         // Regex to match plain text citations like [section 1], [ch. 5], [p. 23], etc.
                         const plainCitationRegex = /\[([^\]]+)\]/g;
+
+                        const dompurify = getDOMPurify();
+                        if (!dompurify) {
+                            // Fallback: return content without sanitization if DOMPurify is not available
+                            return <div dangerouslySetInnerHTML={{ __html: content }} />;
+                        }
                         
-                        return parse(DOMPurify.sanitize(content, {
+                        const sanitized = dompurify.sanitize(content, {
                             ADD_TAGS: ['span'],
                             ADD_ATTR: ['class', 'data-citation-id', 'data-source-id', 'data-source-title', 'data-reference', 'data-quote', 'data-note', 'data-url']
-                        }), {
+                        });
+                        return parse(sanitized, {
                             replace: (domNode: DOMNode) => {
                                 // Handle span-based citation references (new format)
                                 if (domNode instanceof Element && 
