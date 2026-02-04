@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
   /* Typography Scale - Obsidian Inspired */
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-hebrew: "Frank Ruhl Libre", "Noto Serif Hebrew", "David Libre", serif;
@@ -53,56 +55,7 @@
   --color-depth-comprehensive: hsl(142 76% 36%);
   --color-depth-partial: hsl(38 92% 50%);
   --color-depth-minimal: hsl(var(--muted-foreground));
-}
 
-@import "tailwindcss";
-@import "tailwindcss-animate";
-@import "@tailwindcss/typography";
-
-/* Crown & Earth Design System - Premium Blue Theme */
-/* stylelint-disable-next-line at-rule-no-unknown */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-tertiary-foreground: var(--tertiary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-
-  --font-hebrew: 'Frank Ruhl Libre', serif;
-  --font-english: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-
-  --animate-fade-in: fade-in 0.5s ease-out;
-  --animate-slide-up: slide-up 0.5s ease-out;
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-up {
-    from {
-      transform: translateY(10px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-}
-
-:root {
   /* Base - Vellum */
   /* #F5F5F7 - Warm Vellum */
   /* #111111 - Obsidian */
@@ -150,28 +103,29 @@
   /* 18px - emphasized text */
   --font-size-xl: 1.25rem;
   /* 20px - subheadings */
-  --font-size-2xl: 1.5rem;
-  /* 24px - section headings */
-  --font-size-3xl: 1.875rem;
-  /* 30px - page headings */
-  --font-size-4xl: 2.25rem;
-  /* 36px - hero headings */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.97 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
+
+  /* Crown & Earth Design System - Premium Blue Theme */
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --font-hebrew: 'Frank Ruhl Libre', serif;
+  --font-english: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --animate-fade-in: fade-in 0.5s ease-out;
+  --animate-slide-up: slide-up 0.5s ease-out;
+
+  /* Sidebar - Subtle background for navigation panels */
+  --sidebar-background: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -179,7 +133,31 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
 }
+
+@import "tailwindcss";
 
 /* Dark Mode - Supports both system preference and manual toggle via next-themes */
 @media (prefers-color-scheme: dark) {
