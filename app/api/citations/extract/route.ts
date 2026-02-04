@@ -9,7 +9,7 @@ import { extractCitationReferences, CitationReference } from '@/lib/citation-uti
  */
 export async function POST(req: NextRequest) {
   try {
-    const { content, topicId } = await req.json();
+    const { content, topicId, statementId } = await req.json();
 
     if (!content) {
       return NextResponse.json(
@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
         const sourceLinkData = {
           source_id: sourceIdNum,
           topic_id: topicId || null,
-          statement_id: null,
-          relationship_type: 'references', 
+          statement_id: statementId ? Number(statementId) : null,
+          relationship_type: 'references',
           page_number: citation.pageNumber || '',
           section_reference: citation.reference || '',
           verse_reference: citation.verseNumber || '',

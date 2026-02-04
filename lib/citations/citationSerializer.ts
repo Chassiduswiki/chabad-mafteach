@@ -160,13 +160,15 @@ export function serializeCitationToHtml(
  * FIXED: Now reads data-citation-type instead of hardcoding to 'reference'
  */
 export function deserializeHtmlToCitation(html: string): CitationAttrs | null {
-  if (typeof window === 'undefined') {
-    console.warn('deserializeHtmlToCitation called in server context');
-    return null;
+  let doc: Document;
+
+  if (typeof window !== 'undefined') {
+    doc = new DOMParser().parseFromString(html, 'text/html');
+  } else {
+    const { JSDOM } = require('jsdom');
+    doc = new JSDOM(html).window.document;
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
   const citationEl = doc.querySelector('[data-type="citation"]');
 
   if (!citationEl) return null;
@@ -227,16 +229,16 @@ export function enrichHtmlWithCitations(
  * FIXED: Now reads data-citation-type instead of hardcoding to 'reference'
  */
 export function extractCitationsFromHtml(html: string): CitationAttrs[] {
-  // Use a safer approach for browser vs server environments
-  if (typeof window === 'undefined') {
-    // Server-side: can't use DOMParser
-    // Return empty array or use a server-side HTML parser if needed
-    console.warn('extractCitationsFromHtml called in server context');
-    return [];
+  let doc: Document;
+
+  if (typeof window !== 'undefined') {
+    doc = new DOMParser().parseFromString(html, 'text/html');
+  } else {
+    // Server-side: use JSDOM (same approach as citation-utils.ts)
+    const { JSDOM } = require('jsdom');
+    doc = new JSDOM(html).window.document;
   }
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
   const citationEls = doc.querySelectorAll('[data-type="citation"]');
 
   return Array.from(citationEls).map(el => ({

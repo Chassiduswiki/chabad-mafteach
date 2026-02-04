@@ -77,7 +77,25 @@ export async function POST(request: NextRequest) {
 
         if (response.ok) {
             const data = await response.json();
-            return NextResponse.json({ statement: data.data, success: true });
+            const statement = data.data;
+
+            // Trigger citation extraction for the statement's text
+            if (statement?.id && text) {
+                const protocol = request.nextUrl.protocol;
+                const host = request.nextUrl.host;
+                fetch(`${protocol}//${host}/api/citations/extract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: text,
+                        statementId: statement.id
+                    })
+                }).then(res => {
+                    if (!res.ok) console.error(`Citation extraction failed for statement ${statement.id}: HTTP ${res.status}`);
+                }).catch(err => console.error(`Citation extraction error for statement ${statement.id}:`, err));
+            }
+
+            return NextResponse.json({ statement, success: true });
         } else {
             const errorText = await response.text();
             throw new Error(`HTTP ${response.status}: ${errorText}`);
