@@ -103,14 +103,15 @@ export async function GET(request: NextRequest) {
       const endPage = sicha.page_number + (sicha.page_count || 1) - 1;
       const inRange = pageNum >= sicha.page_number && pageNum <= endPage;
 
-      // Generate formatted citation
+      // Generate formatted citation using the root_id provided in request
+      // This ensures citations are formatted according to their actual root source type
       const formattedTitle = formatCitationString({
         id: sicha.id,
         title: sicha.title,
         page_number: sicha.page_number,
         page_count: sicha.page_count,
         parsha: sicha.parsha,
-        rootSourceId: 256,
+        rootSourceId: rootId ? parseInt(rootId) : undefined,
         volumeTitle: targetVolume.title,
       });
 
@@ -244,7 +245,8 @@ function addFormattedTitle(source: any, volumeTitle?: string): any {
     page_count: source.page_count,
     parsha: source.parsha,
     metadata: source.metadata,
-    rootSourceId: source.metadata?.type === 'sicha' ? 256 : undefined,
+    // Use explicit root_source_id from metadata, never assume based on type
+    rootSourceId: source.metadata?.root_source_id,
     volumeTitle,
   });
 
