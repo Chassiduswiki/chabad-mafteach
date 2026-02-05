@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   return requireAuth(async (request, context) => {
     try {
       const { userId } = context;
-      const directus = createClient();
+      const directus = createClient(); // Uses static token for admin privileges
 
       const users = await directus.request(
         readUsers({
@@ -103,7 +103,7 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      const directus = createClient();
+      const directus = createClient(); // Uses static token for admin privileges
 
       // Update user profile
       await directus.request(

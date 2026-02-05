@@ -41,6 +41,8 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
     editingCitation,
     setEditingCitation,
     updateCitation,
+    deleteCitation,
+    handleCitationModalClose,
   } = useEditorContext();
 
   // Call onEditorReady when editor becomes available
@@ -117,12 +119,35 @@ export const EditorContentComponent: React.FC<EditorContentProps> = ({
           open={Boolean(activeCitation)}
           citation={activeCitation as any}
           onClose={() => setActiveCitation(null)}
+          onEdit={() => {
+            if (activeCitation?.citationId && activeCitation?.pos !== undefined) {
+              setEditingCitation({
+                citationId: activeCitation.citationId,
+                citation: {
+                  sourceId: activeCitation.source_id as number | null,
+                  sourceTitle: activeCitation.source_title || '',
+                  reference: activeCitation.reference || '',
+                  quote: activeCitation.quote,
+                  note: activeCitation.note,
+                  url: activeCitation.url,
+                },
+                pos: activeCitation.pos,
+              });
+            }
+            setActiveCitation(null);
+          }}
+          onDelete={() => {
+            if (activeCitation?.pos !== undefined) {
+              deleteCitation(activeCitation.pos);
+            }
+            setActiveCitation(null);
+          }}
         />
       )}
 
       <EliteCitationModal
         open={showCitationModal}
-        onClose={() => setShowCitationModal(false)}
+        onClose={handleCitationModalClose}
         onInsert={insertCitation}
       />
 

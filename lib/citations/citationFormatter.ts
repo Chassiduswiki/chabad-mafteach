@@ -248,12 +248,17 @@ export function formatCitation(source: SourceForFormatting): FormattedCitation {
   // Determine the root source type
   const rootInfo = source.rootSourceId ? ROOT_SOURCES[source.rootSourceId] : null;
 
-  // For Likkutei Sichos
-  if (rootInfo?.citationPrefix === 'Likkutei Sichos' ||
-      source.metadata?.type === 'sicha' ||
-      source.title.match(/^ח["״׳]?[א-ת]/) ||
-      source.volumeTitle?.includes('Likkutei Sichos')) {
+  // Check if this is specifically a Likkutei Sichos source
+  // ONLY true if:
+  // 1. rootSourceId is explicitly 256 (ROOT_SOURCES has it)
+  // 2. OR metadata explicitly marks it as type='sicha' AND volumeTitle contains 'Likkutei Sichos'
+  // Do NOT match on title alone - too many false positives
+  const isLikkuteiSichos =
+    rootInfo?.citationPrefix === 'Likkutei Sichos' ||
+    (source.metadata?.type === 'sicha' && source.volumeTitle?.includes('Likkutei Sichos'));
 
+  // For Likkutei Sichos
+  if (isLikkuteiSichos) {
     result.sourceName = 'Likkutei Sichos';
 
     // Get volume number

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, BookOpen, ExternalLink, Copy, Check } from 'lucide-react';
+import { X, BookOpen, ExternalLink, Copy, Check, Trash2, Pencil } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface CitationData {
   source_id: number | string | null;
@@ -11,16 +12,47 @@ interface CitationData {
   quote?: string;
   note?: string;
   url?: string;
+  citationId?: string;
+  pos?: number;
+  citationType?: string;
 }
 
 interface CitationViewerModalProps {
   open: boolean;
   citation: CitationData | null;
   onClose: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function CitationViewerModal({ open, citation, onClose }: CitationViewerModalProps) {
+function getTypeBadgeStyle(citationType?: string): { label: string; className: string } {
+  switch (citationType) {
+    case 'daf':
+      return { label: 'Daf', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+    case 'halacha':
+      return { label: 'Halacha', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+    case 'verse':
+      return { label: 'Verse', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' };
+    case 'chapter':
+      return { label: 'Chapter', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' };
+    case 'page':
+      return { label: 'Page', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' };
+    case 'section':
+      return { label: 'Section', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' };
+    case 'custom':
+      return { label: 'Custom', className: 'bg-muted text-muted-foreground' };
+    default:
+      return { label: citationType ? citationType.charAt(0).toUpperCase() + citationType.slice(1) : 'Reference', className: 'bg-muted text-muted-foreground' };
+  }
+}
+
+export function CitationViewerModal({ open, citation, onClose, onEdit, onDelete }: CitationViewerModalProps) {
   const [copied, setCopied] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setShowDeleteConfirm(false);
+  }, [open]);
 
   if (!open || !citation) return null;
 
@@ -55,9 +87,15 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">Citation Details</h2>
-              <p className="text-xs text-muted-foreground">
-                {citation.source_id ? 'Synced Source' : 'Manual Citation'}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-muted-foreground">
+                  {citation.source_id ? 'Synced Source' : 'Manual Citation'}
+                </p>
+                {citation.citationType && (() => {
+                  const { label, className: badgeClass } = getTypeBadgeStyle(citation.citationType);
+                  return <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${badgeClass}`}>{label}</Badge>;
+                })()}
+              </div>
             </div>
           </div>
           <button
@@ -173,13 +211,57 @@ export function CitationViewerModal({ open, citation, onClose }: CitationViewerM
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/30">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Close
-          </button>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
+          {showDeleteConfirm ? (
+            <div className="flex items-center justify-between w-full">
+              <p className="text-sm font-medium text-foreground">Remove this citation?</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { onDelete?.(); onClose(); }}
+                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Yes, delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                {onDelete && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <button
+                    onClick={onEdit}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/15 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit Citation
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

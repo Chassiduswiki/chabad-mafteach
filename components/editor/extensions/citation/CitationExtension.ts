@@ -473,6 +473,9 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
         dom.title = 'Unsynced Citation: Click to add source';
       }
 
+      // Per-type class for color differentiation (see editor-styles.css)
+      dom.classList.add(`citation-type-${node.attrs.citationType || 'reference'}`);
+
       // Set display text
       const unified: UnifiedCitation = {
         id: node.attrs.citationId || 'unknown',
@@ -494,6 +497,13 @@ export const UnifiedCitationNode = Node.create<UnifiedCitationOptions>({
       };
       const displayText = formatCitationReference(unified);
       dom.textContent = `[${displayText}]`;
+
+      // Tooltip — set directly on nodeView DOM (decorations don't reliably reach atom nodeViews)
+      const tooltipLabel = unified.quote
+        ? `${displayText}\n\n"${unified.quote}"`
+        : displayText;
+      dom.setAttribute('data-tooltip', tooltipLabel);
+      dom.classList.add('citation-tooltip');
 
       // Hover effects
       dom.addEventListener('mouseenter', () => {

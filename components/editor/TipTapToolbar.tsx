@@ -32,6 +32,7 @@ import {
   Table as TableIcon
 } from 'lucide-react';
 import { AIToolbar } from './AIToolbar';
+import { Badge } from '@/components/ui/badge';
 
 interface TipTapToolbarProps {
   editor: any;
@@ -61,6 +62,16 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
   const currentCount = characterCount?.characters() || 0;
   const wordCount = characterCount?.words() || 0;
   const limit = characterCount?.limit;
+
+  // Count citation nodes in the document
+  const citationCount = React.useMemo(() => {
+    if (!editor) return 0;
+    let count = 0;
+    editor.state.doc.descendants((node: any) => {
+      if (node.type.name === 'citation') count++;
+    });
+    return count;
+  }, [editor?.state?.doc]);
 
   return (
     <div className={`flex flex-col border-b border-border bg-muted/50 ${className || ''}`}>
@@ -270,14 +281,21 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
             </button>
           )}
           {onInsertCitation && (
-            <button
-              onClick={onInsertCitation}
-              className="p-2 rounded hover:bg-muted text-foreground"
-              title="Insert Citation (or type @)"
-              aria-label="Insert Citation"
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={onInsertCitation}
+                className="p-2 rounded hover:bg-muted text-foreground"
+                title={`Insert Citation (or type @)${citationCount > 0 ? ` — ${citationCount} in document` : ''}`}
+                aria-label="Insert Citation"
+              >
+                <BookOpen className="w-4 h-4" />
+              </button>
+              {citationCount > 0 && (
+                <Badge className="absolute -top-1.5 -right-1.5 px-1 py-0 text-[9px] leading-tight min-w-[16px] justify-center">
+                  {citationCount}
+                </Badge>
+              )}
+            </div>
           )}
           <button
             onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -353,6 +371,11 @@ export const TipTapToolbar: React.FC<TipTapToolbarProps> = ({
             {currentCount} {currentCount === 1 ? 'character' : 'characters'}
             {limit && ` / ${limit}`}
           </span>
+          {citationCount > 0 && (
+            <span>
+              {citationCount} {citationCount === 1 ? 'citation' : 'citations'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs">
           <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border">Ctrl+B</kbd> Bold

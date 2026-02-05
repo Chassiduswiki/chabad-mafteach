@@ -209,21 +209,26 @@ function serializeInlineContent(content: EditorContent[]): string {
       
       html += text;
     } else if (node.type === 'citation') {
-      // Serialize citation with all attributes
+      // Serialize citation with all attributes (use camelCase to match CitationExtension)
       const attrs = node.attrs || {};
       html += `<span data-type="citation" `;
-      html += `data-source-id="${attrs.source_id || ''}" `;
-      html += `data-source-title="${attrs.source_title || ''}" `;
-      html += `data-citation-type="${attrs.citation_type || 'page'}" `;
-      html += `data-page-number="${attrs.page_number || ''}" `;
-      html += `data-chapter-number="${attrs.chapter_number || ''}" `;
-      html += `data-section-number="${attrs.section_number || ''}" `;
-      html += `data-daf-number="${attrs.daf_number || ''}" `;
-      html += `data-halacha-number="${attrs.halacha_number || ''}" `;
-      html += `data-verse-number="${attrs.verse_number || ''}" `;
-      html += `data-custom-reference="${attrs.custom_reference || ''}" `;
+      html += `data-citation-id="${attrs.citationId || ''}" `;
+      html += `data-source-id="${attrs.sourceId || ''}" `;
+      html += `data-source-title="${attrs.sourceTitle || ''}" `;
+      html += `data-citation-type="${attrs.citationType || 'reference'}" `;
       html += `data-reference="${attrs.reference || ''}" `;
-      html += `></span>`;
+      html += `data-page-number="${attrs.pageNumber || ''}" `;
+      html += `data-chapter-number="${attrs.chapterNumber || ''}" `;
+      html += `data-section-number="${attrs.sectionNumber || ''}" `;
+      html += `data-daf-number="${attrs.dafNumber || ''}" `;
+      html += `data-halacha-number="${attrs.halachaNumber || ''}" `;
+      html += `data-verse-number="${attrs.verseNumber || ''}" `;
+      html += `data-custom-reference="${attrs.customReference || ''}" `;
+      html += `data-url="${attrs.url || ''}" `;
+      html += `data-quote="${attrs.quote || ''}" `;
+      html += `data-note="${attrs.note || ''}" `;
+      html += `data-statement-id="${attrs.statementId || ''}" `;
+      html += `class="citation-ref"></span>`;
     }
   }
   

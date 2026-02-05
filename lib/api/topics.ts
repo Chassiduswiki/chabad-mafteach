@@ -76,36 +76,62 @@ export async function getTopicBySlug(slug: string, lang: string = 'en') {
         let validStatementTopics: any[] = [];
 
         try {
-            // OPTIMIZED: Single query with deep nested fields instead of 3 separate queries
+            // FIXED: Separate queries to prevent infinite recursion in constructOperationTree
+            // First, get documents with content_blocks (no nested statements)
             const topicDocuments = await directus.request(readItems('documents', {
                 filter: { topic: { _eq: topic.id } } as any,
                 fields: [
                     'id', 'title', 'doc_type',
-                    // Deep query: get content_blocks with their statements in one request
-                    { content_blocks: ['id', 'content', 'order_key', 'block_type', { statements: ['id', 'text', 'order_key', 'block_id'] }] } as any
+                    // Get content_blocks without nested statements to avoid recursion
+                    { content_blocks: ['id', 'content', 'order_key', 'block_type'] } as any
                 ],
                 limit: API.LIMITS.MAX_BULK_LOAD
             })) as any[];
 
             console.log(`Topic ${topic.id}: Found ${topicDocuments.length} documents (optimized query)`);
 
-            // Process the nested data structure
+            // Collect all block IDs for statements query
+            const blockIds: string[] = [];
+            
+            // Process the nested data structure (without statements for now)
             for (const doc of topicDocuments) {
                 const docBlocks = doc.content_blocks || [];
                 for (const block of docBlocks) {
+                    blockIds.push(block.id);
                     contentBlocks.push({
                         id: block.id,
                         content: block.content,
                         order_key: block.order_key,
                         block_type: block.block_type,
                         document_title: doc.title || 'Unknown Document',
-                        statements: (block.statements || []).map((stmt: any) => ({
-                            id: stmt.id,
-                            text: stmt.text,
-                            order_key: stmt.order_key
-                        }))
+                        statements: [] // Will be populated below
                     });
                 }
+            }
+
+            // Fetch statements for all blocks in a separate query
+            if (blockIds.length > 0) {
+                const statements = await directus.request(readItems('statements', {
+                    filter: { block_id: { _in: blockIds } } as any,
+                    fields: ['id', 'text', 'order_key', 'block_id'],
+                    limit: API.LIMITS.MAX_BULK_LOAD
+                })) as any[];
+
+                // Map statements to their blocks
+                const statementsByBlock = statements.reduce((acc, stmt) => {
+                    if (!acc[stmt.block_id]) acc[stmt.block_id] = [];
+                    acc[stmt.block_id].push({
+                        id: stmt.id,
+                        text: stmt.text,
+                        order_key: stmt.order_key
+                    });
+                    return acc;
+                }, {} as Record<string, any[]>);
+
+                // Add statements to content blocks
+                contentBlocks.forEach(block => {
+                    block.statements = statementsByBlock[block.id] || [];
+                });
             }
 
             // Sort content blocks by order_key

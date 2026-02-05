@@ -273,6 +273,33 @@ span[data-type="citation"][data-source-id]:not([data-source-id=""]):hover {
   100% { opacity: 1; }
 }
 
+/* Citation type differentiation — synced citations only */
+.citation-synced.citation-type-daf,
+.citation-synced.citation-type-halacha {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #b45309;
+}
+.citation-synced.citation-type-daf:hover,
+.citation-synced.citation-type-halacha:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.citation-synced.citation-type-verse,
+.citation-synced.citation-type-chapter {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #7c3aed;
+}
+.citation-synced.citation-type-verse:hover,
+.citation-synced.citation-type-chapter:hover {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* page, section, reference, custom keep the default .citation-synced green */
+
 .citation-tooltip {
   position: relative;
 }
