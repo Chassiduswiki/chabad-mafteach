@@ -11,7 +11,7 @@ export { InlineAISuggestionExtension } from './InlineAISuggestionExtension';
 export type { InlineAISuggestionOptions, SuggestionContext } from './InlineAISuggestionExtension';
 
 export const createTipTapExtensions = (options?: {
-  onCitationClick?: (citation: any) => void;
+  onCitationClick?: (citation: any, pos: number) => void;
   onCitationEdit?: (citation: any, pos: number) => void;
   onTrigger?: (range: { from: number; to: number }) => void;
   onDismiss?: () => void;

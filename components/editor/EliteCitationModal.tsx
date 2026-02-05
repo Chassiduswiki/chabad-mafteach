@@ -382,32 +382,20 @@ export function EliteCitationModal({
 
   const selectSource = (source: Source, volumeTitle?: string) => {
     setSelectedSource(source);
+    setFreeTextMode(false); // Ensure we're not in free text mode
     setUrl(source.external_url || '');
     setSmartInput('');
     setSearchResults([]);
     setShowBrowser(false);
 
-    // Use API-provided formatted_title if available, otherwise format client-side
-    let formatted: FormattedCitation;
-    if (source.formatted_title && source.formatted_title !== source.title) {
-      // API already provided a nicely formatted title
-      formatted = {
-        full: source.formatted_title,
-        sourceName: 'Likkutei Sichos', // Could parse from formatted_title if needed
-        pages: source.page_number
-          ? source.page_count && source.page_count > 1
-            ? `pp. ${source.page_number}-${source.page_number + source.page_count - 1}`
-            : `p. ${source.page_number}`
-          : undefined,
-      };
-    } else {
-      // Format client-side
-      formatted = formatCitation({
-        ...source,
-        rootSourceId: 256, // Likkutei Sichos - TODO: detect dynamically
-        volumeTitle,
-      });
-    }
+    // Format the citation - let formatCitation handle the logic
+    // Don't assume any particular root source
+    const formatted = formatCitation({
+      ...source,
+      // Only pass rootSourceId if we know it (e.g., from metadata or parent chain)
+      rootSourceId: source.metadata?.root_source_id,
+      volumeTitle,
+    });
     setFormattedCitation(formatted);
 
     // Set reference (just the page part, since full citation has everything)
@@ -437,25 +425,20 @@ export function EliteCitationModal({
       is_leaf: true,
     };
 
-    // Use API-provided formatted_title if available
-    let formatted: FormattedCitation;
-    if (resolvedSource.formatted_title) {
-      formatted = {
-        full: resolvedSource.formatted_title,
-        sourceName: 'Likkutei Sichos',
-        pages: `pp. ${resolvedSource.page_number}-${resolvedSource.page_number + resolvedSource.page_count - 1}`,
-      };
-    } else {
-      formatted = formatCitation({
-        ...source,
-        rootSourceId: 256,
-        volumeTitle: resolvedSource.volume.title,
-      });
-    }
+    // Format the citation - let formatCitation determine the source name
+    const formatted = formatCitation({
+      ...source,
+      volumeTitle: resolvedSource.volume.title,
+    });
+
+    // Build page range for reference
+    const pageRange = resolvedSource.page_count > 1
+      ? `pp. ${resolvedSource.page_number}-${resolvedSource.page_number + resolvedSource.page_count - 1}`
+      : `p. ${resolvedSource.page_number}`;
 
     setSelectedSource(source);
     setFormattedCitation(formatted);
-    setReference(formatted.pages || `p. ${resolvedSource.requested_page}`);
+    setReference(formatted.pages || pageRange);
     setUrl(resolvedSource.external_url || '');
     setSmartInput('');
     setParsedCitation(null);
@@ -550,7 +533,7 @@ export function EliteCitationModal({
     onInsert({
       sourceId: selectedSource.id,
       sourceTitle: citationTitle,
-      reference: '', // Leave empty since sourceTitle already contains full formatted citation
+      reference: reference.trim(), // Include page numbers and other reference details
       citationType,
       quote: quote.trim() || undefined,
       note: note.trim() || undefined,
@@ -806,7 +789,7 @@ export function EliteCitationModal({
       {/* Advanced Options Toggle */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="w-full flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/50"
       >
         <ChevronDown
           className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
@@ -864,6 +847,20 @@ export function EliteCitationModal({
         <p className="text-base font-semibold text-foreground">
           {freeTextMode ? freeTextCitation : (formattedCitation?.full || selectedSource!.title)}
         </p>
+        {!freeTextMode && (
+          <div className="mt-2.5 pt-2.5 border-t border-emerald-200 dark:border-emerald-800">
+            <label className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mb-1">
+              Reference
+            </label>
+            <input
+              type="text"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="e.g. p. 42, ch. 3..."
+              className="w-full px-2 py-1 text-sm bg-white/60 dark:bg-black/20 border border-emerald-200 dark:border-emerald-800 rounded text-foreground placeholder:text-emerald-400 dark:placeholder:text-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -899,39 +896,54 @@ export function EliteCitationModal({
         ) : (
           <div className="divide-y divide-border">
             {sources.map((source, index) => (
-              <button
+              <div
                 key={source.id}
-                onClick={() => navigateInto(source)}
                 onMouseEnter={() => setFocusedIndex(index)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
+                className={`flex items-center gap-2 px-4 py-3 transition-colors ${index === focusedIndex ? 'bg-primary/10' : 'hover:bg-muted/50'
                   }`}
               >
-                {source.is_browsable ? (
-                  <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                ) : (
-                  <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">
-                    {source.formatted_title || source.title}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {source.formatted_title && source.formatted_title !== source.title && (
-                      <span dir="rtl" className="truncate max-w-[150px]">{source.title}</span>
-                    )}
-                    {!source.formatted_title && source.parsha && <span>{source.parsha}</span>}
-                    {!source.formatted_title && source.page_number && <span>p. {source.page_number}</span>}
-                    {source.child_count && source.child_count > 0 && (
-                      <span className="bg-muted px-1.5 py-0.5 rounded">
-                        {source.child_count}
-                      </span>
-                    )}
+                <button
+                  onClick={() => navigateInto(source)}
+                  className="flex-1 flex items-center gap-3 text-left"
+                >
+                  {source.is_browsable ? (
+                    <Folder className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">
+                      {source.formatted_title || source.title}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {source.formatted_title && source.formatted_title !== source.title && (
+                        <span dir="rtl" className="truncate max-w-[150px]">{source.title}</span>
+                      )}
+                      {!source.formatted_title && source.parsha && <span>{source.parsha}</span>}
+                      {!source.formatted_title && source.page_number && <span>p. {source.page_number}</span>}
+                      {source.child_count && source.child_count > 0 && (
+                        <span className="bg-muted px-1.5 py-0.5 rounded">
+                          {source.child_count} items
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {source.is_browsable && (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  {source.is_browsable && (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+
+                {/* For browsable sources (volumes), add a "Select" button */}
+                {source.is_browsable && !source.is_leaf && currentParentId !== null && (
+                  <button
+                    onClick={() => selectSource(source)}
+                    title={`Select ${source.title}`}
+                    className="px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         )}

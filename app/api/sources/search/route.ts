@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     // Transform to include formatted title
     const transformedSources = (allSources as any[]).map((source) => {
       // Generate formatted citation title
+      // Only set rootSourceId if it's explicitly in metadata or parent_id chain
       const formattedTitle = formatCitationString({
         id: source.id,
         title: source.title,
@@ -75,7 +76,8 @@ export async function GET(request: NextRequest) {
         page_count: source.page_count,
         parsha: source.parsha,
         metadata: source.metadata,
-        rootSourceId: source.metadata?.type === 'sicha' ? 256 : undefined,
+        // Use explicit root_source_id from metadata if available
+        rootSourceId: source.metadata?.root_source_id,
       });
 
       return {

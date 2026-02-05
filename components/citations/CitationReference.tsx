@@ -113,13 +113,13 @@ export function CitationReference({
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="bg-popover/95 backdrop-blur shadow-md border-border py-1 px-2">
-            <p className="text-[11px] font-medium max-w-[200px] truncate">{tooltipLabel}</p>
+            <span className="text-[11px] font-medium max-w-[200px] truncate block">{tooltipLabel}</span>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-0 gap-0 overflow-hidden border-primary/10 shadow-2xl bg-background/98 backdrop-blur-xl">
+        <DialogContent aria-describedby={undefined} className="sm:max-w-[425px] p-0 gap-0 overflow-hidden border-primary/10 shadow-2xl bg-background/98 backdrop-blur-xl">
           <VisuallyHidden.Root>
             <DialogTitle>{displayTitle}</DialogTitle>
           </VisuallyHidden.Root>

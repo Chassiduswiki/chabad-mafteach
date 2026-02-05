@@ -23,6 +23,12 @@ interface CitationData {
   source_title: string | null;
   reference: string | null;
   content?: string;
+  citationId?: string;
+  pos?: number;
+  quote?: string;
+  note?: string;
+  url?: string;
+  citationType?: string;
 }
 
 interface EditingCitation {
@@ -56,6 +62,8 @@ interface EditorContextType {
   editingCitation: EditingCitation | null;
   setEditingCitation: (value: EditingCitation | null) => void;
   updateCitation: (citation: { sourceId: number | null; sourceTitle: string; reference: string; quote?: string; note?: string; url?: string }) => void;
+  deleteCitation: (pos: number) => void;
+  handleCitationModalClose: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -84,6 +92,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [showImageModal, setShowImageModal] = useState(false);
 const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(null);
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   // Initialize TipTap editor
   const editor = useEditor({
@@ -183,12 +192,18 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
       // Custom extensions for Hebrew and citations
       ...createTipTapExtensions({
         topicId: docId || undefined,
-        onCitationClick: (citation) => {
+        onCitationClick: (citation, pos) => {
           setActiveCitation({
             source_id: citation.sourceId,
             source_title: citation.sourceTitle,
             reference: citation.reference,
             content: `${citation.sourceTitle} - ${citation.reference}`,
+            citationId: citation.id,
+            pos,
+            quote: citation.quote,
+            note: citation.note,
+            url: citation.url,
+            citationType: citation.citationType,
           });
         },
         onCitationEdit: (citation, pos) => {
@@ -205,12 +220,12 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
             pos,
           });
         },
-        onTrigger: () => {
-          // Open citation modal when @ is typed
+        onTrigger: (range) => {
+          triggerRangeRef.current = range;
           setShowCitationModal(true);
         },
         onDismiss: () => {
-          // Close citation modal on Escape
+          triggerRangeRef.current = null;
           setShowCitationModal(false);
         },
         onOCRResult: (text) => {
@@ -307,10 +322,14 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
   }) => {
     if (!editor) return;
 
-    console.log('insertCitation called with:', citation);
-
     try {
-      // Use the dedicated insertCitation command from our extension
+      // If this insertion was triggered by @, delete the @ character first
+      if (triggerRangeRef.current) {
+        const { from, to } = triggerRangeRef.current;
+        editor.chain().deleteRange({ from, to }).run();
+        triggerRangeRef.current = null;
+      }
+
       const success = editor.commands.insertCitation({
         id: `cite_${Math.random().toString(36).substring(2, 12)}`,
         sourceId: citation.sourceId,
@@ -321,8 +340,6 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
         note: citation.note,
         url: citation.url,
       });
-
-      console.log('insertCitation command result:', success);
 
       if (success) {
         setShowCitationModal(false);
@@ -340,6 +357,17 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
         message: 'Failed to insert citation. Please try again.'
       });
     }
+  };
+
+  // Handle modal close - clean up @ character if present
+  const handleCitationModalClose = () => {
+    // If modal was opened by @ trigger but nothing was inserted, delete the @
+    if (triggerRangeRef.current && editor) {
+      const { from, to } = triggerRangeRef.current;
+      editor.chain().deleteRange({ from, to }).run();
+      triggerRangeRef.current = null;
+    }
+    setShowCitationModal(false);
   };
 
   const handleInsertImage = () => {
@@ -401,6 +429,15 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
     setFeedback({ type: "success", message: `Citation updated: ${citation.sourceTitle}` });
   };
 
+  const deleteCitation = (pos: number) => {
+    if (!editor) return;
+    const success = editor.commands.deleteCitation(pos);
+    if (success) {
+      setActiveCitation(null);
+      setFeedback({ type: "success", message: "Citation removed" });
+    }
+  };
+
   const contextValue: EditorContextType = {
     editor,
     feedback,
@@ -419,6 +456,8 @@ const [editingCitation, setEditingCitation] = useState<EditingCitation | null>(n
     editingCitation,
     setEditingCitation,
     updateCitation,
+    deleteCitation,
+    handleCitationModalClose,
   };
 
   return (
